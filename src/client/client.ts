@@ -272,9 +272,9 @@ export class Client {
     };
     this.container = document.querySelector('#game-container')!;
     this.version = new Version();
-    this.version.major = 0;
+    this.version.major = 1;
     this.version.minor = 0;
-    this.version.patch = 28;
+    this.version.patch = 0;
     this.challenge = 0;
     getEif().then(async (eif) => {
       this.eif = eif!;
