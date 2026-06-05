@@ -43,8 +43,10 @@ export interface InstanceItem {
   baseItemId: number;
   rarity: InstanceRarity;
   level: number;
-  /** 0..14 when equipped in that paperdoll slot, -1 when in inventory. */
+  /** 0..14 when equipped in that paperdoll slot, -1 otherwise. */
   equippedSlot: number;
+  /** When true the instance lives in the player's locker (bank). */
+  inLocker: boolean;
   mods: InstanceMod[];
 }
 
@@ -91,9 +93,14 @@ export class InstanceController {
     return this.items;
   }
 
-  /** Instances currently in inventory (not equipped). */
+  /** Instances currently in inventory (not equipped, not in locker). */
   inventoryList(): InstanceItem[] {
-    return this.items.filter((i) => i.equippedSlot < 0);
+    return this.items.filter((i) => i.equippedSlot < 0 && !i.inLocker);
+  }
+
+  /** Instances stored in the player's locker (bank). */
+  lockerList(): InstanceItem[] {
+    return this.items.filter((i) => i.inLocker);
   }
 
   byInstanceId(id: string): InstanceItem | undefined {
@@ -121,6 +128,26 @@ export class InstanceController {
     this.client.bus?.sendBuf(
       FAMILY_INSTANCE as PacketFamily,
       PacketAction.Remove,
+      writer.toByteArray(),
+    );
+  }
+
+  sendLockerDeposit(instanceId: string): void {
+    const writer = new EoWriter();
+    writer.addBytes(this.encodeInstanceId(instanceId));
+    this.client.bus?.sendBuf(
+      FAMILY_INSTANCE as PacketFamily,
+      PacketAction.Drop,
+      writer.toByteArray(),
+    );
+  }
+
+  sendLockerTake(instanceId: string): void {
+    const writer = new EoWriter();
+    writer.addBytes(this.encodeInstanceId(instanceId));
+    this.client.bus?.sendBuf(
+      FAMILY_INSTANCE as PacketFamily,
+      PacketAction.Get,
       writer.toByteArray(),
     );
   }

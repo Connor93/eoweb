@@ -521,11 +521,13 @@ export function InventoryGrid({ itemIds }: Props) {
               inst.instanceId,
               subLocForSlot(result.slot),
             );
+          } else if (result.type === 'locker') {
+            client.instanceController.sendLockerDeposit(inst.instanceId);
           }
-          // Other drop targets (chest / locker / trade / junk / drop /
-          // ground) are stackable-only for Slice 2; instance trade /
-          // chest / locker land in Slice 3 and dropping rolled gear
-          // back onto the ground would need a roll-time policy call.
+          // Other drop targets (chest / trade / junk / drop / ground)
+          // are stackable-only for Slice 3a; chest + trade land in
+          // 3b/3c, and dropping rolled gear back onto the ground would
+          // need a roll-time policy call (probably scrap-for-gold).
         },
       });
     },

@@ -22,7 +22,8 @@ import type { InstanceItem, InstanceMod, InstanceRarity } from '@/controllers';
  */
 const FAMILY_INSTANCE = 54;
 const INSTANCE_ID_LEN = 36;
-const EQUIPPED_SENTINEL_INVENTORY = 252;
+const LOCATION_SENTINEL_LOCKER = 251;
+const LOCATION_SENTINEL_INVENTORY = 252;
 
 function parseInstanceList(reader: EoReader): InstanceItem[] {
   const count = reader.getShort();
@@ -32,9 +33,14 @@ function parseInstanceList(reader: EoReader): InstanceItem[] {
     const baseItemId = reader.getShort();
     const rarity = reader.getChar() as InstanceRarity;
     const level = reader.getChar();
-    const equippedRaw = reader.getChar();
-    const equippedSlot =
-      equippedRaw === EQUIPPED_SENTINEL_INVENTORY ? -1 : equippedRaw;
+    const locationRaw = reader.getChar();
+    let equippedSlot = -1;
+    let inLocker = false;
+    if (locationRaw === LOCATION_SENTINEL_LOCKER) {
+      inLocker = true;
+    } else if (locationRaw !== LOCATION_SENTINEL_INVENTORY) {
+      equippedSlot = locationRaw;
+    }
     const modCount = reader.getChar();
     const mods: InstanceMod[] = [];
     for (let j = 0; j < modCount; j++) {
@@ -50,6 +56,7 @@ function parseInstanceList(reader: EoReader): InstanceItem[] {
       rarity,
       level,
       equippedSlot,
+      inLocker,
       mods,
     });
   }
