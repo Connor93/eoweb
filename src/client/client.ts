@@ -67,6 +67,7 @@ import {
   PingController,
   QuakeController,
   QuestController,
+  ReputationController,
   type SavedSession,
   SessionController,
   ShopController,
@@ -198,6 +199,7 @@ export class Client {
   mouseController: MouseController;
   npcController: NpcController;
   questController: QuestController;
+  reputationController: ReputationController;
   sessionController: SessionController;
   shopController: ShopController;
   socialController: SocialController;
@@ -342,6 +344,7 @@ export class Client {
     this.npcController = new NpcController(this);
     this.questController = new QuestController(this);
     this.quakeController = new QuakeController();
+    this.reputationController = new ReputationController(this);
     this.sessionController = new SessionController(this);
     this.shopController = new ShopController(this);
     this.socialController = new SocialController(this);

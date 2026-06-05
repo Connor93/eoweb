@@ -36,6 +36,7 @@ import { registerQuestHandlers } from './quest';
 import { registerRangeHandlers } from './range';
 import { registerRecoverHandlers } from './recover';
 import { registerRefreshHandlers } from './refresh';
+import { registerReputationHandlers } from './reputation';
 import { registerShopHandlers } from './shop';
 import { registerSitHandlers } from './sit';
 import { registerSpellHandlers } from './spell';
@@ -93,4 +94,5 @@ export function registerAllHandlers(client: Client): void {
   registerMarriageHandlers(client);
   registerPriestHandlers(client);
   registerBossHandlers(client);
+  registerReputationHandlers(client);
 }

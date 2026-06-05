@@ -41,6 +41,7 @@ import {
   QuestNpcDialog,
   QuestsDialog,
   QuestTracker,
+  ReputationBadge,
   SettingsDialog,
   ShopDialog,
   SkillMasterDialog,
@@ -324,6 +325,9 @@ function InGameContent() {
       >
         <div class='pointer-events-auto'>
           <BossTracker />
+        </div>
+        <div class='pointer-events-auto'>
+          <ReputationBadge />
         </div>
         <div class='pointer-events-auto'>
           <QuestTracker />

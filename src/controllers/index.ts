@@ -42,6 +42,12 @@ export { PingController } from './ping-controller';
 export { QuakeController } from './quake-controller';
 export type { QuestDialogState } from './quest-controller';
 export { QuestController } from './quest-controller';
+export {
+  ReputationController,
+  type ReputationEntry,
+  ReputationTier,
+  reputationTierLabel,
+} from './reputation-controller';
 export { SessionController } from './session-controller';
 export { ShopController } from './shop-controller';
 export { type CharacterTab, SocialController } from './social-controller';
