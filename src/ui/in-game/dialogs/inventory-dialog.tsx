@@ -1,4 +1,4 @@
-import { INVENTORY_GRID_WIDTH, InventoryGrid } from '@/ui/components';
+import { InventoryGrid } from '@/ui/components';
 import { useLocale } from '@/ui/context';
 import { DialogBase } from './dialog-base';
 
@@ -8,7 +8,7 @@ export function InventoryDialog() {
     <DialogBase
       id='inventory'
       title={locale.inventory.title}
-      width={INVENTORY_GRID_WIDTH + 10}
+      size='md'
       avoidBottom
     >
       <InventoryGrid />

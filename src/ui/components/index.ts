@@ -11,7 +11,7 @@ export { Confirm } from './confirm';
 export { CycleInput } from './cycle-input';
 export { Input } from './input';
 export { InputDialog } from './input-dialog';
-export { INVENTORY_GRID_WIDTH, InventoryGrid } from './inventory-grid';
+export { InventoryGrid } from './inventory-grid';
 export { ItemIcon } from './item-icon';
 export { ProgressBar } from './progress-bar';
 export { QuestBookList } from './quest-book-list';
