@@ -53,6 +53,7 @@ import {
   GuildController,
   HotbarController,
   InnController,
+  InstanceController,
   InventoryController,
   ItemProtectionController,
   JukeboxController,
@@ -193,6 +194,7 @@ export class Client {
   drunkController: DrunkController;
   jukeboxController: JukeboxController;
   commandController: CommandController;
+  instanceController: InstanceController;
   inventoryController: InventoryController;
   lockerController: LockerController;
   mapController: MapController;
@@ -335,6 +337,7 @@ export class Client {
     this.cleanupController = new CleanupController(this);
     this.commandController = new CommandController(this);
     this.drunkController = new DrunkController(this);
+    this.instanceController = new InstanceController(this);
     this.inventoryController = new InventoryController(this);
     this.itemProtectionController = new ItemProtectionController();
     this.alertController = new AlertController();

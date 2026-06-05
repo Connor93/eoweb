@@ -17,6 +17,11 @@ import {
   GiShield,
 } from 'react-icons/gi';
 import { GOLD_ITEM_ID } from '@/consts';
+import {
+  type InstanceItem,
+  InstanceRarity,
+  instanceRarityLabel,
+} from '@/controllers';
 import { playSfxById, SfxId } from '@/sfx';
 import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
@@ -41,6 +46,32 @@ const TAB_ICONS: IconType[] = [
 const DOUBLE_TAP_MS = 250;
 const CARD_SIZE_PX = 56;
 
+function rarityBorderClass(r: InstanceRarity): string {
+  switch (r) {
+    case InstanceRarity.Common:
+      return UI_PANEL_BORDER;
+    case InstanceRarity.Rare:
+      return 'border-info/70';
+    case InstanceRarity.Epic:
+      return 'border-secondary/70';
+    case InstanceRarity.Legendary:
+      return 'border-warning/70';
+  }
+}
+
+function rarityTextClass(r: InstanceRarity): string {
+  switch (r) {
+    case InstanceRarity.Common:
+      return 'text-base-content/70';
+    case InstanceRarity.Rare:
+      return 'text-info';
+    case InstanceRarity.Epic:
+      return 'text-secondary';
+    case InstanceRarity.Legendary:
+      return 'text-warning';
+  }
+}
+
 type JunkDropZoneProps = { zone: 'drop' | 'junk' };
 
 function JunkDropZone({ zone }: JunkDropZoneProps) {
@@ -63,21 +94,21 @@ function JunkDropZone({ zone }: JunkDropZoneProps) {
   );
 }
 
-type InventoryItemCardProps = {
+type StackableCardProps = {
   item: Item;
   isDragging: boolean;
   onPointerDown: (e: PointerEvent, item: Item, target: HTMLElement) => void;
-  onTooltipShow: (id: number, x: number, y: number) => void;
-  onTooltipHide: (id: number) => void;
+  onTooltipShow: (key: string, x: number, y: number) => void;
+  onTooltipHide: (key: string) => void;
 };
 
-function InventoryItemCard({
+function StackableCard({
   item,
   isDragging,
   onPointerDown,
   onTooltipShow,
   onTooltipHide,
-}: InventoryItemCardProps) {
+}: StackableCardProps) {
   const client = useClient();
   const { locale } = useLocale();
   const record = client.getEifRecordById(item.id);
@@ -85,8 +116,7 @@ function InventoryItemCard({
   const name =
     record?.name ??
     locale.shared.itemFallbackName.replace('{id}', String(item.id));
-
-  const slotRef = useRef<HTMLDivElement>(null);
+  const tooltipKey = `stack:${item.id}`;
 
   const handlePointerDown = (e: PointerEvent) => {
     if (e.button !== 0 && e.pointerType !== 'touch') return;
@@ -100,19 +130,17 @@ function InventoryItemCard({
     const x =
       r.right + 4 + 200 > window.innerWidth ? r.left - 4 - 200 : r.right + 4;
     const y = Math.min(Math.max(r.top, 4), window.innerHeight - 80);
-    onTooltipShow(item.id, x, y);
+    onTooltipShow(tooltipKey, x, y);
   };
 
   return (
     <div
-      ref={slotRef}
       data-inventory-item={item.id}
-      /* biome-ignore lint/nursery/useSortedClasses: Need space */
       class={`flex cursor-grab select-none flex-col items-center gap-2 rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10 active:bg-base-content/15${isDragging ? ' opacity-30' : ''}`}
       onPointerDown={handlePointerDown}
       onContextMenu={(e) => e.preventDefault()}
       onMouseEnter={showTooltip}
-      onMouseLeave={() => onTooltipHide(item.id)}
+      onMouseLeave={() => onTooltipHide(tooltipKey)}
     >
       <div
         class={`flex h-14 w-14 items-center justify-center overflow-hidden rounded border ${UI_PANEL_BORDER} bg-base-300 p-1.5 lg:h-16 lg:w-16`}
@@ -141,6 +169,73 @@ function InventoryItemCard({
   );
 }
 
+type InstanceCardProps = {
+  inst: InstanceItem;
+  onTooltipShow: (key: string, x: number, y: number) => void;
+  onTooltipHide: (key: string) => void;
+};
+
+function InstanceCard({
+  inst,
+  onTooltipShow,
+  onTooltipHide,
+}: InstanceCardProps) {
+  const client = useClient();
+  const { locale } = useLocale();
+  const record = client.getEifRecordById(inst.baseItemId);
+  const graphicId = record?.graphicId ?? null;
+  const name =
+    record?.name ??
+    locale.shared.itemFallbackName.replace('{id}', String(inst.baseItemId));
+  const tooltipKey = `instance:${inst.instanceId}`;
+  const borderClass = rarityBorderClass(inst.rarity);
+  const textClass = rarityTextClass(inst.rarity);
+
+  const showTooltip = (e: MouseEvent) => {
+    const el = e.currentTarget as HTMLElement;
+    const r = el.getBoundingClientRect();
+    const x =
+      r.right + 4 + 240 > window.innerWidth ? r.left - 4 - 240 : r.right + 4;
+    const y = Math.min(Math.max(r.top, 4), window.innerHeight - 100);
+    onTooltipShow(tooltipKey, x, y);
+  };
+
+  return (
+    <div
+      data-instance-item={inst.instanceId}
+      class={`flex select-none flex-col items-center gap-2 rounded border-2 ${borderClass} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10`}
+      onContextMenu={(e) => e.preventDefault()}
+      onMouseEnter={showTooltip}
+      onMouseLeave={() => onTooltipHide(tooltipKey)}
+    >
+      <div
+        class={`flex h-14 w-14 items-center justify-center overflow-hidden rounded border ${UI_PANEL_BORDER} bg-base-300 p-1.5 lg:h-16 lg:w-16`}
+      >
+        {graphicId === null ? (
+          <div class='h-10 w-10 rounded bg-base-content/10' />
+        ) : (
+          <ItemIcon
+            graphicId={graphicId}
+            alt={name}
+            class='h-10 w-10 object-contain lg:h-12 lg:w-12'
+          />
+        )}
+      </div>
+      <div class='flex w-full flex-col items-center gap-0.5'>
+        <span
+          class={`wrap-break-word line-clamp-2 w-full text-center font-medium text-xs leading-tight ${textClass}`}
+        >
+          {name}
+        </span>
+        <span class='text-[10px] tabular-nums opacity-60'>
+          Lv{inst.level} · {inst.mods.length} mod
+          {inst.mods.length === 1 ? '' : 's'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 type Props = {
   /** If provided, only items with these IDs are shown. Defaults to all client items. */
   itemIds?: number[];
@@ -155,17 +250,20 @@ export function InventoryGrid({ itemIds }: Props) {
   );
   const [, setRefresh] = useState(0);
   const [tooltip, setTooltip] = useState<{
-    id: number;
+    key: string;
     x: number;
     y: number;
   } | null>(null);
   const lastTapRef = useRef(0);
 
-  // Clear tooltip when touching outside an inventory item
   useEffect(() => {
     const handlePointerDown = (e: PointerEvent) => {
       if (e.pointerType !== 'touch') return;
-      if (!(e.target as HTMLElement).closest('[data-inventory-item]')) {
+      const target = e.target as HTMLElement;
+      if (
+        !target.closest('[data-inventory-item]') &&
+        !target.closest('[data-instance-item]')
+      ) {
         setTooltip(null);
       }
     };
@@ -176,8 +274,11 @@ export function InventoryGrid({ itemIds }: Props) {
   useEffect(() => {
     const handler = () => setRefresh((n) => n + 1);
     client.inventoryController.subscribeInventoryChanged(handler);
-    return () =>
+    client.instanceController.subscribeChanged(handler);
+    return () => {
       client.inventoryController.unsubscribeInventoryChanged(handler);
+      client.instanceController.unsubscribeChanged(handler);
+    };
   }, [client]);
 
   const visibleItems = useMemo((): Item[] => {
@@ -185,10 +286,14 @@ export function InventoryGrid({ itemIds }: Props) {
       ? client.inventoryController.items.filter((i) => itemIds.includes(i.id))
       : client.inventoryController.items;
     return source.filter((i) => i.id !== GOLD_ITEM_ID);
-    // currentDrag included so the dragging-opacity recomputes; setRefresh
-    // re-runs the memo on inventory changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, itemIds, currentDrag]);
+
+  const visibleInstances = useMemo((): InstanceItem[] => {
+    const all = client.instanceController.list();
+    return itemIds ? all.filter((i) => itemIds.includes(i.baseItemId)) : all;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, itemIds]);
 
   const itemsByTab = useMemo(() => {
     const buckets: Item[][] = Array.from(
@@ -205,8 +310,30 @@ export function InventoryGrid({ itemIds }: Props) {
     return buckets;
   }, [visibleItems, client]);
 
-  const tabCounts = itemsByTab.map((b) => b.length);
+  const instancesByTab = useMemo(() => {
+    const buckets: InstanceItem[][] = Array.from(
+      { length: INVENTORY_TAB_COUNT },
+      () => [],
+    );
+    for (const inst of visibleInstances) {
+      const record = client.getEifRecordById(inst.baseItemId);
+      const tab = record
+        ? inventoryTabForItemType(record.type)
+        : InventoryTab.Materials;
+      buckets[tab].push(inst);
+    }
+    // Show higher-rarity instances first; level breaks ties.
+    for (const bucket of buckets) {
+      bucket.sort((a, b) => b.rarity - a.rarity || b.level - a.level);
+    }
+    return buckets;
+  }, [visibleInstances, client]);
+
+  const tabCounts = itemsByTab.map(
+    (b, i) => b.length + instancesByTab[i].length,
+  );
   const activeItems = itemsByTab[activeTab];
+  const activeInstances = instancesByTab[activeTab];
   const goldAmount = client.inventoryController.goldAmount;
 
   const getCoords = () => {
@@ -232,7 +359,7 @@ export function InventoryGrid({ itemIds }: Props) {
       if (e.pointerType === 'touch') {
         const tooltipX = Math.min(rect.right + 4, window.innerWidth - 168);
         const tooltipY = Math.max(4, rect.top);
-        setTooltip({ id: item.id, x: tooltipX, y: tooltipY });
+        setTooltip({ key: `stack:${item.id}`, x: tooltipX, y: tooltipY });
         longPressTimer = setTimeout(() => {
           longPressTimer = null;
           setTooltip(null);
@@ -291,7 +418,6 @@ export function InventoryGrid({ itemIds }: Props) {
           }
           if (result.type === 'cancelled') return;
           if (result.type === 'cell' || result.type === 'tab') {
-            // List-style inventory: no manual re-tabbing, no spatial slots.
             return;
           }
           if (result.type === 'equip-slot') {
@@ -341,12 +467,12 @@ export function InventoryGrid({ itemIds }: Props) {
     [client, locale, startDrag],
   );
 
-  const onTooltipShow = useCallback((id: number, x: number, y: number) => {
-    setTooltip({ id, x, y });
+  const onTooltipShow = useCallback((key: string, x: number, y: number) => {
+    setTooltip({ key, x, y });
   }, []);
 
-  const onTooltipHide = useCallback((id: number) => {
-    setTooltip((t) => (t?.id === id ? null : t));
+  const onTooltipHide = useCallback((key: string) => {
+    setTooltip((t) => (t?.key === key ? null : t));
   }, []);
 
   const TAB_LABELS = [
@@ -357,17 +483,43 @@ export function InventoryGrid({ itemIds }: Props) {
     locale.inventory.tabQuestItems,
   ];
 
-  const getTooltipLines = (item: Item): string[] => {
-    const record = client.getEifRecordById(item.id);
-    if (!record) return [];
-    const meta = getItemMeta(record);
-    const qty = item.amount > 1 ? ` x${item.amount.toLocaleString()}` : '';
-    return [record.name + qty, ...meta];
+  const getTooltipLines = (key: string): string[] => {
+    if (key.startsWith('stack:')) {
+      const id = Number(key.slice(6));
+      const item = visibleItems.find((i) => i.id === id);
+      const record = item ? client.getEifRecordById(item.id) : undefined;
+      if (!item || !record) return [];
+      const meta = getItemMeta(record);
+      const qty = item.amount > 1 ? ` x${item.amount.toLocaleString()}` : '';
+      return [record.name + qty, ...meta];
+    }
+    if (key.startsWith('instance:')) {
+      const id = key.slice(9);
+      const inst = visibleInstances.find((i) => i.instanceId === id);
+      if (!inst) return [];
+      const record = client.getEifRecordById(inst.baseItemId);
+      const name = record?.name ?? `Item ${inst.baseItemId}`;
+      const lines = [
+        `${name} (${instanceRarityLabel(inst.rarity)})`,
+        `Level ${inst.level}`,
+      ];
+      for (const m of inst.mods) {
+        const sign = m.value >= 0 ? '+' : '';
+        const valStr =
+          Math.abs(m.value % 1) < 0.005
+            ? m.value.toFixed(0)
+            : m.value.toFixed(1);
+        lines.push(`${sign}${valStr} ${m.modId}`);
+      }
+      return lines;
+    }
+    return [];
   };
+
+  const isEmpty = activeItems.length === 0 && activeInstances.length === 0;
 
   return (
     <div class='flex flex-col gap-1'>
-      {/* Header: gold counter + junk/drop zones (shown only while dragging) */}
       <div class='flex items-center justify-between gap-1 px-1'>
         <div class='flex items-center gap-1 text-warning text-xs'>
           <FaCoins size={11} />
@@ -381,7 +533,6 @@ export function InventoryGrid({ itemIds }: Props) {
         </div>
       </div>
 
-      {/* Side tabs + bordered item panel */}
       <div class='flex gap-1'>
         <div
           role='tablist'
@@ -431,14 +582,22 @@ export function InventoryGrid({ itemIds }: Props) {
             </span>
           </div>
           <div class='flex-1 overflow-y-auto p-2'>
-            {activeItems.length === 0 ? (
+            {isEmpty ? (
               <p class='py-4 text-center text-sm opacity-50'>
                 {locale.inventory.empty}
               </p>
             ) : (
               <div class='grid grid-cols-2 gap-2 lg:grid-cols-3'>
+                {activeInstances.map((inst) => (
+                  <InstanceCard
+                    key={inst.instanceId}
+                    inst={inst}
+                    onTooltipShow={onTooltipShow}
+                    onTooltipHide={onTooltipHide}
+                  />
+                ))}
                 {activeItems.map((item) => (
-                  <InventoryItemCard
+                  <StackableCard
                     key={item.id}
                     item={item}
                     isDragging={
@@ -456,15 +615,13 @@ export function InventoryGrid({ itemIds }: Props) {
         </div>
       </div>
 
-      {/* Tooltip portal — avoids scroll/clip issues inside dialogs */}
       {tooltip &&
         (() => {
-          const item = visibleItems.find((i) => i.id === tooltip.id);
-          const lines = item ? getTooltipLines(item) : [];
+          const lines = getTooltipLines(tooltip.key);
           if (!lines.length) return null;
           return createPortal(
             <div
-              class='pointer-events-none w-max max-w-48 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
+              class='pointer-events-none w-max max-w-56 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
               style={{
                 position: 'fixed',
                 left: tooltip.x,

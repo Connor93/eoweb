@@ -27,6 +27,13 @@ export { DrunkController } from './drunk-controller';
 export { GuildController } from './guild-controller';
 export { HotbarController } from './hotbar-controller';
 export { InnController } from './inn-controller';
+export {
+  InstanceController,
+  type InstanceItem,
+  type InstanceMod,
+  InstanceRarity,
+  instanceRarityLabel,
+} from './instance-controller';
 export { InventoryController } from './inventory-controller';
 export { ItemProtectionController } from './item-protection-controller';
 export { JukeboxController } from './jukebox-controller';

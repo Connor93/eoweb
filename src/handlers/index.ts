@@ -20,6 +20,7 @@ import { registerEmoteHandlers } from './emote';
 import { registerFaceHandlers } from './face';
 import { registerGuildHandlers } from './guild';
 import { registerInitHandlers } from './init';
+import { registerInstanceHandlers } from './instance';
 import { registerItemHandlers } from './item';
 import { registerJukeboxHandlers } from './jukebox';
 import { registerLockerHandlers } from './locker';
@@ -95,4 +96,5 @@ export function registerAllHandlers(client: Client): void {
   registerPriestHandlers(client);
   registerBossHandlers(client);
   registerReputationHandlers(client);
+  registerInstanceHandlers(client);
 }
