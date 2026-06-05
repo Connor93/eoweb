@@ -8,7 +8,12 @@ import {
   useState,
 } from 'preact/hooks';
 import { FaArrowUp } from 'react-icons/fa';
-import type { CharacterTab } from '@/controllers';
+import {
+  type CharacterTab,
+  type InstanceItem,
+  InstanceRarity,
+  instanceRarityLabel,
+} from '@/controllers';
 import { EquipmentSlot } from '@/equipment';
 import { playSfxById, SfxId } from '@/sfx';
 import { Button, ItemIcon, QuestBookList, Tabs } from '@/ui/components';
@@ -24,6 +29,43 @@ function getEquipTooltipLines(record: EifRecord): string[] {
   return [record.name, ...getItemMeta(record)];
 }
 
+function rarityBorderClass(r: InstanceRarity): string {
+  switch (r) {
+    case InstanceRarity.Common:
+      return UI_PANEL_BORDER;
+    case InstanceRarity.Rare:
+      return 'border-info/70';
+    case InstanceRarity.Epic:
+      return 'border-secondary/70';
+    case InstanceRarity.Legendary:
+      return 'border-warning/70';
+  }
+}
+
+function formatModValue(v: number): string {
+  const sign = v >= 0 ? '+' : '';
+  const abs = Math.abs(v);
+  if (abs === 0) return '0';
+  if (abs < 0.1) return `${sign}${v.toFixed(2)}`;
+  if (Math.abs(v % 1) < 0.005) return `${sign}${v.toFixed(0)}`;
+  return `${sign}${v.toFixed(1)}`;
+}
+
+function getInstanceTooltipLines(
+  inst: InstanceItem,
+  record: EifRecord | null | undefined,
+): string[] {
+  const name = record?.name ?? `Item ${inst.baseItemId}`;
+  const lines = [
+    `${name} (${instanceRarityLabel(inst.rarity)})`,
+    `Level ${inst.level}`,
+  ];
+  for (const m of inst.mods) {
+    lines.push(`${formatModValue(m.value)} ${m.modId}`);
+  }
+  return lines;
+}
+
 type SlotConfig = {
   key: string;
   label: string;
@@ -37,9 +79,32 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
   const client = useClient();
   const info = useCharacterInfo();
   const { startDrag, cancelDrag } = useItemDrag();
-  const record = itemId ? client.getEifRecordById(itemId) : null;
-  const tooltipLines = record ? getEquipTooltipLines(record) : null;
+  const [, setRefresh] = useState(0);
   const isOwnCharacter = info?.details.playerId === client.playerId;
+
+  // Re-render when the instance controller's snapshot changes so a
+  // freshly equipped instance picks up the rarity tint immediately.
+  useEffect(() => {
+    if (!isOwnCharacter) return;
+    const handler = () => setRefresh((n) => n + 1);
+    client.instanceController.subscribeChanged(handler);
+    return () => client.instanceController.unsubscribeChanged(handler);
+  }, [client, isOwnCharacter]);
+
+  // Equipped instance occupying this slot, if any.
+  const equippedInstance = isOwnCharacter
+    ? client.instanceController.equippedAtSlot(slot)
+    : undefined;
+
+  const record = itemId ? client.getEifRecordById(itemId) : null;
+  const tooltipLines = equippedInstance
+    ? getInstanceTooltipLines(equippedInstance, record)
+    : record
+      ? getEquipTooltipLines(record)
+      : null;
+  const rarityBorder = equippedInstance
+    ? rarityBorderClass(equippedInstance.rarity)
+    : null;
   const [touchTooltip, setTouchTooltip] = useState(false);
   const slotRef = useRef<HTMLDivElement>(null);
 
@@ -56,7 +121,11 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
   }, []);
 
   const doUnequip = () => {
-    client.inventoryController.unequipItem(slot);
+    if (equippedInstance) {
+      client.instanceController.sendUnequip(equippedInstance.instanceId);
+    } else {
+      client.inventoryController.unequipItem(slot);
+    }
   };
 
   const onPointerDown = (e: PointerEvent) => {
@@ -119,11 +188,15 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
     doUnequip();
   };
 
+  // Rarity border wins over the default primary tint when an instance
+  // is equipped here.
+  const itemBorder = rarityBorder ?? 'border-primary/30 bg-primary/5';
+
   return (
     <div
       ref={slotRef}
       data-equip-slot={isOwnCharacter ? slot : undefined}
-      class={`group relative flex items-center justify-center rounded border ${itemId ? 'border-primary/30 bg-primary/5' : UI_PANEL_BORDER}${isOwnCharacter && itemId ? 'cursor-grab' : ''}`}
+      class={`group relative flex items-center justify-center rounded border-2 ${itemId ? itemBorder : UI_PANEL_BORDER}${isOwnCharacter && itemId ? ' cursor-grab' : ''}`}
       style={{ gridColumn, gridRow }}
       onPointerDown={onPointerDown}
       onContextMenu={onContextMenu}

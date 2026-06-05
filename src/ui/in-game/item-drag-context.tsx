@@ -28,6 +28,8 @@ type DragDropResult =
 type DragInfo = {
   source: 'inventory' | 'equipment' | 'spell';
   itemId: number;
+  /** Present when the drag source is an instanced (rolled) item card. */
+  instanceId?: string;
   equipSlot?: EquipmentSlot;
   pointerId: number;
   ghostX: number;

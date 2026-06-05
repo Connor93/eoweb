@@ -171,12 +171,20 @@ function StackableCard({
 
 type InstanceCardProps = {
   inst: InstanceItem;
+  isDragging: boolean;
+  onPointerDown: (
+    e: PointerEvent,
+    inst: InstanceItem,
+    target: HTMLElement,
+  ) => void;
   onTooltipShow: (key: string, x: number, y: number) => void;
   onTooltipHide: (key: string) => void;
 };
 
 function InstanceCard({
   inst,
+  isDragging,
+  onPointerDown,
   onTooltipShow,
   onTooltipHide,
 }: InstanceCardProps) {
@@ -191,6 +199,12 @@ function InstanceCard({
   const borderClass = rarityBorderClass(inst.rarity);
   const textClass = rarityTextClass(inst.rarity);
 
+  const handlePointerDown = (e: PointerEvent) => {
+    if (e.button !== 0 && e.pointerType !== 'touch') return;
+    e.preventDefault();
+    onPointerDown(e, inst, e.currentTarget as HTMLElement);
+  };
+
   const showTooltip = (e: MouseEvent) => {
     const el = e.currentTarget as HTMLElement;
     const r = el.getBoundingClientRect();
@@ -203,7 +217,8 @@ function InstanceCard({
   return (
     <div
       data-instance-item={inst.instanceId}
-      class={`flex select-none flex-col items-center gap-2 rounded border-2 ${borderClass} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10`}
+      class={`flex cursor-grab select-none flex-col items-center gap-2 rounded border-2 ${borderClass} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10${isDragging ? ' opacity-30' : ''}`}
+      onPointerDown={handlePointerDown}
       onContextMenu={(e) => e.preventDefault()}
       onMouseEnter={showTooltip}
       onMouseLeave={() => onTooltipHide(tooltipKey)}
@@ -234,6 +249,13 @@ function InstanceCard({
       </div>
     </div>
   );
+}
+
+/** EquipmentSlot indexes that are the "second" of a two-slot pair. */
+const SUB_LOC_1_SLOTS = new Set([10, 12, 14]);
+
+function subLocForSlot(slot: number): number {
+  return SUB_LOC_1_SLOTS.has(slot) ? 1 : 0;
 }
 
 type Props = {
@@ -290,10 +312,12 @@ export function InventoryGrid({ itemIds }: Props) {
   }, [client, itemIds, currentDrag]);
 
   const visibleInstances = useMemo((): InstanceItem[] => {
-    const all = client.instanceController.list();
+    // Inventory grid only shows un-equipped instances; equipped ones
+    // live on the paperdoll.
+    const all = client.instanceController.inventoryList();
     return itemIds ? all.filter((i) => itemIds.includes(i.baseItemId)) : all;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, itemIds]);
+  }, [client, itemIds, currentDrag]);
 
   const itemsByTab = useMemo(() => {
     const buckets: Item[][] = Array.from(
@@ -467,6 +491,47 @@ export function InventoryGrid({ itemIds }: Props) {
     [client, locale, startDrag],
   );
 
+  const handleInstancePointerDown = useCallback(
+    (e: PointerEvent, inst: InstanceItem, target: HTMLElement) => {
+      const rect = target.getBoundingClientRect();
+      const record = client.getEifRecordById(inst.baseItemId);
+      const graphicId = record?.graphicId ?? 0;
+      playSfxById(SfxId.InventoryPickup);
+      setTooltip(null);
+      startDrag({
+        element: target,
+        info: {
+          source: 'inventory',
+          itemId: inst.baseItemId,
+          instanceId: inst.instanceId,
+          pointerId: e.pointerId,
+          ghostX: e.clientX,
+          ghostY: e.clientY,
+          offsetX: e.clientX - rect.left,
+          offsetY: e.clientY - rect.top,
+          graphicId,
+          ghostWidth: CARD_SIZE_PX,
+          ghostHeight: CARD_SIZE_PX,
+        },
+        onResolve: (result) => {
+          playSfxById(SfxId.InventoryPlace);
+          if (result.type === 'cancelled') return;
+          if (result.type === 'equip-slot') {
+            client.instanceController.sendEquip(
+              inst.instanceId,
+              subLocForSlot(result.slot),
+            );
+          }
+          // Other drop targets (chest / locker / trade / junk / drop /
+          // ground) are stackable-only for Slice 2; instance trade /
+          // chest / locker land in Slice 3 and dropping rolled gear
+          // back onto the ground would need a roll-time policy call.
+        },
+      });
+    },
+    [client, startDrag],
+  );
+
   const onTooltipShow = useCallback((key: string, x: number, y: number) => {
     setTooltip({ key, x, y });
   }, []);
@@ -597,6 +662,11 @@ export function InventoryGrid({ itemIds }: Props) {
                   <InstanceCard
                     key={inst.instanceId}
                     inst={inst}
+                    isDragging={
+                      currentDrag?.source === 'inventory' &&
+                      currentDrag?.instanceId === inst.instanceId
+                    }
+                    onPointerDown={handleInstancePointerDown}
                     onTooltipShow={onTooltipShow}
                     onTooltipHide={onTooltipHide}
                   />

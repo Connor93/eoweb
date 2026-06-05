@@ -22,6 +22,7 @@ import type { InstanceItem, InstanceMod, InstanceRarity } from '@/controllers';
  */
 const FAMILY_INSTANCE = 54;
 const INSTANCE_ID_LEN = 36;
+const EQUIPPED_SENTINEL_INVENTORY = 252;
 
 function parseInstanceList(reader: EoReader): InstanceItem[] {
   const count = reader.getShort();
@@ -31,6 +32,9 @@ function parseInstanceList(reader: EoReader): InstanceItem[] {
     const baseItemId = reader.getShort();
     const rarity = reader.getChar() as InstanceRarity;
     const level = reader.getChar();
+    const equippedRaw = reader.getChar();
+    const equippedSlot =
+      equippedRaw === EQUIPPED_SENTINEL_INVENTORY ? -1 : equippedRaw;
     const modCount = reader.getChar();
     const mods: InstanceMod[] = [];
     for (let j = 0; j < modCount; j++) {
@@ -40,7 +44,14 @@ function parseInstanceList(reader: EoReader): InstanceItem[] {
       const valueX100 = reader.getInt();
       mods.push({ modId, value: valueX100 / 100 });
     }
-    entries.push({ instanceId, baseItemId, rarity, level, mods });
+    entries.push({
+      instanceId,
+      baseItemId,
+      rarity,
+      level,
+      equippedSlot,
+      mods,
+    });
   }
   return entries;
 }
