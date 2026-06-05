@@ -11,17 +11,25 @@ import {
 import type { Client } from '@/client';
 import { EOResourceID } from '@/edf';
 import { SfxId } from '@/sfx';
+import type { InstanceItem } from './instance-controller';
 
 type OpenedSubscriber = (items: ThreeItem[]) => void;
 type ChangedSubscriber = (items: ThreeItem[]) => void;
+type InstancesSubscriber = (instances: InstanceItem[]) => void;
 
 export class ChestController {
   private client: Client;
   chestCoords = new Coords();
   items: ThreeItem[] = [];
+  /** Rolled-mod items currently sitting in the open chest. Populated
+   *  by INSTANCE_CHEST_LIST (family 54 / action Open) — pushed to the
+   *  opener and rebroadcast to anyone within client range after every
+   *  deposit / take. */
+  instances: InstanceItem[] = [];
 
   private openedSubscribers: OpenedSubscriber[] = [];
   private changedSubscribers: ChangedSubscriber[] = [];
+  private instancesSubscribers: InstancesSubscriber[] = [];
 
   constructor(client: Client) {
     this.client = client;
@@ -51,6 +59,21 @@ export class ChestController {
   handleChanged(items: ThreeItem[]): void {
     this.items = items;
     for (const cb of this.changedSubscribers) cb(items);
+  }
+
+  subscribeInstancesChanged(cb: InstancesSubscriber): void {
+    this.instancesSubscribers.push(cb);
+  }
+
+  unsubscribeInstancesChanged(cb: InstancesSubscriber): void {
+    this.instancesSubscribers = this.instancesSubscribers.filter(
+      (s) => s !== cb,
+    );
+  }
+
+  handleInstancesUpdated(instances: InstanceItem[]): void {
+    this.instances = instances;
+    for (const cb of this.instancesSubscribers) cb(instances);
   }
 
   openChest(coords: { x: number; y: number }): void {

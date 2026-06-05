@@ -152,6 +152,26 @@ export class InstanceController {
     );
   }
 
+  sendChestDeposit(instanceId: string): void {
+    const writer = new EoWriter();
+    writer.addBytes(this.encodeInstanceId(instanceId));
+    this.client.bus?.sendBuf(
+      FAMILY_INSTANCE as PacketFamily,
+      PacketAction.Use,
+      writer.toByteArray(),
+    );
+  }
+
+  sendChestTake(instanceId: string): void {
+    const writer = new EoWriter();
+    writer.addBytes(this.encodeInstanceId(instanceId));
+    this.client.bus?.sendBuf(
+      FAMILY_INSTANCE as PacketFamily,
+      PacketAction.Buy,
+      writer.toByteArray(),
+    );
+  }
+
   subscribeChanged(cb: InstanceChangedSubscriber): void {
     this.changedSubscribers.push(cb);
   }

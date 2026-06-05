@@ -68,10 +68,53 @@ function handleInstanceList(client: Client, reader: EoReader) {
   client.instanceController.setItems(entries);
 }
 
+/** Parses a `ChestInstanceListServerPacket` (family 54 / action Open).
+ *  Same per-entry shape as INSTANCE_LIST minus the location byte —
+ *  chest contents are inherently floor-pile state. */
+function parseChestInstanceList(reader: EoReader): InstanceItem[] {
+  const count = reader.getShort();
+  const entries: InstanceItem[] = [];
+  for (let i = 0; i < count; i++) {
+    const instanceId = reader.getFixedString(INSTANCE_ID_LEN).trim();
+    const baseItemId = reader.getShort();
+    const rarity = reader.getChar() as InstanceRarity;
+    const level = reader.getChar();
+    const modCount = reader.getChar();
+    const mods: InstanceMod[] = [];
+    for (let j = 0; j < modCount; j++) {
+      const modIdLen = reader.getChar();
+      const modIdBytes = reader.getBytes(modIdLen);
+      const modId = new TextDecoder().decode(new Uint8Array(modIdBytes));
+      const valueX100 = reader.getInt();
+      mods.push({ modId, value: valueX100 / 100 });
+    }
+    entries.push({
+      instanceId,
+      baseItemId,
+      rarity,
+      level,
+      equippedSlot: -1,
+      inLocker: false,
+      mods,
+    });
+  }
+  return entries;
+}
+
+function handleChestInstanceList(client: Client, reader: EoReader) {
+  const entries = parseChestInstanceList(reader);
+  client.chestController.handleInstancesUpdated(entries);
+}
+
 export function registerInstanceHandlers(client: Client) {
   client.bus!.registerPacketHandler(
     FAMILY_INSTANCE as PacketFamily,
     PacketAction.List,
     (reader) => handleInstanceList(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_INSTANCE as PacketFamily,
+    PacketAction.Open,
+    (reader) => handleChestInstanceList(client, reader),
   );
 }
