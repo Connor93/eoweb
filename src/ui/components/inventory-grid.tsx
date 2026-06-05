@@ -7,7 +7,15 @@ import {
   useRef,
   useState,
 } from 'preact/hooks';
+import type { IconType } from 'react-icons';
 import { FaCoins, FaTrash } from 'react-icons/fa';
+import {
+  GiBroadsword,
+  GiCubes,
+  GiHealthPotion,
+  GiScrollQuill,
+  GiShield,
+} from 'react-icons/gi';
 import { GOLD_ITEM_ID } from '@/consts';
 import { playSfxById, SfxId } from '@/sfx';
 import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
@@ -21,7 +29,14 @@ import {
   inventoryTabForItemType,
 } from '@/utils';
 import { ItemIcon } from './item-icon';
-import { Tabs } from './tabs';
+
+const TAB_ICONS: IconType[] = [
+  GiBroadsword,
+  GiShield,
+  GiHealthPotion,
+  GiCubes,
+  GiScrollQuill,
+];
 
 const DOUBLE_TAP_MS = 250;
 const CARD_SIZE_PX = 56;
@@ -366,42 +381,79 @@ export function InventoryGrid({ itemIds }: Props) {
         </div>
       </div>
 
-      {/* Tabs — auto-derived from item type, not drop targets */}
-      <Tabs
-        name='inventory-tabs'
-        items={TAB_LABELS.map((label, index) => ({
-          id: index.toString(),
-          label: `${label} (${tabCounts[index]})`,
-        }))}
-        activeId={activeTab.toString()}
-        onSelect={(id) => setActiveTab(Number(id) as InventoryTab)}
-        style='border'
-        size='sm'
-      />
+      {/* Side tabs + bordered item panel */}
+      <div class='flex gap-1'>
+        <div
+          role='tablist'
+          aria-orientation='vertical'
+          class='flex flex-col gap-1'
+        >
+          {TAB_LABELS.map((label, index) => {
+            const Icon = TAB_ICONS[index];
+            const isActive = index === activeTab;
+            return (
+              <button
+                key={label}
+                type='button'
+                role='tab'
+                aria-selected={isActive}
+                aria-label={`${label} (${tabCounts[index]})`}
+                title={label}
+                onClick={() => setActiveTab(index as InventoryTab)}
+                class={`flex h-11 w-11 flex-col items-center justify-center rounded border transition-colors ${
+                  isActive
+                    ? `${UI_PANEL_BORDER} bg-primary/20 text-primary`
+                    : `${UI_PANEL_BORDER} ${UI_ITEM_BG} text-base-content/70 hover:bg-base-content/10`
+                }`}
+              >
+                <Icon size={16} />
+                <span class='text-[10px] tabular-nums leading-tight'>
+                  {tabCounts[index]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-      {/* Card grid for active tab */}
-      <div class='max-h-72 min-h-24 overflow-y-auto p-2'>
-        {activeItems.length === 0 ? (
-          <p class='py-4 text-center text-sm opacity-50'>
-            {locale.inventory.empty}
-          </p>
-        ) : (
-          <div class='grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4'>
-            {activeItems.map((item) => (
-              <InventoryItemCard
-                key={item.id}
-                item={item}
-                isDragging={
-                  currentDrag?.source === 'inventory' &&
-                  currentDrag.itemId === item.id
-                }
-                onPointerDown={handleItemPointerDown}
-                onTooltipShow={onTooltipShow}
-                onTooltipHide={onTooltipHide}
-              />
-            ))}
+        <div
+          class={`flex max-h-72 min-h-48 flex-1 flex-col overflow-hidden rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG}`}
+        >
+          <div
+            class={`flex items-center gap-1 border-b ${UI_PANEL_BORDER} px-2 py-1 text-xs`}
+          >
+            {(() => {
+              const Icon = TAB_ICONS[activeTab];
+              return <Icon size={11} />;
+            })()}
+            <span class='font-semibold'>{TAB_LABELS[activeTab]}</span>
+            <span class='ml-auto tabular-nums opacity-60'>
+              {tabCounts[activeTab]}
+            </span>
           </div>
-        )}
+          <div class='flex-1 overflow-y-auto p-2'>
+            {activeItems.length === 0 ? (
+              <p class='py-4 text-center text-sm opacity-50'>
+                {locale.inventory.empty}
+              </p>
+            ) : (
+              <div class='grid grid-cols-2 gap-2 lg:grid-cols-3'>
+                {activeItems.map((item) => (
+                  <InventoryItemCard
+                    key={item.id}
+                    item={item}
+                    isDragging={
+                      currentDrag?.source === 'inventory' &&
+                      currentDrag.itemId === item.id
+                    }
+                    onPointerDown={handleItemPointerDown}
+                    onTooltipShow={onTooltipShow}
+                    onTooltipHide={onTooltipHide}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Tooltip portal — avoids scroll/clip issues inside dialogs */}
