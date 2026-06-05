@@ -15,6 +15,7 @@ import {
   BarberDialog,
   BardDialog,
   BoardDialog,
+  BossTracker,
   CharacterDialog,
   ChatDialog,
   ChatLogDialog,
@@ -318,9 +319,12 @@ function InGameContent() {
       </div>
       {/* Upper-right overlay region */}
       <div
-        class='pointer-events-none absolute top-18 right-1 flex flex-col items-end lg:top-9'
+        class='pointer-events-none absolute top-18 right-1 flex flex-col items-end gap-1 lg:top-9'
         style={{ zIndex: HUD_Z }}
       >
+        <div class='pointer-events-auto'>
+          <BossTracker />
+        </div>
         <div class='pointer-events-auto'>
           <QuestTracker />
         </div>

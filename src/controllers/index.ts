@@ -9,6 +9,7 @@ export { BankController } from './bank-controller';
 export { BarberController } from './barber-controller';
 export { BardController } from './bard-controller';
 export { BoardController } from './board-controller';
+export { BossController, type BossInfo } from './boss-controller';
 export { ChatController } from './chat-controller';
 export { ChestController } from './chest-controller';
 export { CleanupController } from './cleanup-controller';

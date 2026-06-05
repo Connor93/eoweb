@@ -6,6 +6,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 EOWeb is a browser-based client for Endless Online (EO), a classic 2D MMORPG using the 0.0.28 protocol. It renders an isometric game world using Pixi.js and overlays a Preact UI.
 
+## Documentation & planning live in the Obsidian vault
+
+**Source of truth:** `~/Documents/TBD/Endless Server (Name TBD)/`
+
+All architecture docs, feature plans, and design decisions for this project live in that vault — **not** in this repo. The repo carries code; the vault carries intent. Specifically:
+
+- `Web Client/Documentation/` — client architecture and subsystem notes
+- `Web Client/Planning/` — client-side planning notes (e.g. `Pub Swaps.md`)
+- `General/Documentation/` — cross-cutting notes (top-level `Architecture.md` is the index)
+- `General/Documentation/Planning/` — cross-cutting feature plans (e.g. `Feature Ideas (Gameplay).md`)
+
+The companion server lives in `~/Projects/reoserv/`; its planning notes are at `Server/Planning/` in the same vault — read those when the work crosses the client/server boundary.
+
+### Workflow rules — apply every task
+
+**Before starting work:**
+
+1. Read the vault note(s) relevant to the task. The user may have hand-edited them since the last session; treat the vault as authoritative over anything you remember.
+2. Confirm with the user what you're working on if it isn't obvious from the task. Don't guess scope.
+
+**While working:**
+
+3. If the task involves design decisions, **write the plan into the vault** under the appropriate `Planning/` folder rather than only laying it out in chat. The plan should survive the session.
+4. Use Obsidian conventions when writing: inline `#tags`, `[[Wikilinks]]`, sentence-case filenames, Mermaid for diagrams. Match the style of existing notes.
+
+**After finishing:**
+
+5. Update the relevant vault note(s) to reflect what actually changed — new behavior, removed code, decisions made along the way. If a note now contradicts the code, fix the note.
+6. If repo-level changes affect anything documented in this `CLAUDE.md` or in a vault doc, update both.
+
+If you're unsure which note to update, ask before writing — the user reorganizes the vault manually and may have a specific home in mind.
+
 ## Commands
 
 ```bash

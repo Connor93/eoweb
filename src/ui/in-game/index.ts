@@ -32,6 +32,7 @@ export { SocialDialog } from './dialogs/social-dialog';
 export { SpellsDialog } from './dialogs/spells-dialog';
 export { TradeDialog } from './dialogs/trade-dialog';
 // HUD components
+export { BossTracker } from './hud/boss-tracker';
 export { DesktopEmoteButton } from './hud/desktop-emote-button';
 export { HotBar } from './hud/hot-bar';
 export { MobileNav, NavSidebar } from './hud/nav-sidebar';

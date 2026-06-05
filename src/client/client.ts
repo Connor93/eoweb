@@ -43,6 +43,7 @@ import {
   BarberController,
   BardController,
   BoardController,
+  BossController,
   ChatController,
   ChestController,
   CleanupController,
@@ -184,6 +185,7 @@ export class Client {
   bardController: BardController;
   barberController: BarberController;
   boardController: BoardController;
+  bossController: BossController;
   chatController: ChatController;
   chestController: ChestController;
   cleanupController: CleanupController;
@@ -325,6 +327,7 @@ export class Client {
     this.bardController = new BardController(this);
     this.barberController = new BarberController(this);
     this.boardController = new BoardController(this);
+    this.bossController = new BossController(this);
     this.chatController = new ChatController(this);
     this.chestController = new ChestController(this);
     this.cleanupController = new CleanupController(this);

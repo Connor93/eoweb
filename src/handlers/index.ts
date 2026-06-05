@@ -7,6 +7,7 @@ import { registerAvatarHandlers } from './avatar';
 import { registerBankHandlers } from './bank';
 import { registerBarberHandlers } from './barber';
 import { registerBoardHandlers } from './board';
+import { registerBossHandlers } from './boss';
 import { registerCastHandlers } from './cast';
 import { registerChairHandlers } from './chair';
 import { registerCharacterHandlers } from './character';
@@ -91,4 +92,5 @@ export function registerAllHandlers(client: Client): void {
   registerJukeboxHandlers(client);
   registerMarriageHandlers(client);
   registerPriestHandlers(client);
+  registerBossHandlers(client);
 }
