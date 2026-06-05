@@ -505,10 +505,15 @@ export function InventoryGrid({ itemIds }: Props) {
       ];
       for (const m of inst.mods) {
         const sign = m.value >= 0 ? '+' : '';
-        const valStr =
-          Math.abs(m.value % 1) < 0.005
-            ? m.value.toFixed(0)
-            : m.value.toFixed(1);
+        // Mod values cover wide magnitudes (e.g. 0.04 magic-find vs 5.3
+        // fire-damage). Show enough precision for sub-1 fractions
+        // without forcing trailing zeros on whole numbers.
+        const abs = Math.abs(m.value);
+        let valStr: string;
+        if (abs === 0) valStr = '0';
+        else if (abs < 0.1) valStr = m.value.toFixed(2);
+        else if (Math.abs(m.value % 1) < 0.005) valStr = m.value.toFixed(0);
+        else valStr = m.value.toFixed(1);
         lines.push(`${sign}${valStr} ${m.modId}`);
       }
       return lines;
