@@ -1,4 +1,4 @@
-import { ItemType, type ThreeItem } from 'eolib';
+import type { ThreeItem } from 'eolib';
 import { createPortal } from 'preact/compat';
 import {
   useCallback,
@@ -7,7 +7,14 @@ import {
   useRef,
   useState,
 } from 'preact/hooks';
-import { FaFilter, FaSearch } from 'react-icons/fa';
+import type { IconType } from 'react-icons';
+import {
+  GiBroadsword,
+  GiCubes,
+  GiHealthPotion,
+  GiScrollQuill,
+  GiShield,
+} from 'react-icons/gi';
 import {
   type InstanceItem,
   InstanceRarity,
@@ -18,8 +25,21 @@ import { ItemIcon } from '@/ui/components';
 import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { useItemDrag } from '@/ui/in-game';
-import { getItemMeta } from '@/utils';
+import {
+  getItemMeta,
+  INVENTORY_TAB_COUNT,
+  InventoryTab,
+  inventoryTabForItemType,
+} from '@/utils';
 import { DialogBase } from './dialog-base';
+
+const TAB_ICONS: IconType[] = [
+  GiBroadsword,
+  GiShield,
+  GiHealthPotion,
+  GiCubes,
+  GiScrollQuill,
+];
 
 function rarityBorderClass(r: InstanceRarity): string {
   switch (r) {
@@ -56,83 +76,28 @@ function formatModValue(v: number): string {
   return `${sign}${v.toFixed(1)}`;
 }
 
-// ---------------------------------------------------------------------------
-// Item type filter categories
-// ---------------------------------------------------------------------------
-
-type FilterCategory =
-  | 'all'
-  | 'weapon'
-  | 'armor'
-  | 'accessory'
-  | 'consumable'
-  | 'other';
-
-const WEAPON_TYPES = new Set([ItemType.Weapon]);
-
-const ARMOR_TYPES = new Set([
-  ItemType.Armor,
-  ItemType.Hat,
-  ItemType.Boots,
-  ItemType.Gloves,
-  ItemType.Belt,
-  ItemType.Shield,
-]);
-
-const ACCESSORY_TYPES = new Set([
-  ItemType.Accessory,
-  ItemType.Ring,
-  ItemType.Armlet,
-  ItemType.Bracer,
-  ItemType.Necklace,
-]);
-
-const CONSUMABLE_TYPES = new Set([
-  ItemType.Heal,
-  ItemType.Alcohol,
-  ItemType.EffectPotion,
-  ItemType.CureCurse,
-  ItemType.Teleport,
-  ItemType.ExpReward,
-  ItemType.HairDye,
-]);
-
-function getCategory(type: ItemType): FilterCategory {
-  if (WEAPON_TYPES.has(type)) return 'weapon';
-  if (ARMOR_TYPES.has(type)) return 'armor';
-  if (ACCESSORY_TYPES.has(type)) return 'accessory';
-  if (CONSUMABLE_TYPES.has(type)) return 'consumable';
-  return 'other';
-}
-
-// ---------------------------------------------------------------------------
-// Single locker item card (shop-style: icon + name + amount)
-// ---------------------------------------------------------------------------
-
-type LockerItemSlotProps = {
+type StackableLockerCardProps = {
   item: ThreeItem;
   onTake: (itemId: number) => void;
+  onTooltipShow: (key: string, x: number, y: number) => void;
+  onTooltipHide: (key: string) => void;
 };
 
-function LockerItemSlot({ item, onTake }: LockerItemSlotProps) {
+function StackableLockerCard({
+  item,
+  onTake,
+  onTooltipShow,
+  onTooltipHide,
+}: StackableLockerCardProps) {
   const client = useClient();
   const { locale } = useLocale();
   const record = client.getEifRecordById(item.id);
   const graphicId = record?.graphicId ?? null;
-
-  const [tooltip, setTooltip] = useState<{ x: number; y: number } | null>(null);
-  const slotRef = useRef<HTMLDivElement>(null);
-  const lastTapRef = useRef(0);
-
   const name =
     record?.name ??
     locale.shared.itemFallbackName.replace('{id}', String(item.id));
-
-  const tooltipLines = (() => {
-    if (!record) return [];
-    const meta = getItemMeta(record);
-    return [`${record.name} x${item.amount.toLocaleString()}`, ...meta];
-  })();
+  const tooltipKey = `stack:${item.id}`;
+  const lastTapRef = useRef(0);
 
   const handlePointerDown = useCallback(
     (e: PointerEvent) => {
@@ -140,21 +105,10 @@ function LockerItemSlot({ item, onTake }: LockerItemSlotProps) {
         const now = Date.now();
         if (now - lastTapRef.current < 300) {
           lastTapRef.current = 0;
-          setTooltip(null);
           onTake(item.id);
           return;
         }
         lastTapRef.current = now;
-        const el = slotRef.current;
-        if (el) {
-          const r = el.getBoundingClientRect();
-          const x =
-            r.right + 4 + 200 > window.innerWidth
-              ? r.left - 4 - 200
-              : r.right + 4;
-          const y = Math.min(Math.max(r.top, 4), window.innerHeight - 80);
-          setTooltip({ x, y });
-        }
         return;
       }
       if (e.button === 0 || e.button === 2) {
@@ -170,17 +124,16 @@ function LockerItemSlot({ item, onTake }: LockerItemSlotProps) {
     const x =
       r.right + 4 + 200 > window.innerWidth ? r.left - 4 - 200 : r.right + 4;
     const y = Math.min(Math.max(r.top, 4), window.innerHeight - 80);
-    setTooltip({ x, y });
+    onTooltipShow(tooltipKey, x, y);
   };
 
   return (
     <div
-      ref={slotRef}
       class={`flex cursor-pointer select-none flex-col items-center gap-2 rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10 active:bg-base-content/15`}
       onPointerDown={handlePointerDown}
       onContextMenu={(e) => e.preventDefault()}
       onMouseEnter={showTooltip}
-      onMouseLeave={() => setTooltip(null)}
+      onMouseLeave={() => onTooltipHide(tooltipKey)}
     >
       <div
         class={`flex h-14 w-14 items-center justify-center overflow-hidden rounded border ${UI_PANEL_BORDER} bg-base-300 p-1.5 lg:h-16 lg:w-16`}
@@ -190,6 +143,7 @@ function LockerItemSlot({ item, onTake }: LockerItemSlotProps) {
         ) : (
           <ItemIcon
             graphicId={graphicId}
+            alt={name}
             class='h-10 w-10 object-contain lg:h-12 lg:w-12'
           />
         )}
@@ -202,100 +156,23 @@ function LockerItemSlot({ item, onTake }: LockerItemSlotProps) {
           x{item.amount.toLocaleString()}
         </span>
       </div>
-
-      {/* Tooltip portal */}
-      {tooltip &&
-        tooltipLines.length > 0 &&
-        createPortal(
-          <div
-            class='pointer-events-none w-max max-w-48 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
-            style={{
-              position: 'fixed',
-              left: tooltip.x,
-              top: tooltip.y,
-              zIndex: 9999,
-            }}
-          >
-            {tooltipLines.map((line, i) => (
-              <div key={i} class={i === 0 ? 'font-semibold' : 'opacity-70'}>
-                {line}
-              </div>
-            ))}
-          </div>,
-          document.getElementById('ui') ?? document.body,
-        )}
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// LockerDialog
-// ---------------------------------------------------------------------------
-
-const FILTER_CATEGORIES: FilterCategory[] = [
-  'all',
-  'weapon',
-  'armor',
-  'accessory',
-  'consumable',
-  'other',
-];
-
-function useCategoryLabel(category: FilterCategory) {
-  const { locale } = useLocale();
-  switch (category) {
-    case 'all':
-      return locale.locker.filterAll;
-    case 'weapon':
-      return locale.locker.filterWeapon;
-    case 'armor':
-      return locale.locker.filterArmor;
-    case 'accessory':
-      return locale.locker.filterAccessory;
-    case 'consumable':
-      return locale.locker.filterConsumable;
-    case 'other':
-      return locale.locker.filterOther;
-  }
-}
-
-function FilterPill({
-  category,
-  active,
-  count,
-  onClick,
-}: {
-  category: FilterCategory;
-  active: boolean;
-  count: number;
-  onClick: () => void;
-}) {
-  const label = useCategoryLabel(category);
-  return (
-    <button
-      type='button'
-      class={`rounded-full px-2 py-0.5 text-xs transition-colors ${
-        active
-          ? 'bg-primary text-primary-content'
-          : 'bg-base-content/10 hover:bg-base-content/20'
-      }`}
-      onClick={() => {
-        playSfxById(SfxId.ButtonClick);
-        onClick();
-      }}
-    >
-      {label}
-      <span class='ml-1 opacity-60'>({count})</span>
-    </button>
-  );
-}
-
-type InstanceSlotProps = {
+type InstanceLockerCardProps = {
   inst: InstanceItem;
   onTake: (instanceId: string) => void;
+  onTooltipShow: (key: string, x: number, y: number) => void;
+  onTooltipHide: (key: string) => void;
 };
 
-function InstanceLockerSlot({ inst, onTake }: InstanceSlotProps) {
+function InstanceLockerCard({
+  inst,
+  onTake,
+  onTooltipShow,
+  onTooltipHide,
+}: InstanceLockerCardProps) {
   const client = useClient();
   const { locale } = useLocale();
   const record = client.getEifRecordById(inst.baseItemId);
@@ -303,21 +180,8 @@ function InstanceLockerSlot({ inst, onTake }: InstanceSlotProps) {
   const name =
     record?.name ??
     locale.shared.itemFallbackName.replace('{id}', String(inst.baseItemId));
-
-  const [tooltip, setTooltip] = useState<{ x: number; y: number } | null>(null);
-  const slotRef = useRef<HTMLDivElement>(null);
+  const tooltipKey = `instance:${inst.instanceId}`;
   const lastTapRef = useRef(0);
-
-  const tooltipLines = (() => {
-    const lines = [
-      `${name} (${instanceRarityLabel(inst.rarity)})`,
-      `Level ${inst.level}`,
-    ];
-    for (const m of inst.mods) {
-      lines.push(`${formatModValue(m.value)} ${m.modId}`);
-    }
-    return lines;
-  })();
 
   const handlePointerDown = useCallback(
     (e: PointerEvent) => {
@@ -325,21 +189,10 @@ function InstanceLockerSlot({ inst, onTake }: InstanceSlotProps) {
         const now = Date.now();
         if (now - lastTapRef.current < 300) {
           lastTapRef.current = 0;
-          setTooltip(null);
           onTake(inst.instanceId);
           return;
         }
         lastTapRef.current = now;
-        const el = slotRef.current;
-        if (el) {
-          const r = el.getBoundingClientRect();
-          const x =
-            r.right + 4 + 200 > window.innerWidth
-              ? r.left - 4 - 200
-              : r.right + 4;
-          const y = Math.min(Math.max(r.top, 4), window.innerHeight - 80);
-          setTooltip({ x, y });
-        }
         return;
       }
       if (e.button === 0 || e.button === 2) {
@@ -355,17 +208,16 @@ function InstanceLockerSlot({ inst, onTake }: InstanceSlotProps) {
     const x =
       r.right + 4 + 240 > window.innerWidth ? r.left - 4 - 240 : r.right + 4;
     const y = Math.min(Math.max(r.top, 4), window.innerHeight - 100);
-    setTooltip({ x, y });
+    onTooltipShow(tooltipKey, x, y);
   };
 
   return (
     <div
-      ref={slotRef}
       class={`flex cursor-pointer select-none flex-col items-center gap-2 rounded border-2 ${rarityBorderClass(inst.rarity)} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10 active:bg-base-content/15`}
       onPointerDown={handlePointerDown}
       onContextMenu={(e) => e.preventDefault()}
       onMouseEnter={showTooltip}
-      onMouseLeave={() => setTooltip(null)}
+      onMouseLeave={() => onTooltipHide(tooltipKey)}
     >
       <div
         class={`flex h-14 w-14 items-center justify-center overflow-hidden rounded border ${UI_PANEL_BORDER} bg-base-300 p-1.5 lg:h-16 lg:w-16`}
@@ -375,6 +227,7 @@ function InstanceLockerSlot({ inst, onTake }: InstanceSlotProps) {
         ) : (
           <ItemIcon
             graphicId={graphicId}
+            alt={name}
             class='h-10 w-10 object-contain lg:h-12 lg:w-12'
           />
         )}
@@ -390,26 +243,6 @@ function InstanceLockerSlot({ inst, onTake }: InstanceSlotProps) {
           {inst.mods.length === 1 ? '' : 's'}
         </span>
       </div>
-
-      {tooltip &&
-        createPortal(
-          <div
-            class='pointer-events-none w-max max-w-56 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
-            style={{
-              position: 'fixed',
-              left: tooltip.x,
-              top: tooltip.y,
-              zIndex: 9999,
-            }}
-          >
-            {tooltipLines.map((line, i) => (
-              <div key={i} class={i === 0 ? 'font-semibold' : 'opacity-70'}>
-                {line}
-              </div>
-            ))}
-          </div>,
-          document.getElementById('ui') ?? document.body,
-        )}
     </div>
   );
 }
@@ -419,29 +252,36 @@ export function LockerDialog() {
   const { locale } = useLocale();
   const { currentDrag } = useItemDrag();
 
+  const [activeTab, setActiveTab] = useState<InventoryTab>(
+    InventoryTab.Weapons,
+  );
   const [items, setItems] = useState<ThreeItem[]>(
     () => client.lockerController.items,
   );
   const [instances, setInstances] = useState<InstanceItem[]>(() =>
     client.instanceController.lockerList(),
   );
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<FilterCategory>('all');
+  const [tooltip, setTooltip] = useState<{
+    key: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
   useEffect(() => {
-    const handleChanged = (newItems: ThreeItem[]) => setItems([...newItems]);
+    const handleItemsChanged = (next: ThreeItem[]) => setItems([...next]);
     const handleInstancesChanged = () =>
       setInstances([...client.instanceController.lockerList()]);
-    client.lockerController.subscribeChanged(handleChanged);
+    client.lockerController.subscribeChanged(handleItemsChanged);
     client.instanceController.subscribeChanged(handleInstancesChanged);
     return () => {
-      client.lockerController.unsubscribeChanged(handleChanged);
+      client.lockerController.unsubscribeChanged(handleItemsChanged);
       client.instanceController.unsubscribeChanged(handleInstancesChanged);
     };
   }, [client]);
 
-  const handleTake = useCallback(
+  const handleTakeStackable = useCallback(
     (itemId: number) => {
+      playSfxById(SfxId.InventoryPlace);
       client.lockerController.takeItem(itemId);
     },
     [client],
@@ -449,139 +289,214 @@ export function LockerDialog() {
 
   const handleTakeInstance = useCallback(
     (instanceId: string) => {
+      playSfxById(SfxId.InventoryPlace);
       client.instanceController.sendLockerTake(instanceId);
     },
     [client],
   );
 
-  // Filter instances by category + search like stackables.
-  const filteredInstances = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return instances.filter((inst) => {
-      const record = client.getEifRecordById(inst.baseItemId);
-      if (!record)
-        return filter === 'all' && (!q || String(inst.baseItemId).includes(q));
-      if (filter !== 'all' && getCategory(record.type) !== filter) return false;
-      if (q && !record.name?.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [instances, search, filter, client]);
-
-  // Count items per category (for filter pill badges); includes both
-  // stackables and instances so "Weapons (4)" matches what the player
-  // actually sees in the grid below.
-  const categoryCounts = useMemo(() => {
-    const counts: Record<FilterCategory, number> = {
-      all: items.length + instances.length,
-      weapon: 0,
-      armor: 0,
-      accessory: 0,
-      consumable: 0,
-      other: 0,
-    };
+  const itemsByTab = useMemo(() => {
+    const buckets: ThreeItem[][] = Array.from(
+      { length: INVENTORY_TAB_COUNT },
+      () => [],
+    );
     for (const item of items) {
       const record = client.getEifRecordById(item.id);
-      if (record) {
-        counts[getCategory(record.type)]++;
-      } else {
-        counts.other++;
-      }
+      const tab = record
+        ? inventoryTabForItemType(record.type)
+        : InventoryTab.Materials;
+      buckets[tab].push(item);
     }
+    return buckets;
+  }, [items, client]);
+
+  const instancesByTab = useMemo(() => {
+    const buckets: InstanceItem[][] = Array.from(
+      { length: INVENTORY_TAB_COUNT },
+      () => [],
+    );
     for (const inst of instances) {
       const record = client.getEifRecordById(inst.baseItemId);
-      if (record) {
-        counts[getCategory(record.type)]++;
-      } else {
-        counts.other++;
-      }
+      const tab = record
+        ? inventoryTabForItemType(record.type)
+        : InventoryTab.Materials;
+      buckets[tab].push(inst);
     }
-    return counts;
-  }, [items, instances, client]);
+    for (const bucket of buckets) {
+      bucket.sort((a, b) => b.rarity - a.rarity || b.level - a.level);
+    }
+    return buckets;
+  }, [instances, client]);
 
-  const filteredItems = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return items.filter((item) => {
-      const record = client.getEifRecordById(item.id);
-      if (!record)
-        return filter === 'all' && (!q || String(item.id).includes(q));
-      if (filter !== 'all' && getCategory(record.type) !== filter) return false;
-      if (q && !record.name?.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [items, search, filter, client]);
+  const tabCounts = itemsByTab.map(
+    (b, i) => b.length + instancesByTab[i].length,
+  );
+  const activeItems = itemsByTab[activeTab];
+  const activeInstances = instancesByTab[activeTab];
+  const isEmpty = activeItems.length === 0 && activeInstances.length === 0;
+
+  const onTooltipShow = useCallback((key: string, x: number, y: number) => {
+    setTooltip({ key, x, y });
+  }, []);
+
+  const onTooltipHide = useCallback((key: string) => {
+    setTooltip((t) => (t?.key === key ? null : t));
+  }, []);
+
+  const TAB_LABELS = [
+    locale.inventory.tabWeapons,
+    locale.inventory.tabArmor,
+    locale.inventory.tabConsumables,
+    locale.inventory.tabMaterials,
+    locale.inventory.tabQuestItems,
+  ];
 
   const isDragTarget = !!currentDrag && currentDrag.source === 'inventory';
 
+  const getTooltipLines = (key: string): string[] => {
+    if (key.startsWith('stack:')) {
+      const id = Number(key.slice(6));
+      const item = items.find((i) => i.id === id);
+      const record = item ? client.getEifRecordById(item.id) : undefined;
+      if (!item || !record) return [];
+      const meta = getItemMeta(record);
+      const qty = item.amount > 0 ? ` x${item.amount.toLocaleString()}` : '';
+      return [record.name + qty, ...meta];
+    }
+    if (key.startsWith('instance:')) {
+      const id = key.slice(9);
+      const inst = instances.find((i) => i.instanceId === id);
+      if (!inst) return [];
+      const record = client.getEifRecordById(inst.baseItemId);
+      const name = record?.name ?? `Item ${inst.baseItemId}`;
+      const lines = [
+        `${name} (${instanceRarityLabel(inst.rarity)})`,
+        `Level ${inst.level}`,
+      ];
+      for (const m of inst.mods) {
+        lines.push(`${formatModValue(m.value)} ${m.modId}`);
+      }
+      return lines;
+    }
+    return [];
+  };
+
   return (
-    <DialogBase id='locker' title={locale.locker.title} size='md'>
-      {/* Search + filter bar */}
-      <div
-        class={`flex flex-col gap-1 ${UI_PANEL_BORDER} border-b px-2 pt-1 pb-2`}
-      >
-        <label class='input input-xs input-bordered flex items-center gap-2'>
-          <FaSearch size={10} />
-          <input
-            type='search'
-            placeholder={locale.locker.searchPlaceholder}
-            value={search}
-            onInput={(e) => setSearch((e.target as HTMLInputElement).value)}
-            onKeyDown={(e) => e.stopPropagation()}
-            class='grow'
-          />
-        </label>
-        <div class='flex items-center gap-1'>
-          <FaFilter size={10} />
-          <div class='flex flex-wrap gap-1'>
-            {FILTER_CATEGORIES.map((cat) => (
-              <FilterPill
-                key={cat}
-                category={cat}
-                active={filter === cat}
-                count={categoryCounts[cat]}
-                onClick={() => setFilter(cat)}
-              />
-            ))}
+    <DialogBase id='locker' title={locale.locker.title} size='md' avoidBottom>
+      <div class='flex flex-col gap-1'>
+        <div class='flex gap-1'>
+          <div
+            role='tablist'
+            aria-orientation='vertical'
+            class='flex flex-col gap-1'
+          >
+            {TAB_LABELS.map((label, index) => {
+              const Icon = TAB_ICONS[index];
+              const isActive = index === activeTab;
+              return (
+                <button
+                  key={label}
+                  type='button'
+                  role='tab'
+                  aria-selected={isActive}
+                  aria-label={`${label} (${tabCounts[index]})`}
+                  title={label}
+                  onClick={() => setActiveTab(index as InventoryTab)}
+                  class={`flex h-11 w-11 flex-col items-center justify-center rounded border transition-colors ${
+                    isActive
+                      ? `${UI_PANEL_BORDER} bg-primary/20 text-primary`
+                      : `${UI_PANEL_BORDER} ${UI_ITEM_BG} text-base-content/70 hover:bg-base-content/10`
+                  }`}
+                >
+                  <Icon size={16} />
+                  <span class='text-[10px] tabular-nums leading-tight'>
+                    {tabCounts[index]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div
+            data-locker-drop
+            class={`relative flex max-h-72 min-h-48 flex-1 flex-col overflow-hidden rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} transition-colors ${
+              isDragTarget ? 'outline-2 outline-primary/40 outline-dashed' : ''
+            }`}
+          >
+            <div
+              class={`flex items-center gap-1 border-b ${UI_PANEL_BORDER} px-2 py-1 text-xs`}
+            >
+              {(() => {
+                const Icon = TAB_ICONS[activeTab];
+                return <Icon size={11} />;
+              })()}
+              <span class='font-semibold'>{TAB_LABELS[activeTab]}</span>
+              <span class='ml-auto tabular-nums opacity-60'>
+                {tabCounts[activeTab]}
+              </span>
+            </div>
+            <div class='flex-1 overflow-y-auto p-2'>
+              {isEmpty ? (
+                <p class='py-4 text-center text-sm opacity-50'>
+                  {locale.locker.empty}
+                </p>
+              ) : (
+                <div class='grid grid-cols-2 gap-2 lg:grid-cols-3'>
+                  {activeInstances.map((inst) => (
+                    <InstanceLockerCard
+                      key={inst.instanceId}
+                      inst={inst}
+                      onTake={handleTakeInstance}
+                      onTooltipShow={onTooltipShow}
+                      onTooltipHide={onTooltipHide}
+                    />
+                  ))}
+                  {activeItems.map((item) => (
+                    <StackableLockerCard
+                      key={item.id}
+                      item={item}
+                      onTake={handleTakeStackable}
+                      onTooltipShow={onTooltipShow}
+                      onTooltipHide={onTooltipHide}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {isDragTarget && (
+              <div class='pointer-events-none absolute inset-0 flex items-center justify-center'>
+                <span class='rounded bg-primary/20 px-2 py-1 font-semibold text-primary text-xs'>
+                  {locale.locker.deposit}
+                </span>
+              </div>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Scrollable grid drop zone */}
-      <div
-        data-locker-drop
-        class={`relative max-h-72 min-h-24 overflow-y-auto p-2 transition-colors ${
-          isDragTarget
-            ? 'bg-primary/10 outline-dashed outline-2 outline-primary/40'
-            : ''
-        }`}
-      >
-        {filteredItems.length === 0 && filteredInstances.length === 0 ? (
-          <p class='py-4 text-center text-sm opacity-50'>
-            {items.length === 0 && instances.length === 0
-              ? locale.locker.empty
-              : locale.locker.filterAll}
-          </p>
-        ) : (
-          <div class='grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4'>
-            {filteredInstances.map((inst) => (
-              <InstanceLockerSlot
-                key={inst.instanceId}
-                inst={inst}
-                onTake={handleTakeInstance}
-              />
-            ))}
-            {filteredItems.map((item) => (
-              <LockerItemSlot key={item.id} item={item} onTake={handleTake} />
-            ))}
-          </div>
-        )}
-
-        {isDragTarget && (
-          <div class='pointer-events-none absolute inset-0 flex items-center justify-center'>
-            <span class='rounded bg-primary/20 px-2 py-1 font-semibold text-primary text-xs'>
-              {locale.locker.deposit}
-            </span>
-          </div>
-        )}
+        {tooltip &&
+          (() => {
+            const lines = getTooltipLines(tooltip.key);
+            if (!lines.length) return null;
+            return createPortal(
+              <div
+                class='pointer-events-none w-max max-w-56 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
+                style={{
+                  position: 'fixed',
+                  left: tooltip.x,
+                  top: tooltip.y,
+                  zIndex: 9999,
+                }}
+              >
+                {lines.map((line, i) => (
+                  <div key={i} class={i === 0 ? 'font-semibold' : 'opacity-70'}>
+                    {line}
+                  </div>
+                ))}
+              </div>,
+              document.getElementById('ui') ?? document.body,
+            );
+          })()}
       </div>
     </DialogBase>
   );
