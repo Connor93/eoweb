@@ -33,8 +33,11 @@ function readMod(reader: EoReader): InstanceMod {
   const nameBytes = reader.getBytes(nameLen);
   const name = new TextDecoder().decode(new Uint8Array(nameBytes));
   const kind = reader.getChar();
+  const targetLen = reader.getChar();
+  const targetBytes = reader.getBytes(targetLen);
+  const target = new TextDecoder().decode(new Uint8Array(targetBytes));
   const valueX100 = reader.getInt();
-  return { modId, name, kind, value: valueX100 / 100 };
+  return { modId, name, kind, target, value: valueX100 / 100 };
 }
 
 function parseInstanceList(reader: EoReader): InstanceItem[] {

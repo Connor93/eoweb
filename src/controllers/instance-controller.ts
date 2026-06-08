@@ -50,6 +50,10 @@ export interface InstanceMod {
    *  no longer in the pool. */
   name: string;
   kind: InstanceModKind;
+  /** snake_case StatTarget variant — e.g. `damage_dealt_fire`,
+   *  `magic_find`, `str`. The client prettifies this for display so
+   *  the player sees *what stat* the mod actually affects. */
+  target: string;
   value: number;
 }
 
