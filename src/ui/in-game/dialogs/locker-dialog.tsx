@@ -26,6 +26,7 @@ import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { useItemDrag } from '@/ui/in-game';
 import {
+  formatInstanceBaseStats,
   formatInstanceMod,
   getItemMeta,
   INVENTORY_TAB_COUNT,
@@ -365,6 +366,9 @@ export function LockerDialog() {
         `${name} (${instanceRarityLabel(inst.rarity)})`,
         `Level ${inst.level}`,
       ];
+      if (record) {
+        lines.push(...formatInstanceBaseStats(record, inst.level));
+      }
       for (const m of inst.mods) {
         lines.push(formatInstanceMod(m));
       }

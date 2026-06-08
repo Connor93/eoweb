@@ -28,6 +28,7 @@ import { useClient, useLocale } from '@/ui/context';
 import { SlotType } from '@/ui/enums';
 import { useItemDrag } from '@/ui/in-game';
 import {
+  formatInstanceBaseStats,
   formatInstanceMod,
   getItemMeta,
   INVENTORY_TAB_COUNT,
@@ -581,6 +582,9 @@ export function InventoryGrid({ itemIds }: Props) {
         `${name} (${instanceRarityLabel(inst.rarity)})`,
         `Level ${inst.level}`,
       ];
+      if (record) {
+        lines.push(...formatInstanceBaseStats(record, inst.level));
+      }
       for (const m of inst.mods) {
         lines.push(formatInstanceMod(m));
       }

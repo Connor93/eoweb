@@ -2,6 +2,7 @@ export { bigCoordsToCoords } from './big-coords-to-coords';
 export { getExpForLevel } from './calculate-tnl';
 export { capitalize } from './capitalize';
 export { formatBigNumber } from './format-big-number';
+export { formatInstanceBaseStats } from './format-instance-base-stats';
 export {
   type FormattableInstanceMod,
   formatInstanceMod,

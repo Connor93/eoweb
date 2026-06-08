@@ -14,6 +14,7 @@ import { useClient, useLocale } from '@/ui/context';
 import { useRawItemGfxUrl } from '@/ui/in-game';
 import {
   capitalize,
+  formatInstanceBaseStats,
   formatInstanceMod,
   getItemGraphicId,
   getItemMeta,
@@ -71,6 +72,9 @@ function TradeInstanceSlot({
       `${name} (${instanceRarityLabel(inst.rarity)})`,
       `Level ${inst.level}`,
     ];
+    if (record) {
+      lines.push(...formatInstanceBaseStats(record, inst.level));
+    }
     for (const m of inst.mods) {
       lines.push(formatInstanceMod(m));
     }

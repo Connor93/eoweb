@@ -16,7 +16,12 @@ import { ItemIcon } from '@/ui/components';
 import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { useItemDrag, useRawItemGfxUrl } from '@/ui/in-game';
-import { formatInstanceMod, getItemGraphicId, getItemMeta } from '@/utils';
+import {
+  formatInstanceBaseStats,
+  formatInstanceMod,
+  getItemGraphicId,
+  getItemMeta,
+} from '@/utils';
 import { DialogBase } from './dialog-base';
 
 function rarityBorderClass(r: InstanceRarity): string {
@@ -68,6 +73,9 @@ function ChestInstanceSlot({ inst, onTake }: ChestInstanceSlotProps) {
       `${name} (${instanceRarityLabel(inst.rarity)})`,
       `Level ${inst.level}`,
     ];
+    if (record) {
+      lines.push(...formatInstanceBaseStats(record, inst.level));
+    }
     for (const m of inst.mods) {
       lines.push(formatInstanceMod(m));
     }

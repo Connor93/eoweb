@@ -20,7 +20,12 @@ import { Button, ItemIcon, QuestBookList, Tabs } from '@/ui/components';
 import { UI_PANEL_BORDER, UI_STICKY_BG } from '@/ui/consts';
 import { useCharacterInfo, useClient, useLocale } from '@/ui/context';
 import { useBackdropBlur, useItemDrag, usePlayerStats } from '@/ui/in-game';
-import { capitalize, formatInstanceMod, getItemMeta } from '@/utils';
+import {
+  capitalize,
+  formatInstanceBaseStats,
+  formatInstanceMod,
+  getItemMeta,
+} from '@/utils';
 import { DialogBase } from './dialog-base';
 
 const EQUIP_CELL = 23;
@@ -51,6 +56,9 @@ function getInstanceTooltipLines(
     `${name} (${instanceRarityLabel(inst.rarity)})`,
     `Level ${inst.level}`,
   ];
+  if (record) {
+    lines.push(...formatInstanceBaseStats(record, inst.level));
+  }
   for (const m of inst.mods) {
     lines.push(formatInstanceMod(m));
   }
