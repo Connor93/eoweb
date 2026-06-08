@@ -2,6 +2,11 @@ import type { Item } from 'eolib';
 import { createPortal } from 'preact/compat';
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import { FaCheck, FaSearch, FaTimes } from 'react-icons/fa';
+import {
+  type InstanceItem,
+  InstanceRarity,
+  instanceRarityLabel,
+} from '@/controllers';
 import { formatLocaleString } from '@/locale';
 import { Button, ItemIcon } from '@/ui/components';
 import { UI_BLUR, UI_ITEM_BG, UI_MODAL_BG, UI_PANEL_BORDER } from '@/ui/consts';
@@ -9,6 +14,144 @@ import { useClient, useLocale } from '@/ui/context';
 import { useRawItemGfxUrl } from '@/ui/in-game';
 import { capitalize, getItemGraphicId, getItemMeta } from '@/utils';
 import { DialogBase } from './dialog-base';
+
+function rarityBorderClass(r: InstanceRarity): string {
+  switch (r) {
+    case InstanceRarity.Common:
+      return UI_PANEL_BORDER;
+    case InstanceRarity.Rare:
+      return 'border-info/70';
+    case InstanceRarity.Epic:
+      return 'border-secondary/70';
+    case InstanceRarity.Legendary:
+      return 'border-warning/70';
+  }
+}
+
+function rarityTextClass(r: InstanceRarity): string {
+  switch (r) {
+    case InstanceRarity.Common:
+      return 'text-base-content/70';
+    case InstanceRarity.Rare:
+      return 'text-info';
+    case InstanceRarity.Epic:
+      return 'text-secondary';
+    case InstanceRarity.Legendary:
+      return 'text-warning';
+  }
+}
+
+function formatModValue(v: number): string {
+  const sign = v >= 0 ? '+' : '';
+  const abs = Math.abs(v);
+  if (abs === 0) return '0';
+  if (abs < 0.1) return `${sign}${v.toFixed(2)}`;
+  if (Math.abs(v % 1) < 0.005) return `${sign}${v.toFixed(0)}`;
+  return `${sign}${v.toFixed(1)}`;
+}
+
+type TradeInstanceSlotProps = {
+  inst: InstanceItem;
+  onRemove?: (instanceId: string) => void;
+  showRemove?: boolean;
+};
+
+function TradeInstanceSlot({
+  inst,
+  onRemove,
+  showRemove = false,
+}: TradeInstanceSlotProps) {
+  const client = useClient();
+  const { locale } = useLocale();
+  const record = client.getEifRecordById(inst.baseItemId);
+  const graphicId = record?.graphicId ?? null;
+  const name =
+    record?.name ??
+    locale.shared.itemFallbackName.replace('{id}', String(inst.baseItemId));
+  const [tooltip, setTooltip] = useState<{ x: number; y: number } | null>(null);
+
+  const tooltipLines = (() => {
+    const lines = [
+      `${name} (${instanceRarityLabel(inst.rarity)})`,
+      `Level ${inst.level}`,
+    ];
+    for (const m of inst.mods) {
+      lines.push(`${formatModValue(m.value)} ${m.modId}`);
+    }
+    return lines;
+  })();
+
+  return (
+    <div
+      class={`relative flex flex-col items-center gap-1 rounded border-2 ${rarityBorderClass(inst.rarity)} ${UI_ITEM_BG} p-1`}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        const r = el.getBoundingClientRect();
+        const x =
+          r.right + 4 + 240 > window.innerWidth
+            ? r.left - 4 - 240
+            : r.right + 4;
+        const y = Math.min(Math.max(r.top, 4), window.innerHeight - 100);
+        setTooltip({ x, y });
+      }}
+      onMouseLeave={() => setTooltip(null)}
+    >
+      <div
+        class={`flex h-14 w-14 items-center justify-center overflow-hidden rounded border ${UI_PANEL_BORDER} bg-base-300 p-1.5 lg:h-16 lg:w-16`}
+      >
+        {graphicId === null ? (
+          <div class='h-10 w-10 rounded bg-base-content/10' />
+        ) : (
+          <ItemIcon
+            graphicId={graphicId}
+            class='h-10 w-10 object-contain lg:h-12 lg:w-12'
+          />
+        )}
+      </div>
+      <div class='flex w-full flex-col items-center gap-0.5'>
+        <span
+          class={`wrap-break-word line-clamp-2 w-full text-center font-medium text-xs leading-tight ${rarityTextClass(inst.rarity)}`}
+        >
+          {name}
+        </span>
+        <span class='text-[10px] tabular-nums opacity-60'>
+          Lv{inst.level} · {inst.mods.length} mod
+          {inst.mods.length === 1 ? '' : 's'}
+        </span>
+      </div>
+      {showRemove && onRemove && (
+        <button
+          type='button'
+          class='btn btn-circle btn-xs btn-error absolute top-1 right-1 flex h-6 min-h-6 w-6 items-center justify-center'
+          onClick={() => onRemove(inst.instanceId)}
+          aria-label={`Remove ${name}`}
+        >
+          <FaTimes size={10} />
+        </button>
+      )}
+      {tooltip &&
+        tooltipLines.length > 0 &&
+        createPortal(
+          <div
+            class='pointer-events-none w-max max-w-56 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
+            style={{
+              position: 'fixed',
+              left: tooltip.x,
+              top: tooltip.y,
+              zIndex: 9999,
+            }}
+          >
+            {tooltipLines.map((line, i) => (
+              <div key={i} class={i === 0 ? 'font-semibold' : 'opacity-70'}>
+                {line}
+              </div>
+            ))}
+          </div>,
+          document.getElementById('ui') ?? document.body,
+        )}
+    </div>
+  );
+}
 
 function getDisplayName(
   client: ReturnType<typeof useClient>,
@@ -267,8 +410,10 @@ export function TradeDialog() {
   const [state, setState] = useState({
     partnerName: tc.partnerName,
     partnerItems: tc.partnerItems,
+    partnerInstances: tc.partnerInstances,
     partnerAgreed: tc.partnerAgreed,
     playerItems: tc.playerItems,
+    playerInstances: tc.playerInstances,
     playerAgreed: tc.playerAgreed,
     scam: tc.scam,
   });
@@ -279,8 +424,10 @@ export function TradeDialog() {
       setState({
         partnerName: tc.partnerName,
         partnerItems: [...tc.partnerItems],
+        partnerInstances: [...tc.partnerInstances],
         partnerAgreed: tc.partnerAgreed,
         playerItems: [...tc.playerItems],
+        playerInstances: [...tc.playerInstances],
         playerAgreed: tc.playerAgreed,
         scam: tc.scam,
       });
@@ -324,6 +471,13 @@ export function TradeDialog() {
     [tc],
   );
 
+  const handleRemoveInstance = useCallback(
+    (instanceId: string) => {
+      client.instanceController.sendTradeRemove(instanceId);
+    },
+    [client],
+  );
+
   const handleAgree = useCallback(() => {
     tc.agree(true);
   }, [tc]);
@@ -362,7 +516,8 @@ export function TradeDialog() {
             )}
           </div>
           <div class='min-h-16 rounded border border-base-content/10 bg-base-300/50 p-2'>
-            {state.partnerItems.length === 0 ? (
+            {state.partnerItems.length === 0 &&
+            state.partnerInstances.length === 0 ? (
               <p class='py-2 text-center text-base-content/50 text-sm'>
                 {formatLocaleString(locale.trade.partnerNoItems, {
                   name: capitalize(state.partnerName),
@@ -370,6 +525,13 @@ export function TradeDialog() {
               </p>
             ) : (
               <div class='grid grid-cols-3 gap-2 sm:grid-cols-4'>
+                {state.partnerInstances.map((inst) => (
+                  <TradeInstanceSlot
+                    key={`partner-inst-${inst.instanceId}`}
+                    inst={inst}
+                    showRemove={false}
+                  />
+                ))}
                 {state.partnerItems.map((item, i) => (
                   <TradeItemSlot
                     key={`partner-${item.id}-${i}`}
@@ -396,12 +558,21 @@ export function TradeDialog() {
             class='min-h-16 rounded border border-base-content/10 bg-base-300/50 p-2'
             data-trade-drop
           >
-            {state.playerItems.length === 0 ? (
+            {state.playerItems.length === 0 &&
+            state.playerInstances.length === 0 ? (
               <p class='py-2 text-center text-base-content/50 text-sm'>
                 {locale.trade.yourNoItems}
               </p>
             ) : (
               <div class='grid grid-cols-3 gap-2 sm:grid-cols-4'>
+                {state.playerInstances.map((inst) => (
+                  <TradeInstanceSlot
+                    key={`player-inst-${inst.instanceId}`}
+                    inst={inst}
+                    showRemove={true}
+                    onRemove={handleRemoveInstance}
+                  />
+                ))}
                 {state.playerItems.map((item, i) => (
                   <TradeItemSlot
                     key={`player-${item.id}-${i}`}
@@ -431,7 +602,11 @@ export function TradeDialog() {
           <Button
             variant='primary'
             onClick={handleAgree}
-            disabled={state.playerAgreed || state.playerItems.length === 0}
+            disabled={
+              state.playerAgreed ||
+              (state.playerItems.length === 0 &&
+                state.playerInstances.length === 0)
+            }
           >
             {locale.trade.agree}
           </Button>

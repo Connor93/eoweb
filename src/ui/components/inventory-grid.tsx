@@ -297,9 +297,11 @@ export function InventoryGrid({ itemIds }: Props) {
     const handler = () => setRefresh((n) => n + 1);
     client.inventoryController.subscribeInventoryChanged(handler);
     client.instanceController.subscribeChanged(handler);
+    client.tradeController.subscribe(handler);
     return () => {
       client.inventoryController.unsubscribeInventoryChanged(handler);
       client.instanceController.unsubscribeChanged(handler);
+      client.tradeController.unsubscribe(handler);
     };
   }, [client]);
 
@@ -312,10 +314,15 @@ export function InventoryGrid({ itemIds }: Props) {
   }, [client, itemIds, currentDrag]);
 
   const visibleInstances = useMemo((): InstanceItem[] => {
-    // Inventory grid only shows un-equipped instances; equipped ones
-    // live on the paperdoll.
+    // Inventory grid shows un-equipped, un-lockered instances — and
+    // excludes anything the player has offered into a trade so the
+    // same card doesn't appear in both inventory and trade panes.
     const all = client.instanceController.inventoryList();
-    return itemIds ? all.filter((i) => itemIds.includes(i.baseItemId)) : all;
+    const inTrade = client.tradeController.playerOfferedInstanceIds();
+    const filtered = all.filter((i) => !inTrade.has(i.instanceId));
+    return itemIds
+      ? filtered.filter((i) => itemIds.includes(i.baseItemId))
+      : filtered;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, itemIds, currentDrag]);
 
@@ -523,11 +530,14 @@ export function InventoryGrid({ itemIds }: Props) {
             );
           } else if (result.type === 'locker') {
             client.instanceController.sendLockerDeposit(inst.instanceId);
+          } else if (result.type === 'chest') {
+            client.instanceController.sendChestDeposit(inst.instanceId);
+          } else if (result.type === 'trade') {
+            client.instanceController.sendTradeAdd(inst.instanceId);
           }
-          // Other drop targets (chest / trade / junk / drop / ground)
-          // are stackable-only for Slice 3a; chest + trade land in
-          // 3b/3c, and dropping rolled gear back onto the ground would
-          // need a roll-time policy call (probably scrap-for-gold).
+          // Other drop targets (junk / drop / ground) are stackable-
+          // only — dropping rolled gear onto the ground would need a
+          // roll-time policy call (probably scrap-for-gold).
         },
       });
     },

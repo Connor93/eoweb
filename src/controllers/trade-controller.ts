@@ -13,6 +13,12 @@ import { DialogResourceID } from '@/edf';
 import { TradeState } from '@/game-state';
 import { SfxId } from '@/sfx';
 import { capitalize } from '@/utils';
+import type { InstanceItem } from './instance-controller';
+
+export interface TradeInstanceSide {
+  playerId: number;
+  instances: InstanceItem[];
+}
 
 export class TradeController {
   state = TradeState.None;
@@ -23,6 +29,11 @@ export class TradeController {
 
   playerItems: Item[] = [];
   playerAgreed = false;
+
+  /** Rolled instances offered by each side. Populated by the server's
+   *  TradeInstanceList custom packet (family 54 / action Reply). */
+  playerInstances: InstanceItem[] = [];
+  partnerInstances: InstanceItem[] = [];
 
   scam = false;
 
@@ -139,8 +150,31 @@ export class TradeController {
     this.partnerAgreed = false;
     this.playerItems = [];
     this.playerAgreed = false;
+    this.playerInstances = [];
+    this.partnerInstances = [];
     this.scam = false;
     this.notifySubscribers();
+  }
+
+  /** Apply a TradeInstanceList snapshot from the server. The two sides
+   *  arrive in unspecified order; we identify ourselves by player id. */
+  notifyInstancesUpdated(sides: TradeInstanceSide[]) {
+    const me = sides.find((s) => s.playerId === this.client.playerId);
+    const them = sides.find((s) => s.playerId !== this.client.playerId);
+    this.playerInstances = me?.instances ?? [];
+    this.partnerInstances = them?.instances ?? [];
+    // Per server-side: any add/remove un-accepts both sides. Mirror
+    // the local flags so the UI doesn't briefly show the wrong state.
+    this.playerAgreed = false;
+    this.partnerAgreed = false;
+    this.notifySubscribers();
+  }
+
+  /** instance_ids the player has currently offered into trade. Inventory
+   *  rendering filters these out so the same card doesn't appear in
+   *  both inventory and trade panes. */
+  playerOfferedInstanceIds(): Set<string> {
+    return new Set(this.playerInstances.map((i) => i.instanceId));
   }
 
   notifyUpdated(data: TradeItemData[], scam = false) {

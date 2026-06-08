@@ -106,6 +106,50 @@ function handleChestInstanceList(client: Client, reader: EoReader) {
   client.chestController.handleInstancesUpdated(entries);
 }
 
+/** Parses the TradeInstanceListServerPacket — two TradeInstanceSides,
+ *  each (player_id, [chest-shaped entries]). The order of the two
+ *  sides isn't fixed; the controller identifies which is "me" by
+ *  matching the player id. */
+function parseTradeInstanceList(reader: EoReader) {
+  const sides: { playerId: number; instances: InstanceItem[] }[] = [];
+  for (let s = 0; s < 2; s++) {
+    const playerId = reader.getShort();
+    const count = reader.getShort();
+    const instances: InstanceItem[] = [];
+    for (let i = 0; i < count; i++) {
+      const instanceId = reader.getFixedString(INSTANCE_ID_LEN).trim();
+      const baseItemId = reader.getShort();
+      const rarity = reader.getChar() as InstanceRarity;
+      const level = reader.getChar();
+      const modCount = reader.getChar();
+      const mods: InstanceMod[] = [];
+      for (let j = 0; j < modCount; j++) {
+        const modIdLen = reader.getChar();
+        const modIdBytes = reader.getBytes(modIdLen);
+        const modId = new TextDecoder().decode(new Uint8Array(modIdBytes));
+        const valueX100 = reader.getInt();
+        mods.push({ modId, value: valueX100 / 100 });
+      }
+      instances.push({
+        instanceId,
+        baseItemId,
+        rarity,
+        level,
+        equippedSlot: -1,
+        inLocker: false,
+        mods,
+      });
+    }
+    sides.push({ playerId, instances });
+  }
+  return sides;
+}
+
+function handleTradeInstanceList(client: Client, reader: EoReader) {
+  const sides = parseTradeInstanceList(reader);
+  client.tradeController.notifyInstancesUpdated(sides);
+}
+
 export function registerInstanceHandlers(client: Client) {
   client.bus!.registerPacketHandler(
     FAMILY_INSTANCE as PacketFamily,
@@ -116,5 +160,10 @@ export function registerInstanceHandlers(client: Client) {
     FAMILY_INSTANCE as PacketFamily,
     PacketAction.Open,
     (reader) => handleChestInstanceList(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_INSTANCE as PacketFamily,
+    PacketAction.Reply,
+    (reader) => handleTradeInstanceList(client, reader),
   );
 }
