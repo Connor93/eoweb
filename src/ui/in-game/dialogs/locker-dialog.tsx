@@ -26,6 +26,7 @@ import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { useItemDrag } from '@/ui/in-game';
 import {
+  formatInstanceMod,
   getItemMeta,
   INVENTORY_TAB_COUNT,
   InventoryTab,
@@ -65,15 +66,6 @@ function rarityTextClass(r: InstanceRarity): string {
     case InstanceRarity.Legendary:
       return 'text-warning';
   }
-}
-
-function formatModValue(v: number): string {
-  const sign = v >= 0 ? '+' : '';
-  const abs = Math.abs(v);
-  if (abs === 0) return '0';
-  if (abs < 0.1) return `${sign}${v.toFixed(2)}`;
-  if (Math.abs(v % 1) < 0.005) return `${sign}${v.toFixed(0)}`;
-  return `${sign}${v.toFixed(1)}`;
 }
 
 type StackableLockerCardProps = {
@@ -374,7 +366,7 @@ export function LockerDialog() {
         `Level ${inst.level}`,
       ];
       for (const m of inst.mods) {
-        lines.push(`${formatModValue(m.value)} ${m.modId}`);
+        lines.push(formatInstanceMod(m));
       }
       return lines;
     }

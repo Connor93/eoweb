@@ -20,7 +20,7 @@ import { Button, ItemIcon, QuestBookList, Tabs } from '@/ui/components';
 import { UI_PANEL_BORDER, UI_STICKY_BG } from '@/ui/consts';
 import { useCharacterInfo, useClient, useLocale } from '@/ui/context';
 import { useBackdropBlur, useItemDrag, usePlayerStats } from '@/ui/in-game';
-import { capitalize, getItemMeta } from '@/utils';
+import { capitalize, formatInstanceMod, getItemMeta } from '@/utils';
 import { DialogBase } from './dialog-base';
 
 const EQUIP_CELL = 23;
@@ -42,15 +42,6 @@ function rarityBorderClass(r: InstanceRarity): string {
   }
 }
 
-function formatModValue(v: number): string {
-  const sign = v >= 0 ? '+' : '';
-  const abs = Math.abs(v);
-  if (abs === 0) return '0';
-  if (abs < 0.1) return `${sign}${v.toFixed(2)}`;
-  if (Math.abs(v % 1) < 0.005) return `${sign}${v.toFixed(0)}`;
-  return `${sign}${v.toFixed(1)}`;
-}
-
 function getInstanceTooltipLines(
   inst: InstanceItem,
   record: EifRecord | null | undefined,
@@ -61,7 +52,7 @@ function getInstanceTooltipLines(
     `Level ${inst.level}`,
   ];
   for (const m of inst.mods) {
-    lines.push(`${formatModValue(m.value)} ${m.modId}`);
+    lines.push(formatInstanceMod(m));
   }
   return lines;
 }

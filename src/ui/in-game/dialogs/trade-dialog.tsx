@@ -12,7 +12,12 @@ import { Button, ItemIcon } from '@/ui/components';
 import { UI_BLUR, UI_ITEM_BG, UI_MODAL_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { useRawItemGfxUrl } from '@/ui/in-game';
-import { capitalize, getItemGraphicId, getItemMeta } from '@/utils';
+import {
+  capitalize,
+  formatInstanceMod,
+  getItemGraphicId,
+  getItemMeta,
+} from '@/utils';
 import { DialogBase } from './dialog-base';
 
 function rarityBorderClass(r: InstanceRarity): string {
@@ -41,15 +46,6 @@ function rarityTextClass(r: InstanceRarity): string {
   }
 }
 
-function formatModValue(v: number): string {
-  const sign = v >= 0 ? '+' : '';
-  const abs = Math.abs(v);
-  if (abs === 0) return '0';
-  if (abs < 0.1) return `${sign}${v.toFixed(2)}`;
-  if (Math.abs(v % 1) < 0.005) return `${sign}${v.toFixed(0)}`;
-  return `${sign}${v.toFixed(1)}`;
-}
-
 type TradeInstanceSlotProps = {
   inst: InstanceItem;
   onRemove?: (instanceId: string) => void;
@@ -76,7 +72,7 @@ function TradeInstanceSlot({
       `Level ${inst.level}`,
     ];
     for (const m of inst.mods) {
-      lines.push(`${formatModValue(m.value)} ${m.modId}`);
+      lines.push(formatInstanceMod(m));
     }
     return lines;
   })();

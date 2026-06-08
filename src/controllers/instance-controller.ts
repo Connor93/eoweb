@@ -33,8 +33,23 @@ export function instanceRarityLabel(rarity: InstanceRarity): string {
   }
 }
 
+/** Wire encoding for the mod's kind, parallel to REOSERV's
+ *  ModifierKind: 0 = flat, 1 = percent_additive, 2 = percent_multiplicative.
+ *  The client uses this to decide whether to render the value as a raw
+ *  number or as a percentage (×100 + `%`). */
+export enum InstanceModKind {
+  Flat = 0,
+  PercentAdditive = 1,
+  PercentMultiplicative = 2,
+}
+
 export interface InstanceMod {
   modId: string;
+  /** Designer-facing display name resolved server-side from
+   *  MODIFIER_DB at push time. Falls back to `modId` if the mod is
+   *  no longer in the pool. */
+  name: string;
+  kind: InstanceModKind;
   value: number;
 }
 

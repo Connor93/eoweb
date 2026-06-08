@@ -3,6 +3,10 @@ export { getExpForLevel } from './calculate-tnl';
 export { capitalize } from './capitalize';
 export { formatBigNumber } from './format-big-number';
 export {
+  type FormattableInstanceMod,
+  formatInstanceMod,
+} from './format-instance-mod';
+export {
   EffectAnimationType,
   EffectMetadata,
   getEffectMetaData,

@@ -28,6 +28,7 @@ import { useClient, useLocale } from '@/ui/context';
 import { SlotType } from '@/ui/enums';
 import { useItemDrag } from '@/ui/in-game';
 import {
+  formatInstanceMod,
   getItemMeta,
   INVENTORY_TAB_COUNT,
   InventoryTab,
@@ -581,17 +582,7 @@ export function InventoryGrid({ itemIds }: Props) {
         `Level ${inst.level}`,
       ];
       for (const m of inst.mods) {
-        const sign = m.value >= 0 ? '+' : '';
-        // Mod values cover wide magnitudes (e.g. 0.04 magic-find vs 5.3
-        // fire-damage). Show enough precision for sub-1 fractions
-        // without forcing trailing zeros on whole numbers.
-        const abs = Math.abs(m.value);
-        let valStr: string;
-        if (abs === 0) valStr = '0';
-        else if (abs < 0.1) valStr = m.value.toFixed(2);
-        else if (Math.abs(m.value % 1) < 0.005) valStr = m.value.toFixed(0);
-        else valStr = m.value.toFixed(1);
-        lines.push(`${sign}${valStr} ${m.modId}`);
+        lines.push(formatInstanceMod(m));
       }
       return lines;
     }

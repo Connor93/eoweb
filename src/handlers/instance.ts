@@ -25,6 +25,18 @@ const INSTANCE_ID_LEN = 36;
 const LOCATION_SENTINEL_LOCKER = 251;
 const LOCATION_SENTINEL_INVENTORY = 252;
 
+function readMod(reader: EoReader): InstanceMod {
+  const modIdLen = reader.getChar();
+  const modIdBytes = reader.getBytes(modIdLen);
+  const modId = new TextDecoder().decode(new Uint8Array(modIdBytes));
+  const nameLen = reader.getChar();
+  const nameBytes = reader.getBytes(nameLen);
+  const name = new TextDecoder().decode(new Uint8Array(nameBytes));
+  const kind = reader.getChar();
+  const valueX100 = reader.getInt();
+  return { modId, name, kind, value: valueX100 / 100 };
+}
+
 function parseInstanceList(reader: EoReader): InstanceItem[] {
   const count = reader.getShort();
   const entries: InstanceItem[] = [];
@@ -44,11 +56,7 @@ function parseInstanceList(reader: EoReader): InstanceItem[] {
     const modCount = reader.getChar();
     const mods: InstanceMod[] = [];
     for (let j = 0; j < modCount; j++) {
-      const modIdLen = reader.getChar();
-      const modIdBytes = reader.getBytes(modIdLen);
-      const modId = new TextDecoder().decode(new Uint8Array(modIdBytes));
-      const valueX100 = reader.getInt();
-      mods.push({ modId, value: valueX100 / 100 });
+      mods.push(readMod(reader));
     }
     entries.push({
       instanceId,
@@ -82,11 +90,7 @@ function parseChestInstanceList(reader: EoReader): InstanceItem[] {
     const modCount = reader.getChar();
     const mods: InstanceMod[] = [];
     for (let j = 0; j < modCount; j++) {
-      const modIdLen = reader.getChar();
-      const modIdBytes = reader.getBytes(modIdLen);
-      const modId = new TextDecoder().decode(new Uint8Array(modIdBytes));
-      const valueX100 = reader.getInt();
-      mods.push({ modId, value: valueX100 / 100 });
+      mods.push(readMod(reader));
     }
     entries.push({
       instanceId,
@@ -124,11 +128,7 @@ function parseTradeInstanceList(reader: EoReader) {
       const modCount = reader.getChar();
       const mods: InstanceMod[] = [];
       for (let j = 0; j < modCount; j++) {
-        const modIdLen = reader.getChar();
-        const modIdBytes = reader.getBytes(modIdLen);
-        const modId = new TextDecoder().decode(new Uint8Array(modIdBytes));
-        const valueX100 = reader.getInt();
-        mods.push({ modId, value: valueX100 / 100 });
+        mods.push(readMod(reader));
       }
       instances.push({
         instanceId,
