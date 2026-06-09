@@ -232,6 +232,35 @@ export class InstanceController {
     );
   }
 
+  /** Drop the named instance onto the ground at the given tile coords.
+   *  Mirrors the stackable `dropItem` flow: the server validates
+   *  distance and tile walkability, then places the item on the ground.
+   *  Pass `coordX = 0xFF, coordY = 0xFF` to drop at the player's feet. */
+  sendKick(instanceId: string, coordX: number, coordY: number): void {
+    const writer = new EoWriter();
+    writer.addBytes(this.encodeInstanceId(instanceId));
+    writer.addChar(Math.max(0, Math.min(0xfe, Math.floor(coordX))));
+    writer.addChar(Math.max(0, Math.min(0xfe, Math.floor(coordY))));
+    this.client.bus?.sendBuf(
+      FAMILY_INSTANCE as PacketFamily,
+      PacketAction.Kick,
+      writer.toByteArray(),
+    );
+  }
+
+  /** Permanently destroy the named instance. The server deletes the DB
+   *  row; no ground sprite is created and there is no recovery path.
+   *  Callers should show a confirmation dialog before invoking. */
+  sendJunk(instanceId: string): void {
+    const writer = new EoWriter();
+    writer.addBytes(this.encodeInstanceId(instanceId));
+    this.client.bus?.sendBuf(
+      FAMILY_INSTANCE as PacketFamily,
+      PacketAction.Junk,
+      writer.toByteArray(),
+    );
+  }
+
   /** Map of `playerId → CombatElement` for every nearby player's
    *  equipped weapon. Populated by PlayerPaperdollSnapshot pushes
    *  from REOSERV on map enter and on every equip / unequip of slot 8.

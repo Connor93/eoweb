@@ -566,10 +566,38 @@ export function InventoryGrid({ itemIds }: Props) {
             client.instanceController.sendChestDeposit(inst.instanceId);
           } else if (result.type === 'trade') {
             client.instanceController.sendTradeAdd(inst.instanceId);
+          } else if (result.type === 'ground') {
+            if (!client.mapController.cursorInDropRange()) return;
+            const coords = client.mouseCoords ?? getCoords();
+            // ByteCoords wire: tile + 1, clamped to [1, 0xFE].
+            const wx = Math.max(1, Math.min(0xfe, coords.x + 1));
+            const wy = Math.max(1, Math.min(0xfe, coords.y + 1));
+            client.instanceController.sendKick(inst.instanceId, wx, wy);
+          } else if (result.type === 'drop') {
+            // Dropped on the "Drop Item" zone — place at player's feet.
+            client.instanceController.sendKick(inst.instanceId, 0xff, 0xff);
+          } else if (result.type === 'junk') {
+            const record = client.getEifRecordById(inst.baseItemId);
+            const itemName =
+              record?.name ??
+              locale.shared.itemFallbackName.replace(
+                '{id}',
+                String(inst.baseItemId),
+              );
+            const message = locale.inventory.junkConfirmMessage.replace(
+              '{name}',
+              itemName,
+            );
+            client.alertController.showConfirm(
+              locale.inventory.junkConfirmTitle,
+              message,
+              (confirmed) => {
+                if (confirmed) {
+                  client.instanceController.sendJunk(inst.instanceId);
+                }
+              },
+            );
           }
-          // Other drop targets (junk / drop / ground) are stackable-
-          // only — dropping rolled gear onto the ground would need a
-          // roll-time policy call (probably scrap-for-gold).
         },
       });
     },
