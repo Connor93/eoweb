@@ -50,13 +50,26 @@ function liveCoordsFor(
   return null;
 }
 
-/** Pixels above the tile-center where the popup spawns. Tile center is
- *  the character's feet in EO's isometric projection; ~80 px puts the
- *  popup near the top of the head for a typical EO character sprite.
- *  The CSS animation flies it further upward from there. */
-const POPUP_HEAD_OFFSET_Y = 80;
-/** HP bar sits just above the head, since it doesn't fly. */
-const HPBAR_HEAD_OFFSET_Y = 84;
+/** Visual top of the character / NPC head, in px above the iso tile
+ *  center (which sits at the sprite's feet). Tuned by eyeballing for
+ *  the typical EO character sprite — bump this single number if the
+ *  whole stack (HP bar + damage popup) needs to shift up or down to
+ *  hug a different sprite size. */
+const HEAD_TOP_OFFSET = 60;
+/** Height of `.combat-hpbar` — keep in sync with the CSS rule. */
+const HP_BAR_HEIGHT = 4;
+/** Vertical span of a single damage popup line at 14 px font + 1.2
+ *  line-height — used to space the popup's bottom against the HP bar's
+ *  top so the popup appears to launch *from* the bar rather than
+ *  overlap with it. */
+const POPUP_LINE_HEIGHT = 17;
+/** HP bar TOP edge sits HP_BAR_HEIGHT px above the head top, so the
+ *  bar's BOTTOM edge just kisses the head. */
+const HPBAR_HEAD_OFFSET_Y = HEAD_TOP_OFFSET + HP_BAR_HEIGHT;
+/** Damage popup TOP edge sits one line-height above HP bar TOP, so the
+ *  popup's BOTTOM kisses the HP bar's TOP at spawn. The CSS animation
+ *  flies it further upward from there. */
+const POPUP_HEAD_OFFSET_Y = HPBAR_HEAD_OFFSET_Y + POPUP_LINE_HEIGHT;
 
 export function CombatOverlay() {
   const client = useClient();
