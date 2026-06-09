@@ -260,6 +260,8 @@ export class MapRenderer {
   private readonly _characterCoordSet = new Set<number>();
   private readonly _npcCoordSet = new Set<number>();
   private readonly _itemCoordSet = new Set<number>();
+  // Last computed player screen position — exposed to the DOM combat overlay
+  private _lastPlayerScreen: { x: number; y: number } | null = null;
 
   hasChairs = false;
 
@@ -612,6 +614,7 @@ export class MapRenderer {
     }
 
     playerScreen.x += this.client.quakeController.quakeOffset;
+    this._lastPlayerScreen = { x: playerScreen.x, y: playerScreen.y };
 
     const gameWidth = this._gameWidth;
     const gameHeight = this._halfGameHeight * 2;
@@ -2394,5 +2397,17 @@ export class MapRenderer {
     }
 
     return { x: 0, y: 0 };
+  }
+
+  public get halfGameWidthPublic(): number {
+    return this._halfGameWidth;
+  }
+
+  public get halfGameHeightPublic(): number {
+    return this._halfGameHeight;
+  }
+
+  public get lastPlayerScreen(): { x: number; y: number } | null {
+    return this._lastPlayerScreen ?? null;
   }
 }

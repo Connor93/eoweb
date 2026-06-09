@@ -1,0 +1,56 @@
+.combat-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+  font-family: "VT323", ui-monospace, "Press Start 2P", monospace;
+}
+
+.combat-popup {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 24px;
+  font-weight: 700;
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.85),
+    0 0 6px rgba(0, 0, 0, 0.65);
+  white-space: nowrap;
+  animation: combat-popup-float 550ms ease-out forwards;
+}
+
+.combat-popup--miss {
+  font-size: 18px;
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+@keyframes combat-popup-float {
+  0% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(-50%, -28px);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -42px);
+    opacity: 0;
+  }
+}
+
+.combat-hpbar {
+  position: absolute;
+  width: 40px;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.85);
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+}
+
+.combat-hpbar__fill {
+  height: 100%;
+  transition: width 100ms linear;
+}

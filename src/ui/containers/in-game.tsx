@@ -1,5 +1,6 @@
 import type { SkillLearn } from 'eolib';
 import { useCallback, useEffect, useState } from 'preact/hooks';
+import { CombatOverlay } from '@/combat-overlay';
 import { TradeState } from '@/game-state';
 import {
   CHAT_Z,
@@ -304,6 +305,7 @@ function InGameContent() {
 
   return (
     <>
+      <CombatOverlay />
       {commandPaletteOpen && <CommandPalette onClose={onCommandPaletteClose} />}
       <PlayerHud />
       <MobileNav />
