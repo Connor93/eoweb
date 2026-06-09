@@ -24,6 +24,10 @@ function worldToScreen(
   };
 }
 
+// Diagnostic: log only the FIRST render of each popup so the console
+// doesn't flood at 60fps. Cleared after Phase A verification.
+const _loggedPopups = new Set<number>();
+
 export function CombatOverlay() {
   const client = useClient();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -75,6 +79,18 @@ function renderPopup(
     halfW,
     halfH,
   );
+  if (!_loggedPopups.has(p.id)) {
+    _loggedPopups.add(p.id);
+    // biome-ignore lint/suspicious/noConsole: temporary diagnostic for Phase A verify
+    console.log('[CombatOverlay] popup', {
+      id: p.id,
+      kind: p.kind,
+      worldXY: { x: p.worldX, y: p.worldY },
+      camera: { x: cameraX, y: cameraY },
+      half: { w: halfW, h: halfH },
+      screenXY: { x, y },
+    });
+  }
   const color = p.kind === 'heal' ? '#4ade80' : combatElementColor(p.element);
   const label = p.kind === 'miss' ? 'miss' : String(p.amount);
   return (

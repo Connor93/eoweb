@@ -27,15 +27,15 @@ type Subscriber = () => void;
 const POPUP_LIFETIME_MS = 550;
 
 export class CombatOverlayController {
+  private client: Client;
   private nextId = 1;
   private popups: CombatPopup[] = [];
   private hpBars: Map<string, HpBarEntry> = new Map();
   private subscribers: Subscriber[] = [];
 
-  // Constructor takes a Client so future phases can reach controllers via it
-  // (paperdoll lookup, etc.) without changing the registration in Client.ts.
-  // Argument intentionally unused today.
-  constructor(_client: Client) {}
+  constructor(client: Client) {
+    this.client = client;
+  }
 
   pushDamage(opts: {
     amount: number;
@@ -43,6 +43,12 @@ export class CombatOverlayController {
     worldX: number;
     worldY: number;
   }): void {
+    // biome-ignore lint/suspicious/noConsole: temporary diagnostic for Phase A verify
+    console.log('[CombatOverlayController] pushDamage', {
+      amount: opts.amount,
+      targetWorld: { x: opts.worldX, y: opts.worldY },
+      playerWorld: this.snapshotPlayerWorld(),
+    });
     this.popups.push({
       id: this.nextId++,
       kind: 'damage',
@@ -53,6 +59,12 @@ export class CombatOverlayController {
       spawnedAtMs: performance.now(),
     });
     this.notify();
+  }
+
+  private snapshotPlayerWorld(): { x: number; y: number; id: number } | null {
+    const c = this.client.getPlayerCharacter?.();
+    if (!c) return null;
+    return { x: c.coords.x, y: c.coords.y, id: c.playerId };
   }
 
   pushHeal(opts: { amount: number; worldX: number; worldY: number }): void {
