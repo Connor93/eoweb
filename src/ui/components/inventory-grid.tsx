@@ -302,7 +302,7 @@ export function InventoryGrid({ itemIds }: Props) {
   const [activeTab, setActiveTab] = useState<InventoryTab>(
     InventoryTab.Weapons,
   );
-  const [, setRefresh] = useState(0);
+  const [refresh, setRefresh] = useState(0);
   const [tooltip, setTooltip] = useState<{
     key: string;
     x: number;
@@ -342,8 +342,11 @@ export function InventoryGrid({ itemIds }: Props) {
       ? client.inventoryController.items.filter((i) => itemIds.includes(i.id))
       : client.inventoryController.items;
     return source.filter((i) => i.id !== GOLD_ITEM_ID);
+    // `refresh` is the version counter bumped by the controller
+    // subscriptions below; without it the memo returned a stale
+    // snapshot after every inventory mutation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, itemIds, currentDrag]);
+  }, [client, itemIds, currentDrag, refresh]);
 
   const visibleInstances = useMemo((): InstanceItem[] => {
     // Inventory grid shows un-equipped, un-lockered instances — and
@@ -356,7 +359,7 @@ export function InventoryGrid({ itemIds }: Props) {
       ? filtered.filter((i) => itemIds.includes(i.baseItemId))
       : filtered;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, itemIds, currentDrag]);
+  }, [client, itemIds, currentDrag, refresh]);
 
   const itemsByTab = useMemo(() => {
     const buckets: Item[][] = Array.from(
