@@ -12,6 +12,7 @@ import {
   PacketFamily,
 } from 'eolib';
 import type { Client } from '@/client';
+import { CombatElement } from '@/combat-overlay/element-colors';
 import {
   EffectAnimation,
   EffectTargetCharacter,
@@ -74,6 +75,7 @@ function handleEffectSpec(client: Client, reader: EoReader) {
   });
   client.combatOverlayController.pushDamage({
     amount: damage,
+    element: CombatElement.Plain,
     targetKey: `char:${client.playerId}`,
     worldX: specPlayerCoords.x,
     worldY: specPlayerCoords.y,
@@ -165,6 +167,7 @@ function handleEffectAdmin(client: Client, reader: EoReader) {
   if (packet.damage > 0) {
     client.combatOverlayController.pushDamage({
       amount: packet.damage,
+      element: CombatElement.Plain,
       targetKey: `char:${packet.playerId}`,
       worldX: character.coords.x,
       worldY: character.coords.y,

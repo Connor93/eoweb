@@ -5,12 +5,17 @@ import {
   AvatarChangeType,
   AvatarRemoveServerPacket,
   AvatarReplyServerPacket,
+  Element as EolibElement,
   type EoReader,
   PacketAction,
   PacketFamily,
   WarpEffect,
 } from 'eolib';
 import type { Client } from '@/client';
+import {
+  CombatElement,
+  eolibToCombatElement,
+} from '@/combat-overlay/element-colors';
 import { ADMIN_WARP_LEAVE_EFFECT_ID } from '@/consts';
 import {
   CharacterDeathAnimation,
@@ -124,8 +129,14 @@ function handleAvatarReply(client: Client, reader: EoReader) {
     worldY: victim.coords.y,
   });
   if (packet.damage > 0) {
+    const element =
+      packet.playerId === client.playerId
+        ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
+            ?.element ?? CombatElement.Plain)
+        : client.instanceController.weaponElement(packet.playerId);
     client.combatOverlayController.pushDamage({
       amount: packet.damage,
+      element,
       targetKey: `char:${packet.victimId}`,
       worldX: victim.coords.x,
       worldY: victim.coords.y,
@@ -168,8 +179,12 @@ function handleAvatarAdmin(client: Client, reader: EoReader) {
     worldY: victim.coords.y,
   });
   if (packet.damage > 0) {
+    const element = eolibToCombatElement(
+      client.getEsfRecordById(packet.spellId)?.element ?? EolibElement.None,
+    );
     client.combatOverlayController.pushDamage({
       amount: packet.damage,
+      element,
       targetKey: `char:${packet.victimId}`,
       worldX: victim.coords.x,
       worldY: victim.coords.y,

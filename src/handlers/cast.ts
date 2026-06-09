@@ -3,12 +3,14 @@ import {
   CastReplyServerPacket,
   CastSpecServerPacket,
   Emote as EmoteType,
+  Element as EolibElement,
   type EoReader,
   ItemMapInfo,
   PacketAction,
   PacketFamily,
 } from 'eolib';
 import type { Client } from '@/client';
+import { eolibToCombatElement } from '@/combat-overlay/element-colors';
 import { ITEM_PROTECT_TICKS_NPC } from '@/consts';
 import { EffectTargetNpc, Emote } from '@/render';
 import { SfxId } from '@/sfx';
@@ -34,8 +36,12 @@ function handleCastReply(client: Client, reader: EoReader) {
     worldY: npc.coords.y,
   });
   if (packet.damage > 0) {
+    const element = eolibToCombatElement(
+      client.getEsfRecordById(packet.spellId)?.element ?? EolibElement.None,
+    );
     client.combatOverlayController.pushDamage({
       amount: packet.damage,
+      element,
       targetKey: `npc:${packet.npcIndex}`,
       worldX: npc.coords.x,
       worldY: npc.coords.y,
@@ -73,12 +79,18 @@ function handleCastSpec(client: Client, reader: EoReader) {
     worldX: npc.coords.x,
     worldY: npc.coords.y,
   });
-  client.combatOverlayController.pushDamage({
-    amount: packet.npcKilledData.damage,
-    targetKey: `npc:${packet.npcKilledData.npcIndex}`,
-    worldX: npc.coords.x,
-    worldY: npc.coords.y,
-  });
+  {
+    const element = eolibToCombatElement(
+      client.getEsfRecordById(packet.spellId)?.element ?? EolibElement.None,
+    );
+    client.combatOverlayController.pushDamage({
+      amount: packet.npcKilledData.damage,
+      element,
+      targetKey: `npc:${packet.npcKilledData.npcIndex}`,
+      worldX: npc.coords.x,
+      worldY: npc.coords.y,
+    });
+  }
 
   client.spellController.playSpellEffect(
     packet.spellId,
@@ -138,12 +150,18 @@ function handleCastAccept(client: Client, reader: EoReader) {
     worldX: npc.coords.x,
     worldY: npc.coords.y,
   });
-  client.combatOverlayController.pushDamage({
-    amount: packet.npcKilledData.damage,
-    targetKey: `npc:${packet.npcKilledData.npcIndex}`,
-    worldX: npc.coords.x,
-    worldY: npc.coords.y,
-  });
+  {
+    const element = eolibToCombatElement(
+      client.getEsfRecordById(packet.spellId)?.element ?? EolibElement.None,
+    );
+    client.combatOverlayController.pushDamage({
+      amount: packet.npcKilledData.damage,
+      element,
+      targetKey: `npc:${packet.npcKilledData.npcIndex}`,
+      worldX: npc.coords.x,
+      worldY: npc.coords.y,
+    });
+  }
 
   client.spellController.playSpellEffect(
     packet.spellId,

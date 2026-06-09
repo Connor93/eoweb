@@ -1,5 +1,6 @@
 import {
   Emote as EmoteType,
+  Element as EolibElement,
   type EoReader,
   ItemMapInfo,
   NpcAcceptServerPacket,
@@ -15,6 +16,10 @@ import {
   PlayerKilledState,
 } from 'eolib';
 import type { Client } from '@/client';
+import {
+  CombatElement,
+  eolibToCombatElement,
+} from '@/combat-overlay/element-colors';
 import { ITEM_PROTECT_TICKS_NPC } from '@/consts';
 import { EOResourceID } from '@/edf';
 import {
@@ -79,8 +84,12 @@ function handleNpcPlayer(client: Client, reader: EoReader) {
       worldY: attackedCoords.y,
     });
     if (attack.damage > 0) {
+      const element = eolibToCombatElement(
+        client.getEnfRecordById(npc.id)?.element ?? EolibElement.None,
+      );
       client.combatOverlayController.pushDamage({
         amount: attack.damage,
+        element,
         targetKey: `char:${attack.playerId}`,
         worldX: attackedCoords.x,
         worldY: attackedCoords.y,
@@ -154,8 +163,15 @@ function handleNpcSpec(client: Client, reader: EoReader) {
       worldX: specNpc.coords.x,
       worldY: specNpc.coords.y,
     });
+    const killerId = packet.npcKilledData.killerId;
+    const element =
+      killerId === client.playerId
+        ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
+            ?.element ?? CombatElement.Plain)
+        : client.instanceController.weaponElement(killerId);
     client.combatOverlayController.pushDamage({
       amount: packet.npcKilledData.damage,
+      element,
       targetKey: `npc:${packet.npcKilledData.npcIndex}`,
       worldX: specNpc.coords.x,
       worldY: specNpc.coords.y,
@@ -207,8 +223,15 @@ function handleNpcAccept(client: Client, reader: EoReader) {
       worldX: acceptNpc.coords.x,
       worldY: acceptNpc.coords.y,
     });
+    const killerId = packet.npcKilledData.killerId;
+    const element =
+      killerId === client.playerId
+        ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
+            ?.element ?? CombatElement.Plain)
+        : client.instanceController.weaponElement(killerId);
     client.combatOverlayController.pushDamage({
       amount: packet.npcKilledData.damage,
+      element,
       targetKey: `npc:${packet.npcKilledData.npcIndex}`,
       worldX: acceptNpc.coords.x,
       worldY: acceptNpc.coords.y,
@@ -290,6 +313,7 @@ function handleNpcJunk(client: Client, reader: EoReader) {
       });
       client.combatOverlayController.pushDamage({
         amount: 1,
+        element: CombatElement.Plain,
         targetKey: `npc:${n.index}`,
         worldX: n.coords.x,
         worldY: n.coords.y,
@@ -340,8 +364,14 @@ function handleNpcReply(client: Client, reader: EoReader) {
     worldY: npc.coords.y,
   });
   if (packet.damage > 0) {
+    const element =
+      packet.playerId === client.playerId
+        ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
+            ?.element ?? CombatElement.Plain)
+        : client.instanceController.weaponElement(packet.playerId);
     client.combatOverlayController.pushDamage({
       amount: packet.damage,
+      element,
       targetKey: `npc:${npc.index}`,
       worldX: npc.coords.x,
       worldY: npc.coords.y,
