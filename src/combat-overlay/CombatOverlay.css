@@ -31,11 +31,11 @@
     opacity: 1;
   }
   70% {
-    transform: translate(-50%, -28px);
+    transform: translate(-50%, -17px);
     opacity: 1;
   }
   100% {
-    transform: translate(-50%, -42px);
+    transform: translate(-50%, -25px);
     opacity: 0;
   }
 }
