@@ -53,11 +53,26 @@ export function CombatOverlay() {
   const cameraY = client.mapRenderer?.lastPlayerScreen?.y ?? 0;
   const halfW = client.mapRenderer?.halfGameWidthPublic ?? 0;
   const halfH = client.mapRenderer?.halfGameHeightPublic ?? 0;
+  // The Pixi canvas is rendered at logical resolution `gameWidth x
+  // gameHeight` and CSS-scaled to `gameWidth*zoom x gameHeight*zoom`
+  // to fill the window. Our `left/top` math is in logical-canvas
+  // coords; CSS-scaling the overlay by the same factor keeps it in
+  // lockstep with the Pixi sprites (e.g. characters, NPCs).
+  const zoom = client.viewportController?.getZoom?.() ?? 1;
 
   const { popups, hpBars } = client.combatOverlayController.tick();
 
   return (
-    <div ref={containerRef} class='combat-overlay'>
+    <div
+      ref={containerRef}
+      class='combat-overlay'
+      style={{
+        transform: `scale(${zoom})`,
+        transformOrigin: 'top left',
+        width: `${100 / zoom}%`,
+        height: `${100 / zoom}%`,
+      }}
+    >
       {popups.map((p) => renderPopup(p, cameraX, cameraY, halfW, halfH))}
       {hpBars.map((b) => renderHpBar(b, cameraX, cameraY, halfW, halfH))}
     </div>

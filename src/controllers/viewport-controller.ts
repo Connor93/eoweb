@@ -51,6 +51,10 @@ export class ViewportController {
     this.zoom = z;
   }
 
+  getZoom() {
+    return this.zoom;
+  }
+
   zoomReset() {
     this.userOverride = false;
     this.resizeCanvases();
