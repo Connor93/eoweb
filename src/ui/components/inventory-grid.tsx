@@ -569,13 +569,19 @@ export function InventoryGrid({ itemIds }: Props) {
           } else if (result.type === 'ground') {
             if (!client.mapController.cursorInDropRange()) return;
             const coords = client.mouseCoords ?? getCoords();
-            // ByteCoords wire: tile + 1, clamped to [1, 0xFE].
-            const wx = Math.max(1, Math.min(0xfe, coords.x + 1));
-            const wy = Math.max(1, Math.min(0xfe, coords.y + 1));
+            // ByteCoords wire: tile + 1, clamped to [1, 252] (eolib char max).
+            const wx = Math.max(1, Math.min(252, coords.x + 1));
+            const wy = Math.max(1, Math.min(252, coords.y + 1));
             client.instanceController.sendKick(inst.instanceId, wx, wy);
           } else if (result.type === 'drop') {
-            // Dropped on the "Drop Item" zone — place at player's feet.
-            client.instanceController.sendKick(inst.instanceId, 0xff, 0xff);
+            // Dropped on the "Drop Item" zone — resolve to the player's
+            // own tile coords client-side. eolib `char` maxes at 252, so
+            // the OG-client 0xFF "at feet" sentinel can't fit on the wire.
+            const playerCoords = client.getPlayerCoords();
+            if (!playerCoords) return;
+            const wx = Math.max(1, Math.min(252, playerCoords.x + 1));
+            const wy = Math.max(1, Math.min(252, playerCoords.y + 1));
+            client.instanceController.sendKick(inst.instanceId, wx, wy);
           } else if (result.type === 'junk') {
             const record = client.getEifRecordById(inst.baseItemId);
             const itemName =

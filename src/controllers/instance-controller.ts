@@ -232,15 +232,16 @@ export class InstanceController {
     );
   }
 
-  /** Drop the named instance onto the ground at the given tile coords.
-   *  Mirrors the stackable `dropItem` flow: the server validates
-   *  distance and tile walkability, then places the item on the ground.
-   *  Pass `coordX = 0xFF, coordY = 0xFF` to drop at the player's feet. */
+  /** Drop the named instance onto the ground at the given ByteCoords
+   *  (tile + 1; range [1, 252]). The caller resolves a "drop at feet"
+   *  gesture to the player's own tile coords — there's no on-wire
+   *  sentinel because eolib's `char` type maxes at 252, well below
+   *  the 0xFF the legacy `ItemDrop` packet uses server-side. */
   sendKick(instanceId: string, coordX: number, coordY: number): void {
     const writer = new EoWriter();
     writer.addBytes(this.encodeInstanceId(instanceId));
-    writer.addChar(Math.max(0, Math.min(0xfe, Math.floor(coordX))));
-    writer.addChar(Math.max(0, Math.min(0xfe, Math.floor(coordY))));
+    writer.addChar(Math.max(1, Math.min(252, Math.floor(coordX))));
+    writer.addChar(Math.max(1, Math.min(252, Math.floor(coordY))));
     this.client.bus?.sendBuf(
       FAMILY_INSTANCE as PacketFamily,
       PacketAction.Kick,
