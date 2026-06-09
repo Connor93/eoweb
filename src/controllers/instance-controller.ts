@@ -1,6 +1,6 @@
 import { EoWriter, PacketAction, type PacketFamily } from 'eolib';
 import type { Client } from '@/client';
-import type { CombatElement } from '@/combat-overlay/element-colors';
+import { CombatElement } from '@/combat-overlay/element-colors';
 
 /**
  * Tracks the player's rolled, hash-keyed instanced items (weapons /
@@ -230,6 +230,25 @@ export class InstanceController {
       PacketAction.Take,
       writer.toByteArray(),
     );
+  }
+
+  /** Map of `playerId → CombatElement` for every nearby player's
+   *  equipped weapon. Populated by PlayerPaperdollSnapshot pushes
+   *  from REOSERV on map enter and on every equip / unequip of slot 8.
+   *  Consumed by combat popups that need to colour by the attacker's
+   *  weapon element (Phase G). */
+  private weaponElementByPlayer: Map<number, CombatElement> = new Map();
+
+  setWeaponElement(playerId: number, element: CombatElement): void {
+    this.weaponElementByPlayer.set(playerId, element);
+  }
+
+  weaponElement(playerId: number): CombatElement {
+    return this.weaponElementByPlayer.get(playerId) ?? CombatElement.Plain;
+  }
+
+  clearWeaponElement(playerId: number): void {
+    this.weaponElementByPlayer.delete(playerId);
   }
 
   /** Stash a ground-instance entry from the INSTANCE_GROUND_ADD packet

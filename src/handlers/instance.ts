@@ -188,6 +188,12 @@ function handleInstanceGroundAdd(client: Client, reader: EoReader) {
   client.instanceController.setGroundInstance(entry);
 }
 
+function handlePlayerPaperdoll(client: Client, reader: EoReader) {
+  const playerId = reader.getShort();
+  const element = reader.getChar() as CombatElement;
+  client.instanceController.setWeaponElement(playerId, element);
+}
+
 export function registerInstanceHandlers(client: Client) {
   client.bus!.registerPacketHandler(
     FAMILY_INSTANCE as PacketFamily,
@@ -208,5 +214,10 @@ export function registerInstanceHandlers(client: Client) {
     FAMILY_INSTANCE as PacketFamily,
     PacketAction.Spec,
     (reader) => handleInstanceGroundAdd(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_INSTANCE as PacketFamily,
+    PacketAction.Player,
+    (reader) => handlePlayerPaperdoll(client, reader),
   );
 }
