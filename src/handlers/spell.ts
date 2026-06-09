@@ -63,6 +63,7 @@ function handleSpellTargetSelf(client: Client, reader: EoReader) {
   if (packet.spellHealHp > 0) {
     client.combatOverlayController.pushHeal({
       amount: packet.spellHealHp,
+      targetKey: `char:${packet.playerId}`,
       worldX: character.coords.x,
       worldY: character.coords.y,
     });
@@ -103,6 +104,7 @@ function handleSpellTargetOther(client: Client, reader: EoReader) {
   if (packet.spellHealHp > 0) {
     client.combatOverlayController.pushHeal({
       amount: packet.spellHealHp,
+      targetKey: `char:${packet.victimId}`,
       worldX: character.coords.x,
       worldY: character.coords.y,
     });
@@ -144,6 +146,7 @@ function handleSpellTargetGroup(client: Client, reader: EoReader) {
     if (packet.spellHealHp > 0) {
       client.combatOverlayController.pushHeal({
         amount: packet.spellHealHp,
+        targetKey: `char:${player.playerId}`,
         worldX: character.coords.x,
         worldY: character.coords.y,
       });

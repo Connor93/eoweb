@@ -74,6 +74,7 @@ function handleEffectSpec(client: Client, reader: EoReader) {
   });
   client.combatOverlayController.pushDamage({
     amount: damage,
+    targetKey: `char:${client.playerId}`,
     worldX: specPlayerCoords.x,
     worldY: specPlayerCoords.y,
   });
@@ -164,11 +165,13 @@ function handleEffectAdmin(client: Client, reader: EoReader) {
   if (packet.damage > 0) {
     client.combatOverlayController.pushDamage({
       amount: packet.damage,
+      targetKey: `char:${packet.playerId}`,
       worldX: character.coords.x,
       worldY: character.coords.y,
     });
   } else {
     client.combatOverlayController.pushMiss({
+      targetKey: `char:${packet.playerId}`,
       worldX: character.coords.x,
       worldY: character.coords.y,
     });

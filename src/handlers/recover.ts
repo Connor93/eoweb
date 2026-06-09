@@ -29,6 +29,7 @@ function handleRecoverPlayer(client: Client, reader: EoReader) {
     });
     client.combatOverlayController.pushHeal({
       amount,
+      targetKey: `char:${client.playerId}`,
       worldX: recoverPlayerCoords.x,
       worldY: recoverPlayerCoords.y,
     });
@@ -55,6 +56,7 @@ function handleRecoverAgree(client: Client, reader: EoReader) {
   });
   client.combatOverlayController.pushHeal({
     amount: packet.healHp,
+    targetKey: `char:${packet.playerId}`,
     worldX: character.coords.x,
     worldY: character.coords.y,
   });

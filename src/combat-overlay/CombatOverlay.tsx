@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import type { Client } from '@/client';
 import type { CombatPopup, HpBarEntry } from '@/controllers';
 import { useClient } from '@/ui/context';
 import { combatElementColor } from './element-colors';
@@ -24,13 +25,38 @@ function worldToScreen(
   };
 }
 
+/** Looks up the live tile coords for an entity by its overlay key.
+ *  Falls back to null when the target has left view (e.g. an NPC died
+ *  and was removed from nearby.npcs). The caller should then use the
+ *  popup's last-known stored worldX/worldY snapshot. */
+function liveCoordsFor(
+  client: Client,
+  key: string | undefined,
+): { x: number; y: number } | null {
+  if (!key) return null;
+  const colon = key.indexOf(':');
+  if (colon < 0) return null;
+  const kind = key.slice(0, colon);
+  const id = Number.parseInt(key.slice(colon + 1), 10);
+  if (Number.isNaN(id)) return null;
+  if (kind === 'npc') {
+    const npc = client.nearby.npcs.find((n) => n.index === id);
+    return npc ? { x: npc.coords.x, y: npc.coords.y } : null;
+  }
+  if (kind === 'char') {
+    const c = client.nearby.characters.find((ch) => ch.playerId === id);
+    return c ? { x: c.coords.x, y: c.coords.y } : null;
+  }
+  return null;
+}
+
 /** Pixels above the tile-center where the popup spawns. Tile center is
- *  the character's feet in EO's isometric projection; ~64 puts the
- *  popup at the top of the head for typical character sprites. The CSS
- *  animation flies it further upward from there. */
-const POPUP_HEAD_OFFSET_Y = 64;
-/** HP bar sits a hair above the head, since it doesn't fly. */
-const HPBAR_HEAD_OFFSET_Y = 56;
+ *  the character's feet in EO's isometric projection; ~80 px puts the
+ *  popup near the top of the head for a typical EO character sprite.
+ *  The CSS animation flies it further upward from there. */
+const POPUP_HEAD_OFFSET_Y = 80;
+/** HP bar sits just above the head, since it doesn't fly. */
+const HPBAR_HEAD_OFFSET_Y = 84;
 
 export function CombatOverlay() {
   const client = useClient();
@@ -77,22 +103,30 @@ export function CombatOverlay() {
         height: `${100 / zoom}%`,
       }}
     >
-      {popups.map((p) => renderPopup(p, cameraX, cameraY, halfW, halfH))}
-      {hpBars.map((b) => renderHpBar(b, cameraX, cameraY, halfW, halfH))}
+      {popups.map((p) =>
+        renderPopup(p, client, cameraX, cameraY, halfW, halfH),
+      )}
+      {hpBars.map((b) =>
+        renderHpBar(b, client, cameraX, cameraY, halfW, halfH),
+      )}
     </div>
   );
 }
 
 function renderPopup(
   p: CombatPopup,
+  client: Client,
   cameraX: number,
   cameraY: number,
   halfW: number,
   halfH: number,
 ) {
+  const live = liveCoordsFor(client, p.targetKey);
+  const worldX = live?.x ?? p.worldX;
+  const worldY = live?.y ?? p.worldY;
   const { x, y } = worldToScreen(
-    p.worldX,
-    p.worldY,
+    worldX,
+    worldY,
     cameraX,
     cameraY,
     halfW,
@@ -117,14 +151,18 @@ function renderPopup(
 
 function renderHpBar(
   bar: HpBarEntry,
+  client: Client,
   cameraX: number,
   cameraY: number,
   halfW: number,
   halfH: number,
 ) {
+  const live = liveCoordsFor(client, bar.key);
+  const worldX = live?.x ?? bar.worldX;
+  const worldY = live?.y ?? bar.worldY;
   const { x, y } = worldToScreen(
-    bar.worldX,
-    bar.worldY,
+    worldX,
+    worldY,
     cameraX,
     cameraY,
     halfW,

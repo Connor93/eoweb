@@ -126,11 +126,13 @@ function handleAvatarReply(client: Client, reader: EoReader) {
   if (packet.damage > 0) {
     client.combatOverlayController.pushDamage({
       amount: packet.damage,
+      targetKey: `char:${packet.victimId}`,
       worldX: victim.coords.x,
       worldY: victim.coords.y,
     });
   } else {
     client.combatOverlayController.pushMiss({
+      targetKey: `char:${packet.victimId}`,
       worldX: victim.coords.x,
       worldY: victim.coords.y,
     });
@@ -168,11 +170,13 @@ function handleAvatarAdmin(client: Client, reader: EoReader) {
   if (packet.damage > 0) {
     client.combatOverlayController.pushDamage({
       amount: packet.damage,
+      targetKey: `char:${packet.victimId}`,
       worldX: victim.coords.x,
       worldY: victim.coords.y,
     });
   } else {
     client.combatOverlayController.pushMiss({
+      targetKey: `char:${packet.victimId}`,
       worldX: victim.coords.x,
       worldY: victim.coords.y,
     });

@@ -36,11 +36,13 @@ function handleCastReply(client: Client, reader: EoReader) {
   if (packet.damage > 0) {
     client.combatOverlayController.pushDamage({
       amount: packet.damage,
+      targetKey: `npc:${packet.npcIndex}`,
       worldX: npc.coords.x,
       worldY: npc.coords.y,
     });
   } else {
     client.combatOverlayController.pushMiss({
+      targetKey: `npc:${packet.npcIndex}`,
       worldX: npc.coords.x,
       worldY: npc.coords.y,
     });
@@ -73,6 +75,7 @@ function handleCastSpec(client: Client, reader: EoReader) {
   });
   client.combatOverlayController.pushDamage({
     amount: packet.npcKilledData.damage,
+    targetKey: `npc:${packet.npcKilledData.npcIndex}`,
     worldX: npc.coords.x,
     worldY: npc.coords.y,
   });
@@ -137,6 +140,7 @@ function handleCastAccept(client: Client, reader: EoReader) {
   });
   client.combatOverlayController.pushDamage({
     amount: packet.npcKilledData.damage,
+    targetKey: `npc:${packet.npcKilledData.npcIndex}`,
     worldX: npc.coords.x,
     worldY: npc.coords.y,
   });

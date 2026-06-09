@@ -81,11 +81,13 @@ function handleNpcPlayer(client: Client, reader: EoReader) {
     if (attack.damage > 0) {
       client.combatOverlayController.pushDamage({
         amount: attack.damage,
+        targetKey: `char:${attack.playerId}`,
         worldX: attackedCoords.x,
         worldY: attackedCoords.y,
       });
     } else {
       client.combatOverlayController.pushMiss({
+        targetKey: `char:${attack.playerId}`,
         worldX: attackedCoords.x,
         worldY: attackedCoords.y,
       });
@@ -154,6 +156,7 @@ function handleNpcSpec(client: Client, reader: EoReader) {
     });
     client.combatOverlayController.pushDamage({
       amount: packet.npcKilledData.damage,
+      targetKey: `npc:${packet.npcKilledData.npcIndex}`,
       worldX: specNpc.coords.x,
       worldY: specNpc.coords.y,
     });
@@ -206,6 +209,7 @@ function handleNpcAccept(client: Client, reader: EoReader) {
     });
     client.combatOverlayController.pushDamage({
       amount: packet.npcKilledData.damage,
+      targetKey: `npc:${packet.npcKilledData.npcIndex}`,
       worldX: acceptNpc.coords.x,
       worldY: acceptNpc.coords.y,
     });
@@ -286,6 +290,7 @@ function handleNpcJunk(client: Client, reader: EoReader) {
       });
       client.combatOverlayController.pushDamage({
         amount: 1,
+        targetKey: `npc:${n.index}`,
         worldX: n.coords.x,
         worldY: n.coords.y,
       });
@@ -337,11 +342,13 @@ function handleNpcReply(client: Client, reader: EoReader) {
   if (packet.damage > 0) {
     client.combatOverlayController.pushDamage({
       amount: packet.damage,
+      targetKey: `npc:${npc.index}`,
       worldX: npc.coords.x,
       worldY: npc.coords.y,
     });
   } else {
     client.combatOverlayController.pushMiss({
+      targetKey: `npc:${npc.index}`,
       worldX: npc.coords.x,
       worldY: npc.coords.y,
     });

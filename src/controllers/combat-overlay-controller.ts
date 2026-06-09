@@ -1,4 +1,3 @@
-import type { Client } from '@/client';
 import { CombatElement } from '@/combat-overlay/element-colors';
 
 export type PopupKind = 'damage' | 'heal' | 'miss';
@@ -8,8 +7,13 @@ export interface CombatPopup {
   kind: PopupKind;
   amount: number; // ignored for miss
   element: CombatElement; // defaults to Plain
-  worldX: number; // map-tile x of the target
-  worldY: number; // map-tile y of the target
+  /** Stable id of the target if known — `"npc:42"` / `"char:1024"`.
+   *  The renderer looks the target up in `client.nearby` each frame
+   *  so the popup follows the target if it walks during its lifetime.
+   *  Falls back to `worldX/worldY` snapshot if the target is gone. */
+  targetKey?: string;
+  worldX: number; // last-known map-tile x (fallback when target dies)
+  worldY: number; // last-known map-tile y (fallback when target dies)
   spawnedAtMs: number; // perf.now() at push; controller drops after lifetime
 }
 
@@ -40,11 +44,10 @@ export class CombatOverlayController {
   private hpBars: Map<string, HpBarEntry> = new Map();
   private subscribers: Subscriber[] = [];
 
-  constructor(_client: Client) {}
-
   pushDamage(opts: {
     amount: number;
     element?: CombatElement;
+    targetKey?: string;
     worldX: number;
     worldY: number;
   }): void {
@@ -53,6 +56,7 @@ export class CombatOverlayController {
       kind: 'damage',
       amount: opts.amount,
       element: opts.element ?? CombatElement.Plain,
+      targetKey: opts.targetKey,
       worldX: opts.worldX,
       worldY: opts.worldY,
       spawnedAtMs: performance.now(),
@@ -60,12 +64,18 @@ export class CombatOverlayController {
     this.notify();
   }
 
-  pushHeal(opts: { amount: number; worldX: number; worldY: number }): void {
+  pushHeal(opts: {
+    amount: number;
+    targetKey?: string;
+    worldX: number;
+    worldY: number;
+  }): void {
     this.popups.push({
       id: this.nextId++,
       kind: 'heal',
       amount: opts.amount,
       element: CombatElement.Plain,
+      targetKey: opts.targetKey,
       worldX: opts.worldX,
       worldY: opts.worldY,
       spawnedAtMs: performance.now(),
@@ -73,12 +83,13 @@ export class CombatOverlayController {
     this.notify();
   }
 
-  pushMiss(opts: { worldX: number; worldY: number }): void {
+  pushMiss(opts: { targetKey?: string; worldX: number; worldY: number }): void {
     this.popups.push({
       id: this.nextId++,
       kind: 'miss',
       amount: 0,
       element: CombatElement.Plain,
+      targetKey: opts.targetKey,
       worldX: opts.worldX,
       worldY: opts.worldY,
       spawnedAtMs: performance.now(),

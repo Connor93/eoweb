@@ -130,6 +130,7 @@ function handleItemReply(client: Client, reader: EoReader) {
         });
         client.combatOverlayController.pushHeal({
           amount: data.hpGain,
+          targetKey: `char:${client.playerId}`,
           worldX: itemPlayerCoords.x,
           worldY: itemPlayerCoords.y,
         });

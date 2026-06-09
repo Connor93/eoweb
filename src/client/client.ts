@@ -337,7 +337,7 @@ export class Client {
     this.chatController = new ChatController(this);
     this.chestController = new ChestController(this);
     this.cleanupController = new CleanupController(this);
-    this.combatOverlayController = new CombatOverlayController(this);
+    this.combatOverlayController = new CombatOverlayController();
     this.commandController = new CommandController(this);
     this.drunkController = new DrunkController(this);
     this.instanceController = new InstanceController(this);
