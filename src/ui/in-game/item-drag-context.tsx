@@ -22,7 +22,7 @@ type DragDropResult =
   | { type: 'trade' }
   | { type: 'junk' }
   | { type: 'drop' }
-  | { type: 'ground' }
+  | { type: 'ground'; clientX: number; clientY: number }
   | { type: 'cancelled' };
 
 type DragInfo = {
@@ -148,7 +148,7 @@ export function ItemDragProvider({
 
       const target = document.elementFromPoint(e.clientX, e.clientY);
       if (!target) {
-        resolve({ type: 'ground' });
+        resolve({ type: 'ground', clientX: e.clientX, clientY: e.clientY });
         return;
       }
 
@@ -232,7 +232,7 @@ export function ItemDragProvider({
         }
       }
 
-      resolve({ type: 'ground' });
+      resolve({ type: 'ground', clientX: e.clientX, clientY: e.clientY });
     };
 
     const handleCancel = (e: PointerEvent) => {

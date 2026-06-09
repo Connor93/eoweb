@@ -494,6 +494,14 @@ export function InventoryGrid({ itemIds }: Props) {
               typeId: item.id,
             });
           } else if (result.type === 'ground') {
+            // pointer-captured drags don't fire mousemove on the canvas,
+            // so client.mouseCoords is stale at pointerup. Refresh from
+            // the resolve-time client coords before checking range.
+            const zoom = client.viewportController?.getZoom?.() ?? 1;
+            client.setMousePosition({
+              x: result.clientX / zoom,
+              y: result.clientY / zoom,
+            });
             if (!client.mapController.cursorInDropRange()) return;
             const coords = client.mouseCoords ?? getCoords();
             client.inventoryController.dropItem(item.id, coords);
@@ -570,6 +578,14 @@ export function InventoryGrid({ itemIds }: Props) {
           } else if (result.type === 'trade') {
             client.instanceController.sendTradeAdd(inst.instanceId);
           } else if (result.type === 'ground') {
+            // pointer-captured drags don't fire mousemove on the canvas,
+            // so client.mouseCoords is stale at pointerup. Refresh from
+            // the resolve-time client coords before checking range.
+            const zoom = client.viewportController?.getZoom?.() ?? 1;
+            client.setMousePosition({
+              x: result.clientX / zoom,
+              y: result.clientY / zoom,
+            });
             if (!client.mapController.cursorInDropRange()) return;
             const coords = client.mouseCoords ?? getCoords();
             // ByteCoords wire: tile + 1, clamped to [1, 252] (eolib char max).
