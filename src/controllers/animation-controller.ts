@@ -11,7 +11,6 @@ import {
   EffectAnimation,
   EffectTargetCharacter,
   type Emote,
-  type HealthBar,
   NpcDeathAnimation,
   NpcWalkAnimation,
 } from '@/render';
@@ -27,8 +26,6 @@ export class AnimationController {
   pendingNpcAnimations: Map<number, Animation> = new Map();
   characterChats: Map<number, ChatBubble> = new Map();
   npcChats: Map<number, ChatBubble> = new Map();
-  npcHealthBars: Map<number, HealthBar> = new Map();
-  characterHealthBars: Map<number, HealthBar> = new Map();
   characterEmotes: Map<number, Emote> = new Map();
   effects: EffectAnimation[] = [];
   cursorClickAnimation: CursorClickAnimation | undefined;
@@ -116,7 +113,6 @@ export class AnimationController {
     this.tickNpcAnimations(activeNpcIds);
     this.tickCursorClick();
     this.tickCharacterChatBubbles(activeCharIds);
-    this.tickHealthBars(activeCharIds, activeNpcIds);
     this.tickNpcChatBubbles(activeNpcIds);
     this.tickEffects();
     return result;
@@ -245,35 +241,6 @@ export class AnimationController {
     }
     for (const id of endedNpcChatBubbles) {
       this.npcChats.delete(id);
-    }
-  }
-
-  private tickHealthBars(
-    activeCharIds: Set<number>,
-    activeNpcIds: Set<number>,
-  ): void {
-    const endedNpcHealthBars: number[] = [];
-    for (const [id, healthBar] of this.npcHealthBars) {
-      if (!activeNpcIds.has(id) || healthBar.ticks <= 0) {
-        endedNpcHealthBars.push(id);
-        continue;
-      }
-      healthBar.tick();
-    }
-    for (const id of endedNpcHealthBars) {
-      this.npcHealthBars.delete(id);
-    }
-
-    const endedCharacterHealthBars: number[] = [];
-    for (const [id, healthBar] of this.characterHealthBars) {
-      if (!activeCharIds.has(id) || healthBar.ticks <= 0) {
-        endedCharacterHealthBars.push(id);
-        continue;
-      }
-      healthBar.tick();
-    }
-    for (const id of endedCharacterHealthBars) {
-      this.characterHealthBars.delete(id);
     }
   }
 

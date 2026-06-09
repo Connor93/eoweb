@@ -16,7 +16,6 @@ import {
   EffectAnimation,
   EffectTargetCharacter,
   EffectTargetTile,
-  HealthBar,
 } from '@/render';
 import { SfxId } from '@/sfx';
 import { getDistance } from '@/utils';
@@ -66,10 +65,19 @@ function handleEffectSpec(client: Client, reader: EoReader) {
   client.hp = data.hp;
   client.audioController.playById(SfxId.Spikes);
 
-  client.animationController.characterHealthBars.set(
-    client.playerId,
-    new HealthBar(Math.floor((client.hp / client.maxHp) * 100), damage),
-  );
+  const specPlayerCoords = client.getPlayerCoords();
+  client.combatOverlayController.setHpBar({
+    key: `char:${client.playerId}`,
+    percent: Math.floor((client.hp / client.maxHp) * 100),
+    worldX: specPlayerCoords.x,
+    worldY: specPlayerCoords.y,
+    remainingTicks: 4,
+  });
+  client.combatOverlayController.pushDamage({
+    amount: damage,
+    worldX: specPlayerCoords.x,
+    worldY: specPlayerCoords.y,
+  });
   client.statsController.notifyStatsUpdated();
 
   if (!data.hp) {
@@ -148,10 +156,25 @@ function handleEffectAdmin(client: Client, reader: EoReader) {
 
   client.audioController.playAtPosition(SfxId.Spikes, character.coords);
 
-  client.animationController.characterHealthBars.set(
-    packet.playerId,
-    new HealthBar(packet.hpPercentage, packet.damage),
-  );
+  client.combatOverlayController.setHpBar({
+    key: `char:${packet.playerId}`,
+    percent: packet.hpPercentage,
+    worldX: character.coords.x,
+    worldY: character.coords.y,
+    remainingTicks: 4,
+  });
+  if (packet.damage > 0) {
+    client.combatOverlayController.pushDamage({
+      amount: packet.damage,
+      worldX: character.coords.x,
+      worldY: character.coords.y,
+    });
+  } else {
+    client.combatOverlayController.pushMiss({
+      worldX: character.coords.x,
+      worldY: character.coords.y,
+    });
+  }
 
   if (packet.died) {
     client.setCharacterDeathAnimation(packet.playerId);

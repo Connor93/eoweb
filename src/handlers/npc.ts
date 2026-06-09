@@ -20,7 +20,6 @@ import { EOResourceID } from '@/edf';
 import {
   ChatBubble,
   Emote,
-  HealthBar,
   NpcAttackAnimation,
   NpcWalkAnimation,
 } from '@/render';
@@ -71,10 +70,27 @@ function handleNpcPlayer(client: Client, reader: EoReader) {
       npc.index,
       new NpcAttackAnimation(),
     );
-    client.animationController.characterHealthBars.set(
-      attack.playerId,
-      new HealthBar(attack.hpPercentage, attack.damage),
-    );
+    const attackedChar = client.getCharacterById(attack.playerId);
+    const attackedCoords = attackedChar?.coords ?? client.getPlayerCoords();
+    client.combatOverlayController.setHpBar({
+      key: `char:${attack.playerId}`,
+      percent: attack.hpPercentage,
+      worldX: attackedCoords.x,
+      worldY: attackedCoords.y,
+      remainingTicks: 4,
+    });
+    if (attack.damage > 0) {
+      client.combatOverlayController.pushDamage({
+        amount: attack.damage,
+        worldX: attackedCoords.x,
+        worldY: attackedCoords.y,
+      });
+    } else {
+      client.combatOverlayController.pushMiss({
+        worldX: attackedCoords.x,
+        worldY: attackedCoords.y,
+      });
+    }
 
     if (attack.killed === PlayerKilledState.Killed) {
       client.setCharacterDeathAnimation(attack.playerId);
@@ -129,10 +145,21 @@ function handleNpcAgree(client: Client, reader: EoReader) {
 
 function handleNpcSpec(client: Client, reader: EoReader) {
   const packet = NpcSpecServerPacket.deserialize(reader);
-  client.animationController.npcHealthBars.set(
-    packet.npcKilledData.npcIndex,
-    new HealthBar(0, packet.npcKilledData.damage),
-  );
+  const specNpc = client.getNpcByIndex(packet.npcKilledData.npcIndex);
+  if (specNpc) {
+    client.combatOverlayController.setHpBar({
+      key: `npc:${packet.npcKilledData.npcIndex}`,
+      percent: 0,
+      worldX: specNpc.coords.x,
+      worldY: specNpc.coords.y,
+      remainingTicks: 4,
+    });
+    client.combatOverlayController.pushDamage({
+      amount: packet.npcKilledData.damage,
+      worldX: specNpc.coords.x,
+      worldY: specNpc.coords.y,
+    });
+  }
 
   client.setNpcDeathAnimation(packet.npcKilledData.npcIndex);
 
@@ -171,10 +198,21 @@ function handleNpcSpec(client: Client, reader: EoReader) {
 
 function handleNpcAccept(client: Client, reader: EoReader) {
   const packet = NpcAcceptServerPacket.deserialize(reader);
-  client.animationController.npcHealthBars.set(
-    packet.npcKilledData.npcIndex,
-    new HealthBar(0, packet.npcKilledData.damage),
-  );
+  const acceptNpc = client.getNpcByIndex(packet.npcKilledData.npcIndex);
+  if (acceptNpc) {
+    client.combatOverlayController.setHpBar({
+      key: `npc:${packet.npcKilledData.npcIndex}`,
+      percent: 0,
+      worldX: acceptNpc.coords.x,
+      worldY: acceptNpc.coords.y,
+      remainingTicks: 4,
+    });
+    client.combatOverlayController.pushDamage({
+      amount: packet.npcKilledData.damage,
+      worldX: acceptNpc.coords.x,
+      worldY: acceptNpc.coords.y,
+    });
+  }
   client.setNpcDeathAnimation(packet.npcKilledData.npcIndex);
 
   if (packet.npcKilledData.dropIndex) {
@@ -242,13 +280,20 @@ function handleNpcJunk(client: Client, reader: EoReader) {
   const packet = NpcJunkServerPacket.deserialize(reader);
   client.nearby.npcs
     .filter((n) => n.id === packet.npcId)
-    .map((n) => n.index)
-    .forEach((npcIndex) => {
-      client.animationController.npcHealthBars.set(
-        npcIndex,
-        new HealthBar(0, 1),
-      );
-      client.setNpcDeathAnimation(npcIndex);
+    .forEach((n) => {
+      client.combatOverlayController.setHpBar({
+        key: `npc:${n.index}`,
+        percent: 0,
+        worldX: n.coords.x,
+        worldY: n.coords.y,
+        remainingTicks: 4,
+      });
+      client.combatOverlayController.pushDamage({
+        amount: 1,
+        worldX: n.coords.x,
+        worldY: n.coords.y,
+      });
+      client.setNpcDeathAnimation(n.index);
     });
 }
 
@@ -287,10 +332,25 @@ function handleNpcReply(client: Client, reader: EoReader) {
     return;
   }
 
-  client.animationController.npcHealthBars.set(
-    npc.index,
-    new HealthBar(packet.hpPercentage, packet.damage),
-  );
+  client.combatOverlayController.setHpBar({
+    key: `npc:${npc.index}`,
+    percent: packet.hpPercentage,
+    worldX: npc.coords.x,
+    worldY: npc.coords.y,
+    remainingTicks: 4,
+  });
+  if (packet.damage > 0) {
+    client.combatOverlayController.pushDamage({
+      amount: packet.damage,
+      worldX: npc.coords.x,
+      worldY: npc.coords.y,
+    });
+  } else {
+    client.combatOverlayController.pushMiss({
+      worldX: npc.coords.x,
+      worldY: npc.coords.y,
+    });
+  }
 
   if (
     packet.playerId === client.playerId &&

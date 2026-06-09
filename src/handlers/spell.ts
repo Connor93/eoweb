@@ -8,11 +8,7 @@ import {
   SpellTargetSelfServerPacket,
 } from 'eolib';
 import type { Client } from '@/client';
-import {
-  CharacterSpellChantAnimation,
-  EffectTargetCharacter,
-  HealthBar,
-} from '@/render';
+import { CharacterSpellChantAnimation, EffectTargetCharacter } from '@/render';
 
 function handleSpellRequest(client: Client, reader: EoReader) {
   const packet = SpellRequestServerPacket.deserialize(reader);
@@ -58,10 +54,20 @@ function handleSpellTargetSelf(client: Client, reader: EoReader) {
     return;
   }
 
-  client.animationController.characterHealthBars.set(
-    packet.playerId,
-    new HealthBar(packet.hpPercentage, 0, packet.spellHealHp),
-  );
+  client.combatOverlayController.setHpBar({
+    key: `char:${packet.playerId}`,
+    percent: packet.hpPercentage,
+    worldX: character.coords.x,
+    worldY: character.coords.y,
+    remainingTicks: 4,
+  });
+  if (packet.spellHealHp > 0) {
+    client.combatOverlayController.pushHeal({
+      amount: packet.spellHealHp,
+      worldX: character.coords.x,
+      worldY: character.coords.y,
+    });
+  }
 
   client.spellController.playSpellEffect(
     packet.spellId,
@@ -89,10 +95,20 @@ function handleSpellTargetOther(client: Client, reader: EoReader) {
     return;
   }
 
-  client.animationController.characterHealthBars.set(
-    packet.victimId,
-    new HealthBar(packet.hpPercentage, 0, packet.spellHealHp),
-  );
+  client.combatOverlayController.setHpBar({
+    key: `char:${packet.victimId}`,
+    percent: packet.hpPercentage,
+    worldX: character.coords.x,
+    worldY: character.coords.y,
+    remainingTicks: 4,
+  });
+  if (packet.spellHealHp > 0) {
+    client.combatOverlayController.pushHeal({
+      amount: packet.spellHealHp,
+      worldX: character.coords.x,
+      worldY: character.coords.y,
+    });
+  }
 
   client.spellController.playSpellEffect(
     packet.spellId,
@@ -121,10 +137,20 @@ function handleSpellTargetGroup(client: Client, reader: EoReader) {
       continue;
     }
 
-    client.animationController.characterHealthBars.set(
-      player.playerId,
-      new HealthBar(player.hpPercentage, 0, packet.spellHealHp),
-    );
+    client.combatOverlayController.setHpBar({
+      key: `char:${player.playerId}`,
+      percent: player.hpPercentage,
+      worldX: character.coords.x,
+      worldY: character.coords.y,
+      remainingTicks: 4,
+    });
+    if (packet.spellHealHp > 0) {
+      client.combatOverlayController.pushHeal({
+        amount: packet.spellHealHp,
+        worldX: character.coords.x,
+        worldY: character.coords.y,
+      });
+    }
 
     client.spellController.playSpellEffect(
       packet.spellId,

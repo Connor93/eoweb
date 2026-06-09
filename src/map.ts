@@ -51,7 +51,7 @@ import {
 import { InstanceRarity } from '@/controllers';
 import { GameState } from '@/game-state';
 import { GfxType } from '@/gfx';
-import type { ChatBubble, Emote, HealthBar } from '@/render';
+import type { ChatBubble, Emote } from '@/render';
 import {
   CharacterAttackAnimation,
   CharacterDeathAnimation,
@@ -1271,16 +1271,12 @@ export class MapRenderer {
       const bubble = this.client.animationController.characterChats.get(
         character.playerId,
       );
-      const healthBar = this.client.animationController.characterHealthBars.get(
-        character.playerId,
-      );
       const emote = this.client.animationController.characterEmotes.get(
         character.playerId,
       );
 
       if (
         !bubble &&
-        !healthBar &&
         !emote &&
         (!(animation instanceof CharacterSpellChantAnimation) ||
           animation.animationFrame)
@@ -1300,11 +1296,6 @@ export class MapRenderer {
           topCenter,
         );
       }
-      this.addHealthBarSprites(
-        `ui:char-health:${character.playerId}`,
-        healthBar!,
-        topCenter,
-      );
       if (emote) {
         this.addEmoteSprite(
           `ui:char-emote:${character.playerId}`,
@@ -1482,11 +1473,8 @@ export class MapRenderer {
     }
 
     const bubble = this.client.animationController.npcChats.get(npc.index);
-    const healthBar = this.client.animationController.npcHealthBars.get(
-      npc.index,
-    );
 
-    if (!bubble && !healthBar) return;
+    if (!bubble) return;
 
     const aboveCoords = { x: coords.x - 1, y: coords.y - 1 };
     const aboveCoordsX = (aboveCoords.x - aboveCoords.y) * HALF_TILE_WIDTH;
@@ -1505,20 +1493,11 @@ export class MapRenderer {
       ),
     };
 
-    if (bubble) {
-      this.addChatBubbleSprites(
-        `ui:npc-bubble:${npc.index}`,
-        bubble,
-        npcTopCenter,
-      );
-    }
-    if (healthBar) {
-      this.addHealthBarSprites(
-        `ui:npc-health:${npc.index}`,
-        healthBar,
-        npcTopCenter,
-      );
-    }
+    this.addChatBubbleSprites(
+      `ui:npc-bubble:${npc.index}`,
+      bubble,
+      npcTopCenter,
+    );
   }
 
   private addItemSprite(entity: Entity, playerScreen: Vector2) {
@@ -1634,118 +1613,6 @@ export class MapRenderer {
         sprite.texture = animTexture;
         sprite.position.set(animX, animY);
       }
-    }
-  }
-
-  private addHealthBarSprites(
-    nodeKey: string,
-    healthBar: HealthBar | null,
-    position: Vector2,
-  ) {
-    if (!healthBar) return;
-    healthBar.renderedFirstFrame = true;
-
-    const frame = this.client.atlas.getStaticEntry(
-      StaticAtlasEntryType.HealthBars,
-    );
-    if (!frame) return;
-
-    const offsetY = -10;
-
-    const bgTexture = this.client.atlas.getFrameTexture({
-      atlasIndex: frame.atlasIndex,
-      x: frame.x,
-      y: frame.y + 28,
-      w: 40,
-      h: 7,
-    });
-    if (bgTexture) {
-      const bgSprite = this.ensureUiSprite(`${nodeKey}:bg`, 'ui:healthbar-bg');
-      bgSprite.texture = bgTexture;
-      bgSprite.position.set(position.x - 20, position.y - 7 + offsetY);
-    }
-
-    let barOffsetY: number;
-    if (healthBar.percentage < 25) {
-      barOffsetY = 23;
-    } else if (healthBar.percentage < 50) {
-      barOffsetY = 16;
-    } else {
-      barOffsetY = 9;
-    }
-
-    const fillW = Math.floor(40 * (healthBar.percentage / 100));
-    if (fillW > 0) {
-      const fillTexture = this.client.atlas.getFrameTexture({
-        atlasIndex: frame.atlasIndex,
-        x: frame.x + 2,
-        y: frame.y + barOffsetY,
-        w: fillW,
-        h: 3,
-      });
-      if (fillTexture) {
-        const fillSprite = this.ensureUiSprite(
-          `${nodeKey}:fill`,
-          'ui:healthbar-fill',
-        );
-        fillSprite.texture = fillTexture;
-        fillSprite.position.set(position.x - 18, position.y - 5 + offsetY);
-      }
-    }
-
-    const amount = healthBar.damage || healthBar.heal;
-    if (!amount) {
-      const missFrame = this.client.atlas.getStaticEntry(
-        StaticAtlasEntryType.Miss,
-      );
-      if (!missFrame) return;
-      const missTexture = this.client.atlas.getFrameTexture(missFrame);
-      if (missTexture) {
-        const missSprite = this.ensureUiSprite(
-          `${nodeKey}:miss`,
-          'ui:healthbar-miss',
-        );
-        missSprite.texture = missTexture;
-        missSprite.position.set(
-          position.x - (missFrame.w >> 1),
-          position.y - 35 + healthBar.ticks,
-        );
-      }
-      return;
-    }
-
-    const numbersFrame = this.client.atlas.getStaticEntry(
-      healthBar.heal
-        ? StaticAtlasEntryType.HealNumbers
-        : StaticAtlasEntryType.DamageNumbers,
-    );
-    if (!numbersFrame) return;
-    const amountAsText = amount.toString();
-    const digitWidth = 9;
-    const totalWidth = amountAsText.length * digitWidth;
-    const y = position.y - 35 + healthBar.ticks;
-    let x = position.x - totalWidth / 2;
-
-    for (let index = 0; index < amountAsText.length; index++) {
-      const number = amountAsText.charCodeAt(index) - 48; // '0'.charCodeAt(0) === 48
-      const digitTexture = this.client.atlas.getFrameTexture({
-        atlasIndex: numbersFrame.atlasIndex,
-        x: numbersFrame.x + number * digitWidth,
-        y: numbersFrame.y,
-        w: digitWidth,
-        h: numbersFrame.h,
-      });
-      if (!digitTexture) {
-        x += digitWidth;
-        continue;
-      }
-      const dnSprite = this.ensureUiSprite(
-        `${nodeKey}:digit:${index}`,
-        `ui:healthbar-digit value=${number}`,
-      );
-      dnSprite.texture = digitTexture;
-      dnSprite.position.set(x, y);
-      x += digitWidth;
     }
   }
 
@@ -1985,11 +1852,6 @@ export class MapRenderer {
         !!this.client.animationController.characterChats.get(
           character.playerId,
         );
-      const bar =
-        character &&
-        !!this.client.animationController.characterHealthBars.get(
-          character.playerId,
-        );
       let animation =
         character &&
         this.client.animationController.characterAnimations.get(
@@ -2004,7 +1866,6 @@ export class MapRenderer {
 
       if (
         !bubble &&
-        !bar &&
         !(animation instanceof CharacterDeathAnimation) &&
         !(animation instanceof CharacterSpellChantAnimation) &&
         character &&
@@ -2051,8 +1912,6 @@ export class MapRenderer {
         const npc = this.client.getNpcByIndex(npcRect.id);
         const bubble =
           npc && !!this.client.animationController.npcChats.get(npc.index);
-        const bar =
-          npc && !!this.client.animationController.npcHealthBars.get(npc.index);
         let animation =
           npc && this.client.animationController.npcAnimations.get(npc.index);
         let dying = false;
@@ -2062,12 +1921,7 @@ export class MapRenderer {
           if (animation.base) animation = animation.base;
         }
 
-        if (
-          !bubble &&
-          !bar &&
-          !(animation instanceof NpcDeathAnimation) &&
-          npc
-        ) {
+        if (!bubble && !(animation instanceof NpcDeathAnimation) && npc) {
           const record = this.client.getEnfRecordById(npc.id);
           if (record) {
             name = record.name;

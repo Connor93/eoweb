@@ -15,7 +15,6 @@ export {
   EffectTargetTile,
 } from './effect';
 export { Emote } from './emote';
-export { HealthBar } from './health-bar';
 export { NpcAttackAnimation } from './npc-attack';
 export { NpcDeathAnimation } from './npc-death';
 export { NpcWalkAnimation } from './npc-walk';

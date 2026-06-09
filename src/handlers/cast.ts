@@ -10,7 +10,7 @@ import {
 } from 'eolib';
 import type { Client } from '@/client';
 import { ITEM_PROTECT_TICKS_NPC } from '@/consts';
-import { EffectTargetNpc, Emote, HealthBar } from '@/render';
+import { EffectTargetNpc, Emote } from '@/render';
 import { SfxId } from '@/sfx';
 import { ChatChannels, ChatIcon } from '@/ui/enums';
 
@@ -27,10 +27,25 @@ function handleCastReply(client: Client, reader: EoReader) {
     client.statsController.notifyStatsUpdated();
   }
 
-  client.animationController.npcHealthBars.set(
-    packet.npcIndex,
-    new HealthBar(packet.hpPercentage, packet.damage),
-  );
+  client.combatOverlayController.setHpBar({
+    key: `npc:${packet.npcIndex}`,
+    percent: packet.hpPercentage,
+    worldX: npc.coords.x,
+    worldY: npc.coords.y,
+    remainingTicks: 4,
+  });
+  if (packet.damage > 0) {
+    client.combatOverlayController.pushDamage({
+      amount: packet.damage,
+      worldX: npc.coords.x,
+      worldY: npc.coords.y,
+    });
+  } else {
+    client.combatOverlayController.pushMiss({
+      worldX: npc.coords.x,
+      worldY: npc.coords.y,
+    });
+  }
 
   client.spellController.playSpellEffect(
     packet.spellId,
@@ -51,10 +66,18 @@ function handleCastSpec(client: Client, reader: EoReader) {
     client.statsController.notifyStatsUpdated();
   }
 
-  client.animationController.npcHealthBars.set(
-    packet.npcKilledData.npcIndex,
-    new HealthBar(0, packet.npcKilledData.damage),
-  );
+  client.combatOverlayController.setHpBar({
+    key: `npc:${packet.npcKilledData.npcIndex}`,
+    percent: 0,
+    worldX: npc.coords.x,
+    worldY: npc.coords.y,
+    remainingTicks: 4,
+  });
+  client.combatOverlayController.pushDamage({
+    amount: packet.npcKilledData.damage,
+    worldX: npc.coords.x,
+    worldY: npc.coords.y,
+  });
 
   client.spellController.playSpellEffect(
     packet.spellId,
@@ -108,10 +131,18 @@ function handleCastAccept(client: Client, reader: EoReader) {
     client.statsController.notifyStatsUpdated();
   }
 
-  client.animationController.npcHealthBars.set(
-    packet.npcKilledData.npcIndex,
-    new HealthBar(0, packet.npcKilledData.damage),
-  );
+  client.combatOverlayController.setHpBar({
+    key: `npc:${packet.npcKilledData.npcIndex}`,
+    percent: 0,
+    worldX: npc.coords.x,
+    worldY: npc.coords.y,
+    remainingTicks: 4,
+  });
+  client.combatOverlayController.pushDamage({
+    amount: packet.npcKilledData.damage,
+    worldX: npc.coords.x,
+    worldY: npc.coords.y,
+  });
 
   client.spellController.playSpellEffect(
     packet.spellId,

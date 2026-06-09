@@ -663,8 +663,6 @@ export class Client {
     this.map = map;
     this.animationController.characterChats.clear();
     this.animationController.npcChats.clear();
-    this.animationController.npcHealthBars.clear();
-    this.animationController.characterHealthBars.clear();
     this.itemProtectionController.itemProtectionTimers.clear();
     this.jukeboxController.reset();
     if (this.map) {
@@ -731,8 +729,6 @@ export class Client {
     this.animationController.characterChats.clear();
     this.animationController.npcChats.clear();
     this.npcController.queuedNpcChats.clear();
-    this.animationController.npcHealthBars.clear();
-    this.animationController.characterHealthBars.clear();
     this.animationController.characterEmotes.clear();
     this.animationController.effects = [];
     this.movementController.autoWalkPath = [];

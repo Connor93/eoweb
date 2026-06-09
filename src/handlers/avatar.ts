@@ -17,7 +17,6 @@ import {
   EffectAnimation,
   EffectTargetCharacter,
   EffectTargetTile,
-  HealthBar,
 } from '@/render';
 import { SfxId } from '@/sfx';
 
@@ -118,10 +117,25 @@ function handleAvatarReply(client: Client, reader: EoReader) {
     return;
   }
 
-  client.animationController.characterHealthBars.set(
-    packet.victimId,
-    new HealthBar(packet.hpPercentage, packet.damage),
-  );
+  client.combatOverlayController.setHpBar({
+    key: `char:${packet.victimId}`,
+    percent: packet.hpPercentage,
+    worldX: victim.coords.x,
+    worldY: victim.coords.y,
+    remainingTicks: 4,
+  });
+  if (packet.damage > 0) {
+    client.combatOverlayController.pushDamage({
+      amount: packet.damage,
+      worldX: victim.coords.x,
+      worldY: victim.coords.y,
+    });
+  } else {
+    client.combatOverlayController.pushMiss({
+      worldX: victim.coords.x,
+      worldY: victim.coords.y,
+    });
+  }
 
   if (packet.dead) {
     client.setCharacterDeathAnimation(packet.victimId);
@@ -146,10 +160,25 @@ function handleAvatarAdmin(client: Client, reader: EoReader) {
     return;
   }
 
-  client.animationController.characterHealthBars.set(
-    packet.victimId,
-    new HealthBar(packet.hpPercentage, packet.damage),
-  );
+  client.combatOverlayController.setHpBar({
+    key: `char:${packet.victimId}`,
+    percent: packet.hpPercentage,
+    worldX: victim.coords.x,
+    worldY: victim.coords.y,
+    remainingTicks: 4,
+  });
+  if (packet.damage > 0) {
+    client.combatOverlayController.pushDamage({
+      amount: packet.damage,
+      worldX: victim.coords.x,
+      worldY: victim.coords.y,
+    });
+  } else {
+    client.combatOverlayController.pushMiss({
+      worldX: victim.coords.x,
+      worldY: victim.coords.y,
+    });
+  }
 
   if (packet.victimDied) {
     client.setCharacterDeathAnimation(packet.victimId);

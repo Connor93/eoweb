@@ -10,7 +10,7 @@ import {
   RecoverTargetGroupServerPacket,
 } from 'eolib';
 import type { Client } from '@/client';
-import { Emote, HealthBar } from '@/render';
+import { Emote } from '@/render';
 import { SfxId } from '@/sfx';
 
 function handleRecoverPlayer(client: Client, reader: EoReader) {
@@ -20,10 +20,19 @@ function handleRecoverPlayer(client: Client, reader: EoReader) {
     const amount = packet.hp - client.hp;
     const percentage = (packet.hp / client.maxHp) * 100;
     client.hp = packet.hp;
-    client.animationController.characterHealthBars.set(
-      client.playerId,
-      new HealthBar(percentage, 0, amount),
-    );
+    const recoverPlayerCoords = client.getPlayerCoords();
+    client.combatOverlayController.setHpBar({
+      key: `char:${client.playerId}`,
+      percent: percentage,
+      worldX: recoverPlayerCoords.x,
+      worldY: recoverPlayerCoords.y,
+      remainingTicks: 4,
+    });
+    client.combatOverlayController.pushHeal({
+      amount,
+      worldX: recoverPlayerCoords.x,
+      worldY: recoverPlayerCoords.y,
+    });
   }
 
   client.tp = packet.tp;
@@ -39,10 +48,18 @@ function handleRecoverAgree(client: Client, reader: EoReader) {
   }
 
   character.hp += packet.healHp;
-  client.animationController.characterHealthBars.set(
-    packet.playerId,
-    new HealthBar(packet.hpPercentage, 0, packet.healHp),
-  );
+  client.combatOverlayController.setHpBar({
+    key: `char:${packet.playerId}`,
+    percent: packet.hpPercentage,
+    worldX: character.coords.x,
+    worldY: character.coords.y,
+    remainingTicks: 4,
+  });
+  client.combatOverlayController.pushHeal({
+    amount: packet.healHp,
+    worldX: character.coords.x,
+    worldY: character.coords.y,
+  });
 }
 
 function handleRecoverList(client: Client, reader: EoReader) {

@@ -20,12 +20,7 @@ import type { Client } from '@/client';
 import { ITEM_PROTECT_TICKS_PLAYER } from '@/consts';
 import { EOResourceID } from '@/edf';
 import { EquipmentSlot } from '@/equipment';
-import {
-  EffectAnimation,
-  EffectTargetCharacter,
-  Emote,
-  HealthBar,
-} from '@/render';
+import { EffectAnimation, EffectTargetCharacter, Emote } from '@/render';
 import { SfxId } from '@/sfx';
 import { ChatChannels, ChatIcon } from '@/ui/enums';
 
@@ -126,10 +121,19 @@ function handleItemReply(client: Client, reader: EoReader) {
       client.tp = data.tp;
       if (data.hpGain) {
         const percent = (client.hp / client.maxHp) * 100;
-        client.animationController.characterHealthBars.set(
-          client.playerId,
-          new HealthBar(percent, 0, data.hpGain),
-        );
+        const itemPlayerCoords = client.getPlayerCoords();
+        client.combatOverlayController.setHpBar({
+          key: `char:${client.playerId}`,
+          percent,
+          worldX: itemPlayerCoords.x,
+          worldY: itemPlayerCoords.y,
+          remainingTicks: 4,
+        });
+        client.combatOverlayController.pushHeal({
+          amount: data.hpGain,
+          worldX: itemPlayerCoords.x,
+          worldY: itemPlayerCoords.y,
+        });
       }
       client.statsController.notifyStatsUpdated();
       break;
