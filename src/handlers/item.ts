@@ -53,6 +53,7 @@ function handleItemRemove(client: Client, reader: EoReader) {
   client.nearby.items = client.nearby.items.filter(
     (i) => i.uid !== packet.itemIndex,
   );
+  client.instanceController.clearGroundInstance(packet.itemIndex);
 }
 
 function handleItemGet(client: Client, reader: EoReader) {

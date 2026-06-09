@@ -23,6 +23,9 @@ export class CleanupController {
       this.client.nearby.items = this.client.nearby.items.filter((i) =>
         inRange(playerCoords, i.coords),
       );
+      this.client.instanceController.pruneGroundInstances(
+        new Set(this.client.nearby.items.map((i) => i.uid)),
+      );
       this.clearOutofRangeTicks = CLEAR_OUT_OF_RANGE_TICKS;
 
       if (this.client.menuPlayerId) {

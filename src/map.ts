@@ -48,6 +48,7 @@ import {
   WALK_HEIGHT_FACTOR,
   WALK_WIDTH_FACTOR,
 } from '@/consts';
+import { InstanceRarity } from '@/controllers';
 import { GameState } from '@/game-state';
 import { GfxType } from '@/gfx';
 import type { ChatBubble, Emote, HealthBar } from '@/render';
@@ -193,6 +194,24 @@ const WALK_OFFSETS = [
 ];
 
 const JUMP_OFFSETS = [-8, -16, -16, -8];
+
+/** Rarity → sprite tint for ground drops. White (common) is the
+ *  identity tint — the sprite renders unmodified. The Rare / Epic /
+ *  Legendary hexes match the inventory border palette of muted /
+ *  info blue / secondary purple / warning orange so a player who
+ *  sees a blue sprite knows the inventory card will also be blue. */
+function groundRarityTint(rarity: InstanceRarity): number {
+  switch (rarity) {
+    case InstanceRarity.Rare:
+      return 0x60a5fa;
+    case InstanceRarity.Epic:
+      return 0xc084fc;
+    case InstanceRarity.Legendary:
+      return 0xfb923c;
+    default:
+      return 0xffffff;
+  }
+}
 
 export class MapRenderer {
   client: Client;
@@ -1528,6 +1547,13 @@ export class MapRenderer {
     );
     sprite.texture = texture;
     sprite.position.set(screenX, screenY);
+    // Tint by rarity when the server has flagged this uid as an
+    // instance. Always re-assign (even back to 0xffffff) because
+    // ensureWorldSprite reuses the Sprite object across frames.
+    const ground = this.client.instanceController.groundInstanceByIndex(
+      item.uid,
+    );
+    sprite.tint = ground ? groundRarityTint(ground.rarity) : 0xffffff;
   }
 
   private addCursorSprites(entity: Entity, playerScreen: Vector2) {

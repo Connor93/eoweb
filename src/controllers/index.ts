@@ -28,6 +28,7 @@ export { GuildController } from './guild-controller';
 export { HotbarController } from './hotbar-controller';
 export { InnController } from './inn-controller';
 export {
+  type GroundInstanceItem,
   InstanceController,
   type InstanceItem,
   type InstanceMod,

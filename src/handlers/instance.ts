@@ -1,6 +1,11 @@
 import { type EoReader, PacketAction, type PacketFamily } from 'eolib';
 import type { Client } from '@/client';
-import type { InstanceItem, InstanceMod, InstanceRarity } from '@/controllers';
+import type {
+  GroundInstanceItem,
+  InstanceItem,
+  InstanceMod,
+  InstanceRarity,
+} from '@/controllers';
 
 /**
  * REOSERV custom packet family — not in upstream eolib. INSTANCE_LIST
@@ -153,6 +158,28 @@ function handleTradeInstanceList(client: Client, reader: EoReader) {
   client.tradeController.notifyInstancesUpdated(sides);
 }
 
+/** Parses INSTANCE_GROUND_ADD (family 54 / action Spec). One ground-
+ *  item's instance metadata so the renderer can tint the sprite. The
+ *  matching ItemRemove tears the cache entry back down. */
+function parseInstanceGroundAdd(reader: EoReader): GroundInstanceItem {
+  const itemIndex = reader.getShort();
+  const instanceId = reader.getFixedString(INSTANCE_ID_LEN).trim();
+  const baseItemId = reader.getShort();
+  const rarity = reader.getChar() as InstanceRarity;
+  const level = reader.getChar();
+  const modCount = reader.getChar();
+  const mods: InstanceMod[] = [];
+  for (let j = 0; j < modCount; j++) {
+    mods.push(readMod(reader));
+  }
+  return { itemIndex, instanceId, baseItemId, rarity, level, mods };
+}
+
+function handleInstanceGroundAdd(client: Client, reader: EoReader) {
+  const entry = parseInstanceGroundAdd(reader);
+  client.instanceController.setGroundInstance(entry);
+}
+
 export function registerInstanceHandlers(client: Client) {
   client.bus!.registerPacketHandler(
     FAMILY_INSTANCE as PacketFamily,
@@ -168,5 +195,10 @@ export function registerInstanceHandlers(client: Client) {
     FAMILY_INSTANCE as PacketFamily,
     PacketAction.Reply,
     (reader) => handleTradeInstanceList(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_INSTANCE as PacketFamily,
+    PacketAction.Spec,
+    (reader) => handleInstanceGroundAdd(client, reader),
   );
 }

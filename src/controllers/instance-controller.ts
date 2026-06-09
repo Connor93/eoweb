@@ -69,6 +69,20 @@ export interface InstanceItem {
   mods: InstanceMod[];
 }
 
+/** One instance sitting on the floor at a given ground-item uid. The
+ *  standard `ItemAdd` / map-info / walk-reply traffic still paints the
+ *  sprite; this metadata layers the rarity tint + mod tooltip onto it.
+ *  Cleared when the matching `ItemRemove` arrives. */
+export interface GroundInstanceItem {
+  /** Matches `ItemMapInfo.uid` — the map's per-drop item index. */
+  itemIndex: number;
+  instanceId: string;
+  baseItemId: number;
+  rarity: InstanceRarity;
+  level: number;
+  mods: InstanceMod[];
+}
+
 const FAMILY_INSTANCE = 54;
 const INSTANCE_ID_LEN = 36;
 
@@ -78,6 +92,10 @@ export class InstanceController {
   private client: Client;
   private items: InstanceItem[] = [];
   private changedSubscribers: InstanceChangedSubscriber[] = [];
+  /** Ground drops the server has flagged as instances. Keyed by the
+   *  same uid the map renderer uses for the sprite, so `addItemSprite`
+   *  in map.ts can look up rarity in O(1). */
+  private groundByIndex: Map<number, GroundInstanceItem> = new Map();
 
   constructor(client: Client) {
     this.client = client;
@@ -209,6 +227,40 @@ export class InstanceController {
       PacketAction.Take,
       writer.toByteArray(),
     );
+  }
+
+  /** Stash a ground-instance entry from the INSTANCE_GROUND_ADD packet
+   *  (family 54 / action Spec). The map renderer consults this on
+   *  every sprite draw, so updates show on the next tick. */
+  setGroundInstance(entry: GroundInstanceItem): void {
+    this.groundByIndex.set(entry.itemIndex, entry);
+  }
+
+  /** Drop the ground-instance entry for a uid. Called from the
+   *  standard `ItemRemove` handler so the cache mirrors `nearby.items`
+   *  for instance-flagged drops. */
+  clearGroundInstance(itemIndex: number): void {
+    this.groundByIndex.delete(itemIndex);
+  }
+
+  /** Forget every ground-instance entry — used on disconnect /
+   *  map-change so stale uids from a previous map can't accidentally
+   *  match the index counter on a new map. */
+  resetGroundInstances(): void {
+    this.groundByIndex.clear();
+  }
+
+  /** Drop ground-instance entries whose uid is no longer in the
+   *  player's `nearby.items` set. Called from the periodic cleanup
+   *  controller so out-of-range entries don't accumulate. */
+  pruneGroundInstances(liveUids: Set<number>): void {
+    for (const uid of this.groundByIndex.keys()) {
+      if (!liveUids.has(uid)) this.groundByIndex.delete(uid);
+    }
+  }
+
+  groundInstanceByIndex(itemIndex: number): GroundInstanceItem | undefined {
+    return this.groundByIndex.get(itemIndex);
   }
 
   subscribeChanged(cb: InstanceChangedSubscriber): void {
