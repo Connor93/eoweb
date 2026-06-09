@@ -47,6 +47,7 @@ import {
   ChatController,
   ChestController,
   CleanupController,
+  CombatOverlayController,
   CommandController,
   ConfigController,
   DrunkController,
@@ -191,6 +192,7 @@ export class Client {
   chatController: ChatController;
   chestController: ChestController;
   cleanupController: CleanupController;
+  combatOverlayController: CombatOverlayController;
   drunkController: DrunkController;
   jukeboxController: JukeboxController;
   commandController: CommandController;
@@ -335,6 +337,7 @@ export class Client {
     this.chatController = new ChatController(this);
     this.chestController = new ChestController(this);
     this.cleanupController = new CleanupController(this);
+    this.combatOverlayController = new CombatOverlayController(this);
     this.commandController = new CommandController(this);
     this.drunkController = new DrunkController(this);
     this.instanceController = new InstanceController(this);

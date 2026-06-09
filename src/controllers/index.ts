@@ -13,6 +13,11 @@ export { BossController, type BossInfo } from './boss-controller';
 export { ChatController } from './chat-controller';
 export { ChestController } from './chest-controller';
 export { CleanupController } from './cleanup-controller';
+export {
+  CombatOverlayController,
+  type CombatPopup,
+  type HpBarEntry,
+} from './combat-overlay-controller';
 export { CommandController } from './command-controller';
 export type {
   FpsLimit,
