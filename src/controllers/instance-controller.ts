@@ -1,5 +1,6 @@
 import { EoWriter, PacketAction, type PacketFamily } from 'eolib';
 import type { Client } from '@/client';
+import type { CombatElement } from '@/combat-overlay/element-colors';
 
 /**
  * Tracks the player's rolled, hash-keyed instanced items (weapons /
@@ -62,6 +63,7 @@ export interface InstanceItem {
   baseItemId: number;
   rarity: InstanceRarity;
   level: number;
+  element: CombatElement;
   /** 0..14 when equipped in that paperdoll slot, -1 otherwise. */
   equippedSlot: number;
   /** When true the instance lives in the player's locker (bank). */
@@ -80,6 +82,7 @@ export interface GroundInstanceItem {
   baseItemId: number;
   rarity: InstanceRarity;
   level: number;
+  element: CombatElement;
   mods: InstanceMod[];
 }
 

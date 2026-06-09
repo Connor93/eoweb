@@ -1,5 +1,6 @@
 import { type EoReader, PacketAction, type PacketFamily } from 'eolib';
 import type { Client } from '@/client';
+import type { CombatElement } from '@/combat-overlay/element-colors';
 import type {
   GroundInstanceItem,
   InstanceItem,
@@ -66,11 +67,13 @@ function parseInstanceList(reader: EoReader): InstanceItem[] {
     for (let j = 0; j < modCount; j++) {
       mods.push(readMod(reader));
     }
+    const element = reader.getChar() as CombatElement;
     entries.push({
       instanceId,
       baseItemId,
       rarity,
       level,
+      element,
       equippedSlot,
       inLocker,
       mods,
@@ -100,11 +103,13 @@ function parseChestInstanceList(reader: EoReader): InstanceItem[] {
     for (let j = 0; j < modCount; j++) {
       mods.push(readMod(reader));
     }
+    const element = reader.getChar() as CombatElement;
     entries.push({
       instanceId,
       baseItemId,
       rarity,
       level,
+      element,
       equippedSlot: -1,
       inLocker: false,
       mods,
@@ -138,11 +143,13 @@ function parseTradeInstanceList(reader: EoReader) {
       for (let j = 0; j < modCount; j++) {
         mods.push(readMod(reader));
       }
+      const element = reader.getChar() as CombatElement;
       instances.push({
         instanceId,
         baseItemId,
         rarity,
         level,
+        element,
         equippedSlot: -1,
         inLocker: false,
         mods,
@@ -172,7 +179,8 @@ function parseInstanceGroundAdd(reader: EoReader): GroundInstanceItem {
   for (let j = 0; j < modCount; j++) {
     mods.push(readMod(reader));
   }
-  return { itemIndex, instanceId, baseItemId, rarity, level, mods };
+  const element = reader.getChar() as CombatElement;
+  return { itemIndex, instanceId, baseItemId, rarity, level, element, mods };
 }
 
 function handleInstanceGroundAdd(client: Client, reader: EoReader) {
