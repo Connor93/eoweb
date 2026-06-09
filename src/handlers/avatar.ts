@@ -122,7 +122,6 @@ function handleAvatarReply(client: Client, reader: EoReader) {
     percent: packet.hpPercentage,
     worldX: victim.coords.x,
     worldY: victim.coords.y,
-    remainingTicks: 4,
   });
   if (packet.damage > 0) {
     client.combatOverlayController.pushDamage({
@@ -165,7 +164,6 @@ function handleAvatarAdmin(client: Client, reader: EoReader) {
     percent: packet.hpPercentage,
     worldX: victim.coords.x,
     worldY: victim.coords.y,
-    remainingTicks: 4,
   });
   if (packet.damage > 0) {
     client.combatOverlayController.pushDamage({

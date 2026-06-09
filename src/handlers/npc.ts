@@ -77,7 +77,6 @@ function handleNpcPlayer(client: Client, reader: EoReader) {
       percent: attack.hpPercentage,
       worldX: attackedCoords.x,
       worldY: attackedCoords.y,
-      remainingTicks: 4,
     });
     if (attack.damage > 0) {
       client.combatOverlayController.pushDamage({
@@ -152,7 +151,6 @@ function handleNpcSpec(client: Client, reader: EoReader) {
       percent: 0,
       worldX: specNpc.coords.x,
       worldY: specNpc.coords.y,
-      remainingTicks: 4,
     });
     client.combatOverlayController.pushDamage({
       amount: packet.npcKilledData.damage,
@@ -205,7 +203,6 @@ function handleNpcAccept(client: Client, reader: EoReader) {
       percent: 0,
       worldX: acceptNpc.coords.x,
       worldY: acceptNpc.coords.y,
-      remainingTicks: 4,
     });
     client.combatOverlayController.pushDamage({
       amount: packet.npcKilledData.damage,
@@ -286,7 +283,6 @@ function handleNpcJunk(client: Client, reader: EoReader) {
         percent: 0,
         worldX: n.coords.x,
         worldY: n.coords.y,
-        remainingTicks: 4,
       });
       client.combatOverlayController.pushDamage({
         amount: 1,
@@ -337,7 +333,6 @@ function handleNpcReply(client: Client, reader: EoReader) {
     percent: packet.hpPercentage,
     worldX: npc.coords.x,
     worldY: npc.coords.y,
-    remainingTicks: 4,
   });
   if (packet.damage > 0) {
     client.combatOverlayController.pushDamage({

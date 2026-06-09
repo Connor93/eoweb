@@ -127,7 +127,6 @@ function handleItemReply(client: Client, reader: EoReader) {
           percent,
           worldX: itemPlayerCoords.x,
           worldY: itemPlayerCoords.y,
-          remainingTicks: 4,
         });
         client.combatOverlayController.pushHeal({
           amount: data.hpGain,

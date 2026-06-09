@@ -26,7 +26,6 @@ function handleRecoverPlayer(client: Client, reader: EoReader) {
       percent: percentage,
       worldX: recoverPlayerCoords.x,
       worldY: recoverPlayerCoords.y,
-      remainingTicks: 4,
     });
     client.combatOverlayController.pushHeal({
       amount,
@@ -53,7 +52,6 @@ function handleRecoverAgree(client: Client, reader: EoReader) {
     percent: packet.hpPercentage,
     worldX: character.coords.x,
     worldY: character.coords.y,
-    remainingTicks: 4,
   });
   client.combatOverlayController.pushHeal({
     amount: packet.healHp,

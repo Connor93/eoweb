@@ -59,7 +59,6 @@ function handleSpellTargetSelf(client: Client, reader: EoReader) {
     percent: packet.hpPercentage,
     worldX: character.coords.x,
     worldY: character.coords.y,
-    remainingTicks: 4,
   });
   if (packet.spellHealHp > 0) {
     client.combatOverlayController.pushHeal({
@@ -100,7 +99,6 @@ function handleSpellTargetOther(client: Client, reader: EoReader) {
     percent: packet.hpPercentage,
     worldX: character.coords.x,
     worldY: character.coords.y,
-    remainingTicks: 4,
   });
   if (packet.spellHealHp > 0) {
     client.combatOverlayController.pushHeal({
@@ -142,7 +140,6 @@ function handleSpellTargetGroup(client: Client, reader: EoReader) {
       percent: player.hpPercentage,
       worldX: character.coords.x,
       worldY: character.coords.y,
-      remainingTicks: 4,
     });
     if (packet.spellHealHp > 0) {
       client.combatOverlayController.pushHeal({

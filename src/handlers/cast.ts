@@ -32,7 +32,6 @@ function handleCastReply(client: Client, reader: EoReader) {
     percent: packet.hpPercentage,
     worldX: npc.coords.x,
     worldY: npc.coords.y,
-    remainingTicks: 4,
   });
   if (packet.damage > 0) {
     client.combatOverlayController.pushDamage({
@@ -71,7 +70,6 @@ function handleCastSpec(client: Client, reader: EoReader) {
     percent: 0,
     worldX: npc.coords.x,
     worldY: npc.coords.y,
-    remainingTicks: 4,
   });
   client.combatOverlayController.pushDamage({
     amount: packet.npcKilledData.damage,
@@ -136,7 +134,6 @@ function handleCastAccept(client: Client, reader: EoReader) {
     percent: 0,
     worldX: npc.coords.x,
     worldY: npc.coords.y,
-    remainingTicks: 4,
   });
   client.combatOverlayController.pushDamage({
     amount: packet.npcKilledData.damage,

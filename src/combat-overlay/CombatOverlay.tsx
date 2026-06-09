@@ -24,9 +24,13 @@ function worldToScreen(
   };
 }
 
-// Diagnostic: log only the FIRST render of each popup so the console
-// doesn't flood at 60fps. Cleared after Phase A verification.
-const _loggedPopups = new Set<number>();
+/** Pixels above the tile-center where the popup spawns. Tile center is
+ *  the character's feet in EO's isometric projection; ~64 puts the
+ *  popup at the top of the head for typical character sprites. The CSS
+ *  animation flies it further upward from there. */
+const POPUP_HEAD_OFFSET_Y = 64;
+/** HP bar sits a hair above the head, since it doesn't fly. */
+const HPBAR_HEAD_OFFSET_Y = 56;
 
 export function CombatOverlay() {
   const client = useClient();
@@ -94,18 +98,6 @@ function renderPopup(
     halfW,
     halfH,
   );
-  if (!_loggedPopups.has(p.id)) {
-    _loggedPopups.add(p.id);
-    // biome-ignore lint/suspicious/noConsole: temporary diagnostic for Phase A verify
-    console.log('[CombatOverlay] popup', {
-      id: p.id,
-      kind: p.kind,
-      worldXY: { x: p.worldX, y: p.worldY },
-      camera: { x: cameraX, y: cameraY },
-      half: { w: halfW, h: halfH },
-      screenXY: { x, y },
-    });
-  }
   const color = p.kind === 'heal' ? '#4ade80' : combatElementColor(p.element);
   const label = p.kind === 'miss' ? 'miss' : String(p.amount);
   return (
@@ -114,7 +106,7 @@ function renderPopup(
       class={`combat-popup combat-popup--${p.kind}`}
       style={{
         left: `${x}px`,
-        top: `${y - 35}px`,
+        top: `${y - POPUP_HEAD_OFFSET_Y}px`,
         color,
       }}
     >
@@ -146,7 +138,7 @@ function renderHpBar(
       class='combat-hpbar'
       style={{
         left: `${x - 20}px`,
-        top: `${y - 12}px`,
+        top: `${y - HPBAR_HEAD_OFFSET_Y}px`,
       }}
     >
       <div

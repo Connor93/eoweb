@@ -19,23 +19,28 @@ export interface HpBarEntry {
   percent: number; // 0..100
   worldX: number;
   worldY: number;
-  remainingTicks: number; // matches existing HealthBar.ticks
+  /** Wall-clock ms when this entry should disappear. Refreshed every
+   *  time `setHpBar` is called for the same key — i.e. each fresh
+   *  combat event extends the timer. Set by the controller, not by
+   *  callers. */
+  expireAtMs: number;
 }
 
 type Subscriber = () => void;
 
 const POPUP_LIFETIME_MS = 550;
+/** HP bars stay visible for 3 s after the last combat event on that
+ *  target. Each new hit / heal / miss for the same key refreshes the
+ *  timer, so as long as combat is ongoing the bar stays up. */
+const HP_BAR_LIFETIME_MS = 3000;
 
 export class CombatOverlayController {
-  private client: Client;
   private nextId = 1;
   private popups: CombatPopup[] = [];
   private hpBars: Map<string, HpBarEntry> = new Map();
   private subscribers: Subscriber[] = [];
 
-  constructor(client: Client) {
-    this.client = client;
-  }
+  constructor(_client: Client) {}
 
   pushDamage(opts: {
     amount: number;
@@ -43,12 +48,6 @@ export class CombatOverlayController {
     worldX: number;
     worldY: number;
   }): void {
-    // biome-ignore lint/suspicious/noConsole: temporary diagnostic for Phase A verify
-    console.log('[CombatOverlayController] pushDamage', {
-      amount: opts.amount,
-      targetWorld: { x: opts.worldX, y: opts.worldY },
-      playerWorld: this.snapshotPlayerWorld(),
-    });
     this.popups.push({
       id: this.nextId++,
       kind: 'damage',
@@ -59,12 +58,6 @@ export class CombatOverlayController {
       spawnedAtMs: performance.now(),
     });
     this.notify();
-  }
-
-  private snapshotPlayerWorld(): { x: number; y: number; id: number } | null {
-    const c = this.client.getPlayerCharacter?.();
-    if (!c) return null;
-    return { x: c.coords.x, y: c.coords.y, id: c.playerId };
   }
 
   pushHeal(opts: { amount: number; worldX: number; worldY: number }): void {
@@ -93,8 +86,14 @@ export class CombatOverlayController {
     this.notify();
   }
 
-  setHpBar(entry: HpBarEntry): void {
-    this.hpBars.set(entry.key, entry);
+  /** Show / refresh the head-floating HP bar for a target. Each call
+   *  resets the visibility timer to HP_BAR_LIFETIME_MS — combat events
+   *  in rapid succession keep the bar visible continuously. */
+  setHpBar(entry: Omit<HpBarEntry, 'expireAtMs'>): void {
+    this.hpBars.set(entry.key, {
+      ...entry,
+      expireAtMs: performance.now() + HP_BAR_LIFETIME_MS,
+    });
     this.notify();
   }
 
@@ -102,8 +101,10 @@ export class CombatOverlayController {
     if (this.hpBars.delete(key)) this.notify();
   }
 
-  /** Called by the overlay component on each render-tick to drop expired popups
-   *  and decrement HP-bar ticks. */
+  /** Called by the overlay component on each render-tick to drop
+   *  expired popups + HP bars. Popup lifetime is short
+   *  (POPUP_LIFETIME_MS); HP bar lifetime is the 3 s after-combat
+   *  window set in setHpBar. */
   tick(): { popups: CombatPopup[]; hpBars: HpBarEntry[] } {
     const now = performance.now();
     const before = this.popups.length;
@@ -112,11 +113,8 @@ export class CombatOverlayController {
     );
     let dirty = before !== this.popups.length;
 
-    for (const bar of this.hpBars.values()) {
-      bar.remainingTicks = Math.max(0, bar.remainingTicks - 1);
-    }
     for (const [key, bar] of this.hpBars) {
-      if (bar.remainingTicks === 0) {
+      if (now >= bar.expireAtMs) {
         this.hpBars.delete(key);
         dirty = true;
       }

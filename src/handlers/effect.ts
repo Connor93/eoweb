@@ -71,7 +71,6 @@ function handleEffectSpec(client: Client, reader: EoReader) {
     percent: Math.floor((client.hp / client.maxHp) * 100),
     worldX: specPlayerCoords.x,
     worldY: specPlayerCoords.y,
-    remainingTicks: 4,
   });
   client.combatOverlayController.pushDamage({
     amount: damage,
@@ -161,7 +160,6 @@ function handleEffectAdmin(client: Client, reader: EoReader) {
     percent: packet.hpPercentage,
     worldX: character.coords.x,
     worldY: character.coords.y,
-    remainingTicks: 4,
   });
   if (packet.damage > 0) {
     client.combatOverlayController.pushDamage({
