@@ -9,6 +9,11 @@ import {
 } from 'preact/hooks';
 import { FaArrowUp } from 'react-icons/fa';
 import {
+  CombatElement,
+  combatElementColor,
+  combatElementLabel,
+} from '@/combat-overlay';
+import {
   type CharacterTab,
   type InstanceItem,
   InstanceRarity,
@@ -220,6 +225,17 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
               {line}
             </div>
           ))}
+          {equippedInstance &&
+            equippedInstance.element !== CombatElement.Plain && (
+              <div
+                style={{
+                  color: combatElementColor(equippedInstance.element),
+                  fontSize: '11px',
+                }}
+              >
+                {combatElementLabel(equippedInstance.element)}
+              </div>
+            )}
         </div>
       )}
     </div>

@@ -16,6 +16,11 @@ import {
   GiScrollQuill,
   GiShield,
 } from 'react-icons/gi';
+import {
+  CombatElement,
+  combatElementColor,
+  combatElementLabel,
+} from '@/combat-overlay';
 import { GOLD_ITEM_ID } from '@/consts';
 import {
   type InstanceItem,
@@ -250,6 +255,31 @@ function InstanceCard({
         </span>
       </div>
     </div>
+  );
+}
+
+function InstanceTooltipContent({
+  inst,
+  lines,
+}: {
+  inst: InstanceItem;
+  lines: string[];
+}) {
+  return (
+    <>
+      {lines.map((line, i) => (
+        <div key={i} class={i === 0 ? 'font-semibold' : 'opacity-70'}>
+          {line}
+        </div>
+      ))}
+      {inst.element !== CombatElement.Plain && (
+        <div
+          style={{ color: combatElementColor(inst.element), fontSize: '11px' }}
+        >
+          {combatElementLabel(inst.element)}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -701,6 +731,11 @@ export function InventoryGrid({ itemIds }: Props) {
         (() => {
           const lines = getTooltipLines(tooltip.key);
           if (!lines.length) return null;
+          const isInstance = tooltip.key.startsWith('instance:');
+          const instId = isInstance ? tooltip.key.slice(9) : null;
+          const inst = instId
+            ? visibleInstances.find((i) => i.instanceId === instId)
+            : null;
           return createPortal(
             <div
               class='pointer-events-none w-max max-w-56 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
@@ -711,11 +746,15 @@ export function InventoryGrid({ itemIds }: Props) {
                 zIndex: 9999,
               }}
             >
-              {lines.map((line, i) => (
-                <div key={i} class={i === 0 ? 'font-semibold' : 'opacity-70'}>
-                  {line}
-                </div>
-              ))}
+              {inst ? (
+                <InstanceTooltipContent inst={inst} lines={lines} />
+              ) : (
+                lines.map((line, i) => (
+                  <div key={i} class={i === 0 ? 'font-semibold' : 'opacity-70'}>
+                    {line}
+                  </div>
+                ))
+              )}
             </div>,
             document.getElementById('ui') ?? document.body,
           );
