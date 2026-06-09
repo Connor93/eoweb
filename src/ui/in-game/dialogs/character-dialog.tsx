@@ -220,11 +220,10 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
         <div
           class={`pointer-events-none absolute top-0 left-full z-50 ml-1 w-max max-w-40 rounded bg-base-300 px-2 py-1 text-xs shadow-lg ${touchTooltip ? 'block' : 'hidden group-hover:block'}`}
         >
-          {tooltipLines.map((line, i) => (
-            <div key={i} class={i === 0 ? 'font-semibold' : 'opacity-70'}>
-              {line}
-            </div>
-          ))}
+          {/* Layout: name (line 0) → element row (if instance is non-Plain) → rest. */}
+          {tooltipLines[0] !== undefined && (
+            <div class='font-semibold'>{tooltipLines[0]}</div>
+          )}
           {equippedInstance &&
             equippedInstance.element !== CombatElement.Plain && (
               <div
@@ -236,6 +235,11 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
                 {combatElementLabel(equippedInstance.element)}
               </div>
             )}
+          {tooltipLines.slice(1).map((line, i) => (
+            <div key={i} class='opacity-70'>
+              {line}
+            </div>
+          ))}
         </div>
       )}
     </div>

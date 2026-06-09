@@ -265,13 +265,11 @@ function InstanceTooltipContent({
   inst: InstanceItem;
   lines: string[];
 }) {
+  // Layout: name (lines[0]) → element row (if non-Plain) → rest of lines.
+  const [head, ...rest] = lines;
   return (
     <>
-      {lines.map((line, i) => (
-        <div key={i} class={i === 0 ? 'font-semibold' : 'opacity-70'}>
-          {line}
-        </div>
-      ))}
+      {head !== undefined && <div class='font-semibold'>{head}</div>}
       {inst.element !== CombatElement.Plain && (
         <div
           style={{ color: combatElementColor(inst.element), fontSize: '11px' }}
@@ -279,6 +277,11 @@ function InstanceTooltipContent({
           {combatElementLabel(inst.element)}
         </div>
       )}
+      {rest.map((line, i) => (
+        <div key={i} class='opacity-70'>
+          {line}
+        </div>
+      ))}
     </>
   );
 }
