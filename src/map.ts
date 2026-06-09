@@ -2264,4 +2264,71 @@ export class MapRenderer {
   public get lastPlayerScreen(): { x: number; y: number } | null {
     return this._lastPlayerScreen ?? null;
   }
+
+  /**
+   * Smoothed iso-world screen position for a target identified by an
+   * overlay key (`"npc:42"` / `"char:1024"`). Returns null when the
+   * target is no longer in `client.nearby` (e.g. an NPC's death
+   * animation has finished and the corpse has been despawned).
+   *
+   * Reuses the same walk interpolation the sprite render path applies,
+   * so combat-overlay popups + HP bars track the visual sprite tile-
+   * to-tile instead of snapping at each step.
+   */
+  public getEntityIsoScreenPosition(
+    key: string,
+  ): { x: number; y: number } | null {
+    const colon = key.indexOf(':');
+    if (colon < 0) return null;
+    const kind = key.slice(0, colon);
+    const id = Number.parseInt(key.slice(colon + 1), 10);
+    if (Number.isNaN(id)) return null;
+
+    if (kind === 'char') {
+      const character = this.client.nearby.characters.find(
+        (c) => c.playerId === id,
+      );
+      if (!character) return null;
+      let animation =
+        this.client.animationController.characterAnimations.get(id);
+      if (animation instanceof CharacterDeathAnimation && animation.base) {
+        animation = animation.base;
+      }
+      let coords: Vector2 = character.coords;
+      let walkOffset = { x: 0, y: 0 };
+      if (animation instanceof CharacterWalkAnimation) {
+        coords = animation.from;
+        const off = this.interpolateWalkOffset(
+          animation.animationFrame,
+          animation.direction,
+        );
+        walkOffset = { x: off.x, y: off.y };
+      }
+      const t = isoToScreen(coords);
+      return { x: t.x + walkOffset.x, y: t.y + walkOffset.y };
+    }
+
+    if (kind === 'npc') {
+      const npc = this.client.nearby.npcs.find((n) => n.index === id);
+      if (!npc) return null;
+      let animation = this.client.animationController.npcAnimations.get(id);
+      if (animation instanceof NpcDeathAnimation && animation.base) {
+        animation = animation.base;
+      }
+      let coords: Vector2 = npc.coords;
+      let walkOffset = { x: 0, y: 0 };
+      if (animation instanceof NpcWalkAnimation) {
+        coords = animation.from;
+        const off = this.interpolateWalkOffset(
+          animation.animationFrame,
+          animation.direction,
+        );
+        walkOffset = { x: off.x, y: off.y };
+      }
+      const t = isoToScreen(coords);
+      return { x: t.x + walkOffset.x, y: t.y + walkOffset.y };
+    }
+
+    return null;
+  }
 }

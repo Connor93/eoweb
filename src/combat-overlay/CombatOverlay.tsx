@@ -25,29 +25,16 @@ function worldToScreen(
   };
 }
 
-/** Looks up the live tile coords for an entity by its overlay key.
- *  Falls back to null when the target has left view (e.g. an NPC died
- *  and was removed from nearby.npcs). The caller should then use the
- *  popup's last-known stored worldX/worldY snapshot. */
-function liveCoordsFor(
+/** Smoothed iso-world screen position for the entity behind a key.
+ *  Returns null when the entity is no longer in `client.nearby` —
+ *  i.e. an NPC's death animation has finished and the corpse has
+ *  been despawned, or a character has walked out of view. */
+function liveIsoScreenFor(
   client: Client,
   key: string | undefined,
 ): { x: number; y: number } | null {
   if (!key) return null;
-  const colon = key.indexOf(':');
-  if (colon < 0) return null;
-  const kind = key.slice(0, colon);
-  const id = Number.parseInt(key.slice(colon + 1), 10);
-  if (Number.isNaN(id)) return null;
-  if (kind === 'npc') {
-    const npc = client.nearby.npcs.find((n) => n.index === id);
-    return npc ? { x: npc.coords.x, y: npc.coords.y } : null;
-  }
-  if (kind === 'char') {
-    const c = client.nearby.characters.find((ch) => ch.playerId === id);
-    return c ? { x: c.coords.x, y: c.coords.y } : null;
-  }
-  return null;
+  return client.mapRenderer?.getEntityIsoScreenPosition(key) ?? null;
 }
 
 /** Visual top of the character / NPC head, in px above the iso tile
@@ -134,17 +121,21 @@ function renderPopup(
   halfW: number,
   halfH: number,
 ) {
-  const live = liveCoordsFor(client, p.targetKey);
-  const worldX = live?.x ?? p.worldX;
-  const worldY = live?.y ?? p.worldY;
-  const { x, y } = worldToScreen(
-    worldX,
-    worldY,
-    cameraX,
-    cameraY,
-    halfW,
-    halfH,
-  );
+  // Prefer the smoothed live iso position so the popup follows the
+  // sprite during walk animations. If the target is gone (death),
+  // fall back to the tile-coord snapshot so the popup still flies up
+  // from where the hit landed.
+  const liveIso = liveIsoScreenFor(client, p.targetKey);
+  let x: number;
+  let y: number;
+  if (liveIso) {
+    x = Math.floor(liveIso.x - cameraX + halfW);
+    y = Math.floor(liveIso.y - cameraY + halfH);
+  } else {
+    const s = worldToScreen(p.worldX, p.worldY, cameraX, cameraY, halfW, halfH);
+    x = s.x;
+    y = s.y;
+  }
   const color = p.kind === 'heal' ? '#4ade80' : combatElementColor(p.element);
   const label = p.kind === 'miss' ? 'miss' : String(p.amount);
   return (
@@ -170,17 +161,14 @@ function renderHpBar(
   halfW: number,
   halfH: number,
 ) {
-  const live = liveCoordsFor(client, bar.key);
-  const worldX = live?.x ?? bar.worldX;
-  const worldY = live?.y ?? bar.worldY;
-  const { x, y } = worldToScreen(
-    worldX,
-    worldY,
-    cameraX,
-    cameraY,
-    halfW,
-    halfH,
-  );
+  // HP bar only renders when the target is still present in
+  // client.nearby. As soon as the target is despawned (NPC death
+  // animation finished, character left view) the bar disappears,
+  // even if the 3 s timer hasn't expired.
+  const liveIso = liveIsoScreenFor(client, bar.key);
+  if (!liveIso) return null;
+  const x = Math.floor(liveIso.x - cameraX + halfW);
+  const y = Math.floor(liveIso.y - cameraY + halfH);
   const fillColor =
     bar.percent < 25 ? '#dc2626' : bar.percent < 50 ? '#facc15' : '#22c55e';
   return (
