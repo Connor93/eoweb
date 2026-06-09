@@ -29,18 +29,16 @@ export function CombatOverlay() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [, force] = useState(0);
 
-  useEffect(() => {
-    const handler = () => force((n) => n + 1);
-    client.combatOverlayController.subscribe(handler);
-    return () => client.combatOverlayController.unsubscribe(handler);
-  }, [client]);
-
-  // Drive a rAF loop so popups animate smoothly and the controller can
-  // expire them on time. Each frame: tick + force re-render.
+  // Drive a re-render every animation frame. Pixi sprites live inside
+  // worldContainer and scroll with the camera for free; DOM nodes need
+  // a fresh read of cameraX/cameraY/halfGameWidth/Height every frame
+  // to follow the camera as the player walks. Also expires popups via
+  // tick() on the same tick.
   useEffect(() => {
     let raf = 0;
     const loop = () => {
       client.combatOverlayController.tick();
+      force((n) => (n + 1) % 65536);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
