@@ -1,6 +1,7 @@
 export { Alert } from './alert';
 export { AmountDialog } from './amount-dialog';
 export { Backdrop } from './backdrop';
+export { BreakdownTooltip } from './breakdown-tooltip';
 export { Button } from './button';
 export {
   CharacterPreview,
