@@ -1,7 +1,7 @@
 # Stats Panel Effective View — Design Spec
 
 **Date:** 2026-06-10
-**Status:** Approved pending user review
+**Status:** Shipped 2026-06-10 (pending in-game play-test). Implementation deviations: the per-mod wire block also gained a **sign byte** (eolib ints can't encode negatives — resist mod values were corrupting on the wire pre-existing; fixed in the same lockstep change); the client mirrors the server's skip of **conditional baked-target mods** in gear sums; exactly-cancelling effect lines and pool-deleted (empty-target) mods are skipped in the Effects list.
 **Surfaces:** eoweb (primary), REOSERV (one small wire addition)
 **Vault:** `Web Client/Documentation/Planning/Stats panel effective view.md` mirrors the intent; this file is the implementation-facing spec.
 

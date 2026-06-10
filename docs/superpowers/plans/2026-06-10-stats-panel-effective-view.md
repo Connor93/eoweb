@@ -1,5 +1,7 @@
 # Stats Panel Effective View Implementation Plan
 
+> **✅ COMPLETED 2026-06-10** — all 8 tasks executed via subagent-driven development (REOSERV `542a60b..46c9445`, eoweb `0622bcc..c903e9f`). Notable mid-execution additions: sign byte on the per-mod wire (pre-existing negative-value corruption found by the codec round-trip test), codec hardening (length/value clamps), `equipRev` subscription (classic-equip changes weren't invalidating the breakdown memo), client mirror of the server's conditional-baked-mod skip. In-game play-test checklist in Task 8 still pending.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Per-item breakdown tooltips on every stat row, HP/TP rows in the derived column, and a grouped "Effects" section aggregating live gear mods — in eoweb's character dialog Stats tab.
@@ -311,7 +313,11 @@ function readMod(reader: EoReader): InstanceMod {
   const targetLen = reader.getChar();
   const targetBytes = reader.getBytes(targetLen);
   const target = new TextDecoder().decode(new Uint8Array(targetBytes));
-  const valueX100 = reader.getInt();
+  // Sign byte (0 = +, 1 = −): eolib ints can't encode negatives, and
+  // resist mods roll negative values. Added server-side in the same
+  // change as the condition field.
+  const negative = reader.getChar() === 1;
+  const valueX100 = reader.getInt() * (negative ? -1 : 1);
   const conditionLen = reader.getChar();
   const conditionBytes = reader.getBytes(conditionLen);
   const condition = new TextDecoder().decode(new Uint8Array(conditionBytes));
