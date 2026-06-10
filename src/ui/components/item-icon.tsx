@@ -37,20 +37,25 @@ type Props = {
 
 export function ItemIcon({ graphicId, alt = '', class: className }: Props) {
   const client = useClient();
-  const [src, setSrc] = useState<string | null>(
-    () => urlCache.get(graphicId) ?? null,
-  );
+  // src derives from the cache keyed by the CURRENT prop — never stored
+  // in state. Storing it froze the first loaded image: the effect
+  // early-returned on `src` being set, so a graphicId change on a
+  // mounted icon (equip-swap replacing a slot's item) kept the old
+  // image. The state below only exists to re-render when an async load
+  // completes.
+  const [, setLoaded] = useState(0);
+  const src = urlCache.get(graphicId) ?? null;
 
   useEffect(() => {
-    if (src) return;
+    if (urlCache.has(graphicId)) return;
     let cancelled = false;
-    loadItemUrl(client.gfxLoader, graphicId).then((url) => {
-      if (!cancelled) setSrc(url);
+    loadItemUrl(client.gfxLoader, graphicId).then(() => {
+      if (!cancelled) setLoaded((n) => n + 1);
     });
     return () => {
       cancelled = true;
     };
-  }, [client, graphicId, src]);
+  }, [client, graphicId]);
 
   if (!src) {
     return <div class={`skeleton ${className ?? ''}`} />;
