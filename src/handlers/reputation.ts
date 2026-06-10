@@ -16,6 +16,8 @@ import type { ReputationEntry, ReputationTier } from '@/controllers';
 const FAMILY_REPUTATION = 53;
 const MIN_ENTRY_BYTES = 7;
 
+const utf8Decoder = new TextDecoder();
+
 function parseRepList(reader: EoReader): ReputationEntry[] {
   const entries: ReputationEntry[] = [];
   while (reader.remaining >= MIN_ENTRY_BYTES) {
@@ -24,7 +26,7 @@ function parseRepList(reader: EoReader): ReputationEntry[] {
     const tier = reader.getChar();
     const nameLen = reader.getChar();
     const nameBytes = reader.getBytes(nameLen);
-    const zoneName = new TextDecoder().decode(new Uint8Array(nameBytes));
+    const zoneName = utf8Decoder.decode(new Uint8Array(nameBytes));
     entries.push({
       zoneId,
       value,
