@@ -36,6 +36,8 @@ export interface ReputationEntry {
   zoneId: number;
   value: number;
   tier: ReputationTier;
+  /** Human-readable zone name from zones.json; empty when unknown. */
+  zoneName: string;
 }
 
 type ReputationChangedSubscriber = (entries: ReputationEntry[]) => void;

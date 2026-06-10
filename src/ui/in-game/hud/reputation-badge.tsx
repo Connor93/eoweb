@@ -57,7 +57,9 @@ export function ReputationBadge() {
           key={entry.zoneId}
           class='flex min-w-44 items-center justify-between gap-3 text-slate-100 text-xs'
         >
-          <span class='font-medium'>Zone {entry.zoneId}</span>
+          <span class='font-medium'>
+            {entry.zoneName || `Zone ${entry.zoneId}`}
+          </span>
           <span class={tierClass(entry.tier)}>
             {reputationTierLabel(entry.tier)}
           </span>
