@@ -460,6 +460,15 @@ function StatsTab() {
     return () => client.instanceController.unsubscribeChanged(handler);
   }, [client, isOwnCharacter]);
 
+  const [equipRev, setEquipRev] = useState(0);
+  useEffect(() => {
+    if (!isOwnCharacter) return;
+    const handler = () => setEquipRev((n) => n + 1);
+    client.inventoryController.subscribeEquipmentChanged(handler);
+    return () =>
+      client.inventoryController.unsubscribeEquipmentChanged(handler);
+  }, [client, isOwnCharacter]);
+
   const breakdown = useMemo(() => {
     if (!isOwnCharacter) return null;
     const equipped = client.instanceController
@@ -470,9 +479,9 @@ function StatsTab() {
       classicEquipsFromPaperdoll(client.equipment),
       (id) => client.getEifRecordById(id) ?? null,
     );
-    // instanceRev is the change signal; secondary/base stats refresh via usePlayerStats
+    // instanceRev / equipRev are the change signals; secondary/base stats refresh via usePlayerStats
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, isOwnCharacter, instanceRev]);
+  }, [client, isOwnCharacter, instanceRev, equipRev]);
 
   const statRow = (key: StatRowKey, total: number, display?: string) => {
     if (!isOwnCharacter || !breakdown) {
@@ -506,9 +515,11 @@ function StatsTab() {
     [locale.stats.labelCha, 'cha', base.cha, StatId.Cha],
   ];
 
+  // gearTotalMax is only set when a weapon contributes damage; with no
+  // weapon the full range is class/level base, so the fallback is 0.
   const damageBase =
     isOwnCharacter && breakdown
-      ? `${(secondary.minDamage - (breakdown.damage.gearTotal ?? 0)).toLocaleString()} - ${(secondary.maxDamage - (breakdown.damage.gearTotalMax ?? 0)).toLocaleString()}`
+      ? `${(secondary.minDamage - breakdown.damage.gearTotal).toLocaleString()} - ${(secondary.maxDamage - (breakdown.damage.gearTotalMax ?? 0)).toLocaleString()}`
       : undefined;
 
   return (
@@ -566,23 +577,23 @@ function StatsTab() {
           </div>
           <div class='flex justify-between'>
             <span class='text-primary/60'>{locale.stats.labelAccuracy}</span>
-            <span>{statRow('accuracy', secondary.accuracy)}</span>
+            {statRow('accuracy', secondary.accuracy)}
           </div>
           <div class='flex justify-between'>
             <span class='text-primary/60'>{locale.stats.labelEvade}</span>
-            <span>{statRow('evade', secondary.evade)}</span>
+            {statRow('evade', secondary.evade)}
           </div>
           <div class='flex justify-between'>
             <span class='text-primary/60'>{locale.stats.labelArmor}</span>
-            <span>{statRow('armor', secondary.armor)}</span>
+            {statRow('armor', secondary.armor)}
           </div>
           <div class='flex justify-between'>
             <span class='text-primary/60'>{locale.stats.labelHp}</span>
-            <span>{statRow('maxHp', maxHp)}</span>
+            {statRow('maxHp', maxHp)}
           </div>
           <div class='flex justify-between'>
             <span class='text-primary/60'>{locale.stats.labelTp}</span>
-            <span>{statRow('maxTp', maxTp)}</span>
+            {statRow('maxTp', maxTp)}
           </div>
         </div>
       </div>
