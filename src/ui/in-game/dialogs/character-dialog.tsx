@@ -480,8 +480,10 @@ function EffectsSection() {
           <div class={`text-xs ${GROUP_HEADER_CLASS[g.group]}`}>
             {groupLabel[g.group]}
           </div>
-          {g.lines.map((line) => (
-            <div key={`${line.label}|${line.condition}`} class='pl-2'>
+          {g.lines.map((line, i) => (
+            // Index disambiguates the rare same-label+condition pair
+            // (two mod kinds on one target render as separate lines).
+            <div key={`${line.label}|${line.condition}|${i}`} class='pl-2'>
               <BreakdownTooltip sources={line.sources}>
                 <span
                   class='text-xs'
