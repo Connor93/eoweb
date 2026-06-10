@@ -163,17 +163,16 @@ export function computeGearBreakdown(
     const record = getEif(inst.baseItemId);
     const name = record?.name ?? `Item ${inst.baseItemId}`;
     const factor = levelCurve(inst.level);
-    // EIF-only contributions feed the totals before mods are folded in.
-    const eifOnly = record ? eifContributions(record, factor) : {};
-    addEif(eifOnly);
     // Per-row display amount for this item's source line: rounded EIF
     // part + raw baked-mod part (fractional values allowed on the line).
     const perRow = record ? eifContributions(record, factor) : {};
+    // Capture EIF-only totals before mods are folded in.
+    addEif(perRow);
     for (const mod of inst.mods) {
       if (mod.kind !== InstanceModKind.Flat) continue;
       const row = BAKED_TARGET_TO_ROW[mod.target];
       if (!row) continue; // live mods → Effects section; max_sp → no row
-      modSums[row] = (modSums[row] ?? 0) + mod.value;
+      modSums[row] = (modSums[row] ?? 0) + mod.value; // mirrors REOSERV baked_mods::fold — sum raw f32s, round once per stat
       const existing = perRow[row];
       perRow[row] = {
         amount: (existing?.amount ?? 0) + mod.value,
@@ -372,6 +371,8 @@ export function computeEffects(
   for (const b of buckets.values()) {
     const merged =
       b.kind === InstanceModKind.PercentMultiplicative ? b.value - 1 : b.value;
+    // Opposing mods can cancel to a meaningless "+0%" line — skip it.
+    if (merged === 0) continue;
     const d = effectDisplay(b.target, merged);
     groups[groupFor(b.target)].push({
       label: d.label,
