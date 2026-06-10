@@ -34,6 +34,7 @@ import { useBackdropBlur, useItemDrag, usePlayerStats } from '@/ui/in-game';
 import {
   capitalize,
   classicEquipsFromPaperdoll,
+  computeEffects,
   computeGearBreakdown,
   formatInstanceBaseStats,
   formatInstanceMod,
@@ -424,6 +425,92 @@ function PaperdollTab() {
   );
 }
 
+const GROUP_HEADER_CLASS: Record<string, string> = {
+  offense: 'text-error/80',
+  defense: 'text-info/80',
+  utility: 'text-secondary/80',
+};
+
+const elementFromName: Record<string, CombatElement> = {
+  fire: CombatElement.Fire,
+  water: CombatElement.Water,
+  earth: CombatElement.Earth,
+  wind: CombatElement.Wind,
+  light: CombatElement.Light,
+  dark: CombatElement.Dark,
+};
+
+function EffectsSection() {
+  const client = useClient();
+  const { locale } = useLocale();
+  const [rev, setRev] = useState(0);
+  useEffect(() => {
+    const handler = () => setRev((n) => n + 1);
+    client.instanceController.subscribeChanged(handler);
+    return () => client.instanceController.unsubscribeChanged(handler);
+  }, [client]);
+
+  const groups = useMemo(() => {
+    const equipped = client.instanceController
+      .list()
+      .filter((i) => i.equippedSlot >= 0);
+    return computeEffects(equipped, (id) =>
+      id ? (client.getEifRecordById(id) ?? null) : null,
+    );
+  }, [client, rev]);
+
+  const groupLabel: Record<string, string> = {
+    offense: locale.stats.groupOffense,
+    defense: locale.stats.groupDefense,
+    utility: locale.stats.groupUtility,
+  };
+
+  return (
+    <div class='flex flex-col gap-0.5 border-base-content/10 border-t pt-2'>
+      <span class='text-primary/60 text-xs uppercase tracking-wide'>
+        {locale.stats.labelEffects}
+      </span>
+      {groups.length === 0 && (
+        <span class='text-base-content/40 text-xs'>
+          {locale.stats.effectsEmpty}
+        </span>
+      )}
+      {groups.map((g) => (
+        <div key={g.group}>
+          <div class={`text-xs ${GROUP_HEADER_CLASS[g.group]}`}>
+            {groupLabel[g.group]}
+          </div>
+          {g.lines.map((line) => (
+            <div key={`${line.label}|${line.condition}`} class='pl-2'>
+              <BreakdownTooltip sources={line.sources}>
+                <span
+                  class='text-xs'
+                  style={
+                    line.element
+                      ? {
+                          color: combatElementColor(
+                            elementFromName[line.element] ??
+                              CombatElement.Plain,
+                          ),
+                        }
+                      : undefined
+                  }
+                >
+                  <span class='text-success'>{line.valueText}</span>{' '}
+                  {line.label}
+                  {line.condition && (
+                    <span class='opacity-50'> ({line.condition})</span>
+                  )}
+                </span>
+              </BreakdownTooltip>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function StatsTab() {
   const client = useClient();
   const { locale } = useLocale();
@@ -597,6 +684,7 @@ function StatsTab() {
           </div>
         </div>
       </div>
+      {isOwnCharacter && <EffectsSection />}
     </div>
   );
 }
