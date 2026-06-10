@@ -37,6 +37,7 @@ export {
   InstanceController,
   type InstanceItem,
   type InstanceMod,
+  InstanceModKind,
   InstanceRarity,
   instanceRarityLabel,
 } from './instance-controller';

@@ -32,3 +32,15 @@ export { padWithZeros } from './pad-with-zeros';
 export { randomRange } from './random-range';
 export { getDistance, inRange } from './range';
 export { screenToIso } from './screen-to-iso';
+export {
+  type ClassicEquip,
+  classicEquipsFromPaperdoll,
+  computeEffects,
+  computeGearBreakdown,
+  type EffectGroup,
+  type EffectGroupKey,
+  type EffectLine,
+  type GearSource,
+  type StatBreakdown,
+  type StatRowKey,
+} from './stat-breakdown';

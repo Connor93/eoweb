@@ -40,7 +40,7 @@ const TARGET_WORD: Record<string, string> = {
 
 /** snake_case → "Sentence case" for display. Replaces known stat
  *  abbreviations with their full names. */
-function prettyTarget(target: string): string {
+export function prettyTarget(target: string): string {
   if (!target) return '';
   return target
     .split('_')

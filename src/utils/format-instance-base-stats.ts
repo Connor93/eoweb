@@ -4,7 +4,7 @@ import type { EifRecord } from 'eolib';
  *  (level − 1)). Keep this in sync with `src/items/level_curve.rs` —
  *  if the server formula changes the client display will drift until
  *  this is updated. */
-function levelCurve(level: number): number {
+export function levelCurve(level: number): number {
   return 1.0 + 0.1 * (Math.max(level, 1) - 1);
 }
 
