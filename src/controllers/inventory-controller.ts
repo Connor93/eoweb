@@ -1,5 +1,6 @@
 import {
   ByteCoords,
+  type EifRecord,
   Item,
   ItemDropClientPacket,
   ItemJunkClientPacket,
@@ -366,21 +367,18 @@ export class InventoryController {
     this.client.bus!.send(packet);
   }
 
-  equipItem(slot: EquipmentSlot, itemId: number): boolean {
-    const item = this.getItemById(itemId);
-    if (!item || item.amount <= 0) {
-      return false;
-    }
-
-    const record = this.client.getEifRecordById(item.id);
-    if (!record) {
-      return false;
-    }
-
-    if (!this.itemTypeValidForSlot(record.type, slot)) {
-      return false;
-    }
-
+  /**
+   * Validate level / stat / class / gender equip requirements for a base
+   * item, surfacing the matching warning toast on the first failure.
+   * Shared by the classic equip path (below) and the instance drag-equip
+   * path so rolled items get the same feedback instead of a silent
+   * server-side reject. Returns true when every requirement is met.
+   *
+   * Item level requirements live on the base item (`levelRequirement`)
+   * and still gate equip — that's separate from an instance's rolled
+   * level. See the vault's "Item and NPC levels" note, decision 3.
+   */
+  checkEquipRequirements(record: EifRecord): boolean {
     const character = this.client.getPlayerCharacter();
     if (!character) {
       return false;
@@ -452,6 +450,28 @@ export class InventoryController {
       this.client.toastController.showWarning(
         `${this.client.getResourceString(EOResourceID.STATUS_LABEL_ITEM_EQUIP_THIS_ITEM_REQUIRES)} LVL ${record.levelRequirement}`,
       );
+      return false;
+    }
+
+    return true;
+  }
+
+  equipItem(slot: EquipmentSlot, itemId: number): boolean {
+    const item = this.getItemById(itemId);
+    if (!item || item.amount <= 0) {
+      return false;
+    }
+
+    const record = this.client.getEifRecordById(item.id);
+    if (!record) {
+      return false;
+    }
+
+    if (!this.itemTypeValidForSlot(record.type, slot)) {
+      return false;
+    }
+
+    if (!this.checkEquipRequirements(record)) {
       return false;
     }
 

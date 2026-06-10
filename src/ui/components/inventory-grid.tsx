@@ -570,6 +570,17 @@ export function InventoryGrid({ itemIds }: Props) {
           playSfxById(SfxId.InventoryPlace);
           if (result.type === 'cancelled') return;
           if (result.type === 'equip-slot') {
+            // Mirror the classic equip path's requirement pre-check so a
+            // rolled item that fails level/stat/class/gender gates shows
+            // a toast instead of being silently dropped by the server
+            // (the instance equip packet has no reject-reply).
+            const record = client.getEifRecordById(inst.baseItemId);
+            if (
+              record &&
+              !client.inventoryController.checkEquipRequirements(record)
+            ) {
+              return;
+            }
             client.instanceController.sendEquip(
               inst.instanceId,
               subLocForSlot(result.slot),
