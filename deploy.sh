@@ -27,7 +27,7 @@ SSH_PORT="${SSH_PORT:-2222}"
 echo "═══ eoweb deploy → $CLIENT_DOMAIN (ws=$WS_URL) ═══"
 
 echo "📦 Building $IMAGE (large — bakes GFX) ..."
-docker build --platform linux/amd64 -t "$IMAGE" "$SCRIPT_DIR"
+docker build --platform linux/amd64 --build-arg VITE_WS_HOST="$WS_URL" -t "$IMAGE" "$SCRIPT_DIR"
 
 echo "🚀 Pushing to GHCR ..."
 echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin

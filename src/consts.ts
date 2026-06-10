@@ -1,4 +1,8 @@
-export const HOST = 'wss://ws.reoserv.net';
+// Prod builds bake the real host via the VITE_WS_HOST build arg (see the
+// Dockerfile + deploy.sh). Local dev leaves it unset and falls back to the
+// dev socket — no need to hand-edit this line anymore. The runtime
+// /config.json (config.ts) can still override it.
+export const HOST = import.meta.env.VITE_WS_HOST ?? 'ws://0.0.0.0:8079';
 export const TILE_WIDTH = 64;
 export const TILE_HEIGHT = 32;
 export const HALF_TILE_WIDTH = TILE_WIDTH >> 1;
