@@ -24,7 +24,15 @@ import type {
  *       -- per mod --
  *       char   mod_id_len
  *       bytes  mod_id        (mod_id_len bytes)
- *       int    value_x100    (f32 × 100, rounded)
+ *       char   name_len
+ *       bytes  name          (name_len bytes)
+ *       char   kind          (0=flat, 1=percent_additive, 2=percent_multiplicative)
+ *       char   target_len
+ *       bytes  target        (target_len bytes)
+ *       char   sign          (0=positive, 1=negative)
+ *       int    value_x100    (abs(f32 × 100), rounded)
+ *       char   condition_len
+ *       bytes  condition     (condition_len bytes; empty = unconditional)
  */
 const FAMILY_INSTANCE = 54;
 const INSTANCE_ID_LEN = 36;
@@ -42,8 +50,14 @@ function readMod(reader: EoReader): InstanceMod {
   const targetLen = reader.getChar();
   const targetBytes = reader.getBytes(targetLen);
   const target = new TextDecoder().decode(new Uint8Array(targetBytes));
-  const valueX100 = reader.getInt();
-  return { modId, name, kind, target, value: valueX100 / 100 };
+  // Sign byte (0 = +, 1 = −): eolib ints can't encode negatives, and
+  // resist mods roll negative values.
+  const negative = reader.getChar() === 1;
+  const valueX100 = reader.getInt() * (negative ? -1 : 1);
+  const conditionLen = reader.getChar();
+  const conditionBytes = reader.getBytes(conditionLen);
+  const condition = new TextDecoder().decode(new Uint8Array(conditionBytes));
+  return { modId, name, kind, target, value: valueX100 / 100, condition };
 }
 
 function parseInstanceList(reader: EoReader): InstanceItem[] {

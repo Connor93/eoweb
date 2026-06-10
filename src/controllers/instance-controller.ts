@@ -56,6 +56,9 @@ export interface InstanceMod {
    *  the player sees *what stat* the mod actually affects. */
   target: string;
   value: number;
+  /** Server-rendered condition annotation ("below 30% HP"); empty
+   *  string when the mod is unconditional. */
+  condition: string;
 }
 
 export interface InstanceItem {
