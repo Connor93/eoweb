@@ -21,15 +21,24 @@ import {
 } from '@/controllers';
 import { EquipmentSlot } from '@/equipment';
 import { playSfxById, SfxId } from '@/sfx';
-import { Button, ItemIcon, QuestBookList, Tabs } from '@/ui/components';
+import {
+  BreakdownTooltip,
+  Button,
+  ItemIcon,
+  QuestBookList,
+  Tabs,
+} from '@/ui/components';
 import { UI_PANEL_BORDER, UI_STICKY_BG } from '@/ui/consts';
 import { useCharacterInfo, useClient, useLocale } from '@/ui/context';
 import { useBackdropBlur, useItemDrag, usePlayerStats } from '@/ui/in-game';
 import {
   capitalize,
+  classicEquipsFromPaperdoll,
+  computeGearBreakdown,
   formatInstanceBaseStats,
   formatInstanceMod,
   getItemMeta,
+  type StatRowKey,
 } from '@/utils';
 import { DialogBase } from './dialog-base';
 
@@ -424,6 +433,8 @@ function StatsTab() {
     baseStats: base,
     secondaryStats: secondary,
     statPoints,
+    maxHp,
+    maxTp,
   } = usePlayerStats();
 
   const isOwnCharacter = info?.details.playerId === client.playerId;
@@ -441,24 +452,64 @@ function StatsTab() {
     String(statPoints),
   );
 
-  const baseRows: [string, number, StatId][] = [
-    [locale.stats.labelStr, base.str, StatId.Str],
-    [locale.stats.labelInt, base.intl, StatId.Int],
-    [locale.stats.labelWis, base.wis, StatId.Wis],
-    [locale.stats.labelAgi, base.agi, StatId.Agi],
-    [locale.stats.labelCon, base.con, StatId.Con],
-    [locale.stats.labelCha, base.cha, StatId.Cha],
+  const [instanceRev, setInstanceRev] = useState(0);
+  useEffect(() => {
+    if (!isOwnCharacter) return;
+    const handler = () => setInstanceRev((n) => n + 1);
+    client.instanceController.subscribeChanged(handler);
+    return () => client.instanceController.unsubscribeChanged(handler);
+  }, [client, isOwnCharacter]);
+
+  const breakdown = useMemo(() => {
+    if (!isOwnCharacter) return null;
+    const equipped = client.instanceController
+      .list()
+      .filter((i) => i.equippedSlot >= 0);
+    return computeGearBreakdown(
+      equipped,
+      classicEquipsFromPaperdoll(client.equipment),
+      (id) => client.getEifRecordById(id) ?? null,
+    );
+    // instanceRev is the change signal; secondary/base stats refresh via usePlayerStats
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, isOwnCharacter, instanceRev]);
+
+  const statRow = (key: StatRowKey, total: number, display?: string) => {
+    if (!isOwnCharacter || !breakdown) {
+      return <span>{display ?? total.toLocaleString()}</span>;
+    }
+    const b = breakdown[key];
+    const base = total - b.gearTotal;
+    return (
+      <BreakdownTooltip
+        baseLabel={locale.stats.labelBaseClassLevel}
+        baseValue={String(base)}
+        sources={b.sources}
+      >
+        <span
+          class={
+            b.sources.length ? 'border-b border-current/30 border-dotted' : ''
+          }
+        >
+          {display ?? total.toLocaleString()}
+        </span>
+      </BreakdownTooltip>
+    );
+  };
+
+  const baseRows: [string, StatRowKey, number, StatId][] = [
+    [locale.stats.labelStr, 'str', base.str, StatId.Str],
+    [locale.stats.labelInt, 'int', base.intl, StatId.Int],
+    [locale.stats.labelWis, 'wis', base.wis, StatId.Wis],
+    [locale.stats.labelAgi, 'agi', base.agi, StatId.Agi],
+    [locale.stats.labelCon, 'con', base.con, StatId.Con],
+    [locale.stats.labelCha, 'cha', base.cha, StatId.Cha],
   ];
 
-  const derivedRows: [string, string][] = [
-    [
-      locale.stats.labelDmg,
-      `${secondary.minDamage.toLocaleString()} - ${secondary.maxDamage.toLocaleString()}`,
-    ],
-    [locale.stats.labelAccuracy, secondary.accuracy.toLocaleString()],
-    [locale.stats.labelEvade, secondary.evade.toLocaleString()],
-    [locale.stats.labelArmor, secondary.armor.toLocaleString()],
-  ];
+  const damageBase =
+    isOwnCharacter && breakdown
+      ? `${(secondary.minDamage - (breakdown.damage.gearTotal ?? 0)).toLocaleString()} - ${(secondary.maxDamage - (breakdown.damage.gearTotalMax ?? 0)).toLocaleString()}`
+      : undefined;
 
   return (
     <div class='flex flex-col gap-2 text-sm'>
@@ -473,10 +524,10 @@ function StatsTab() {
       )}
       <div class='flex gap-4'>
         <div class='flex flex-1 flex-col gap-0.5'>
-          {baseRows.map(([label, value, statId]) => (
+          {baseRows.map(([label, rowKey, value, statId]) => (
             <div key={label} class='flex items-center justify-between gap-1'>
               <span class='text-primary/60'>{label}</span>
-              <span class='flex-1 text-right'>{value.toLocaleString()}</span>
+              <span class='flex-1 text-right'>{statRow(rowKey, value)}</span>
               {isOwnCharacter && (
                 <Button
                   variant={['xs', canTrain ? 'primary' : 'disabled']}
@@ -490,12 +541,49 @@ function StatsTab() {
           ))}
         </div>
         <div class='flex flex-1 flex-col gap-0.5'>
-          {derivedRows.map(([label, value]) => (
-            <div key={label} class='flex justify-between'>
-              <span class='text-primary/60'>{label}</span>
-              <span>{value}</span>
-            </div>
-          ))}
+          {/* Damage row — base is a range, render directly */}
+          <div class='flex justify-between'>
+            <span class='text-primary/60'>{locale.stats.labelDmg}</span>
+            {isOwnCharacter && breakdown ? (
+              <BreakdownTooltip
+                baseLabel={locale.stats.labelBaseClassLevel}
+                baseValue={damageBase}
+                sources={breakdown.damage.sources}
+              >
+                <span
+                  class={
+                    breakdown.damage.sources.length
+                      ? 'border-b border-current/30 border-dotted'
+                      : ''
+                  }
+                >
+                  {`${secondary.minDamage.toLocaleString()} - ${secondary.maxDamage.toLocaleString()}`}
+                </span>
+              </BreakdownTooltip>
+            ) : (
+              <span>{`${secondary.minDamage.toLocaleString()} - ${secondary.maxDamage.toLocaleString()}`}</span>
+            )}
+          </div>
+          <div class='flex justify-between'>
+            <span class='text-primary/60'>{locale.stats.labelAccuracy}</span>
+            <span>{statRow('accuracy', secondary.accuracy)}</span>
+          </div>
+          <div class='flex justify-between'>
+            <span class='text-primary/60'>{locale.stats.labelEvade}</span>
+            <span>{statRow('evade', secondary.evade)}</span>
+          </div>
+          <div class='flex justify-between'>
+            <span class='text-primary/60'>{locale.stats.labelArmor}</span>
+            <span>{statRow('armor', secondary.armor)}</span>
+          </div>
+          <div class='flex justify-between'>
+            <span class='text-primary/60'>{locale.stats.labelHp}</span>
+            <span>{statRow('maxHp', maxHp)}</span>
+          </div>
+          <div class='flex justify-between'>
+            <span class='text-primary/60'>{locale.stats.labelTp}</span>
+            <span>{statRow('maxTp', maxTp)}</span>
+          </div>
         </div>
       </div>
     </div>
