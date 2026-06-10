@@ -170,6 +170,10 @@ export function computeGearBreakdown(
     addEif(perRow);
     for (const mod of inst.mods) {
       if (mod.kind !== InstanceModKind.Flat) continue;
+      // The server's baked_mods::fold skips conditional baked mods
+      // (always-active fold can't honor a `when`); mirror it or the
+      // gear sum would include a value the server never applied.
+      if (mod.condition) continue;
       const row = BAKED_TARGET_TO_ROW[mod.target];
       if (!row) continue; // live mods → Effects section; max_sp → no row
       modSums[row] = (modSums[row] ?? 0) + mod.value; // mirrors REOSERV baked_mods::fold — sum raw f32s, round once per stat
@@ -336,6 +340,9 @@ export function computeEffects(
     const itemName = getEif(inst.baseItemId)?.name ?? `Item ${inst.baseItemId}`;
     for (const mod of inst.mods) {
       if (BAKED_TARGET_TO_ROW[mod.target] || mod.target === 'max_sp') continue;
+      // A mod whose definition left the pool ships an empty target;
+      // prettyTarget('') would render a value with no label.
+      if (!mod.target) continue;
       const key = `${mod.target}|${mod.kind}|${mod.condition}`;
       let bucket = buckets.get(key);
       if (!bucket) {
