@@ -55,15 +55,17 @@ function continuousWalkOffset(
 ): { x: number; y: number } {
   const dx = 4 * WALK_WIDTH_FACTOR * progress;
   const dy = 4 * WALK_HEIGHT_FACTOR * progress;
+  // Floor the SIGNED offsets — fractional positions shimmer on the scaled
+  // canvas (see map.ts continuousWalkOffset).
   switch (direction) {
     case Direction.Down:
-      return { x: -dx, y: dy };
+      return { x: Math.floor(-dx), y: Math.floor(dy) };
     case Direction.Right:
-      return { x: dx, y: dy };
+      return { x: Math.floor(dx), y: Math.floor(dy) };
     case Direction.Up:
-      return { x: dx, y: -dy };
+      return { x: Math.floor(dx), y: Math.floor(-dy) };
     default: // Direction.Left
-      return { x: -dx, y: -dy };
+      return { x: Math.floor(-dx), y: Math.floor(-dy) };
   }
 }
 

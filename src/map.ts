@@ -206,15 +206,18 @@ function continuousWalkOffset(
 ): { x: number; y: number } {
   const dx = 4 * WALK_WIDTH_FACTOR * progress;
   const dy = 4 * WALK_HEIGHT_FACTOR * progress;
+  // Math.floor the SIGNED offsets (matching the old interpolateWalkOffset) —
+  // fractional positions land sprites on sub-pixel coordinates that shimmer
+  // against the CSS-scaled canvas ("vibrating" while walking).
   switch (direction) {
     case Direction.Down:
-      return { x: -dx, y: dy };
+      return { x: Math.floor(-dx), y: Math.floor(dy) };
     case Direction.Right:
-      return { x: dx, y: dy };
+      return { x: Math.floor(dx), y: Math.floor(dy) };
     case Direction.Up:
-      return { x: dx, y: -dy };
+      return { x: Math.floor(dx), y: Math.floor(-dy) };
     default: // Direction.Left
-      return { x: -dx, y: -dy };
+      return { x: Math.floor(-dx), y: Math.floor(-dy) };
   }
 }
 
