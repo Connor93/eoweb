@@ -79,6 +79,13 @@ const WALK_TICKS = WALK_ANIMATION_TICKS - 1;
 // before the speed-split (face = 1 tick = 120ms; sit = 4 ticks = 480ms).
 const FACE_MS = 120;
 const SIT_MS = 480;
+// Turn-then-walk gate from STANDSTILL — keeps tap-to-face possible (a tap
+// shorter than this faces without stepping). Mid-movement turns bypass it
+// entirely (see wasJustWalking). Feel-tuned with the user; vanilla was 240ms.
+const TURN_WALK_DELAY_MS = 60;
+// How long after a step completes the player still counts as "in motion"
+// for instant turn chaining (covers frame jitter at the step boundary).
+const MOVING_GRACE_MS = 100;
 
 export class KeyboardController {
   private client: Client;
@@ -89,6 +96,13 @@ export class KeyboardController {
   private nextAttackAt = 0;
   private nextFaceAt = 0;
   private nextSitAt = 0;
+  // When the last walk was dispatched — lets mid-movement turns chain into
+  // the next step with zero delay (no tap-vs-hold ambiguity while moving).
+  private lastWalkAt = 0;
+
+  private wasJustWalking(now: number, moveMs: number): boolean {
+    return now - this.lastWalkAt <= moveMs + MOVING_GRACE_MS;
+  }
 
   // Tick-based gates retained for actions that stay in tick().
   private hotbarTicks = HOTBAR_COOLDOWN_TICKS;
@@ -499,7 +513,13 @@ export class KeyboardController {
           this.client.playerId,
         );
         this.nextFaceAt = now + FACE_MS;
-        this.nextWalkAt = now + moveMs * 0.25; // turn-then-walk gate: feel-tuned to 120ms at default (vanilla was 240ms; user picked snappier — taps still face without stepping)
+        // Mid-movement turns chain instantly: if this face landed within a
+        // step's length of the last walk the player is clearly still moving
+        // (held key), so there's no tap-vs-hold ambiguity to disambiguate.
+        // From standstill, a short gate keeps tap-to-face possible.
+        this.nextWalkAt = this.wasJustWalking(now, moveMs)
+          ? now
+          : now + TURN_WALK_DELAY_MS;
         this.nextAttackAt = now + attackMs * 0.4; // old: ATTACK_TICKS-3 = 2 ticks = 240ms = 0.4 × 600
         return;
       }
@@ -574,7 +594,11 @@ export class KeyboardController {
           this.client.playerId,
         );
         this.nextFaceAt = now + FACE_MS;
-        this.nextWalkAt = now + moveMs * 0.25; // turn-then-walk gate: feel-tuned to 120ms at default (vanilla was 240ms; user picked snappier — taps still face without stepping)
+        // Mid-movement turns chain instantly (see the matching comment on
+        // the pre-attack face site above).
+        this.nextWalkAt = this.wasJustWalking(now, moveMs)
+          ? now
+          : now + TURN_WALK_DELAY_MS;
         this.nextAttackAt = now + attackMs * 0.4; // old: ATTACK_TICKS-3 = 2 ticks = 240ms = 0.4 × 600
         return;
       }
@@ -659,6 +683,7 @@ export class KeyboardController {
           getTimestamp(),
         );
         const { moveMs } = this.client.getPlayerRates(this.client.playerId);
+        this.lastWalkAt = now;
         this.nextWalkAt = now + moveMs;
         this.nextFaceAt = now + FACE_MS;
         this.nextSitAt = now + SIT_MS;
