@@ -1,3 +1,4 @@
+export { attackSpeedLine } from './attack-speed-line';
 export { bigCoordsToCoords } from './big-coords-to-coords';
 export { getExpForLevel } from './calculate-tnl';
 export { capitalize } from './capitalize';

@@ -180,6 +180,9 @@ export class Client {
       moveCapped: boolean;
     }
   > = new Map();
+  // Authored weapon swing speeds (item_id -> ms), from the family-55 Reply
+  // packet. Sparse: only items that author attack_rate_ms appear.
+  itemAttackRates: Map<number, number> = new Map();
   eif!: Eif;
   ecf!: Ecf;
   enf!: Enf;

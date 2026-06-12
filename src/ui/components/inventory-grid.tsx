@@ -33,6 +33,7 @@ import { useClient, useLocale } from '@/ui/context';
 import { SlotType } from '@/ui/enums';
 import { useItemDrag } from '@/ui/in-game';
 import {
+  attackSpeedLine,
   formatInstanceBaseStats,
   formatInstanceMod,
   getItemMeta,
@@ -667,7 +668,12 @@ export function InventoryGrid({ itemIds }: Props) {
       if (!item || !record) return [];
       const meta = getItemMeta(record);
       const qty = item.amount > 1 ? ` x${item.amount.toLocaleString()}` : '';
-      return [record.name + qty, ...meta];
+      const lines = [record.name + qty, ...meta];
+      const speed = attackSpeedLine(client, item.id);
+      if (speed) {
+        lines.push(speed);
+      }
+      return lines;
     }
     if (key.startsWith('instance:')) {
       const id = key.slice(9);
@@ -679,6 +685,10 @@ export function InventoryGrid({ itemIds }: Props) {
         `${name} (${instanceRarityLabel(inst.rarity)})`,
         `Level ${inst.level}`,
       ];
+      const speed = attackSpeedLine(client, inst.baseItemId);
+      if (speed) {
+        lines.push(speed);
+      }
       if (record) {
         lines.push(...formatInstanceBaseStats(record, inst.level));
       }

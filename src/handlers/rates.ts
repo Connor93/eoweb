@@ -43,4 +43,17 @@ export function registerRatesHandlers(client: Client) {
     PacketAction.List,
     (reader) => parseEntries(client, reader),
   );
+  // Sparse authored weapon swing speeds — sent at map enter / refresh.
+  client.bus!.registerPacketHandler(
+    FAMILY_RATES as PacketFamily,
+    PacketAction.Reply,
+    (reader) => {
+      const count = reader.getShort();
+      for (let i = 0; i < count; i++) {
+        const itemId = reader.getShort();
+        const attackMs = reader.getThree();
+        client.itemAttackRates.set(itemId, attackMs);
+      }
+    },
+  );
 }
