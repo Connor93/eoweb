@@ -68,11 +68,14 @@ window.addEventListener('DOMContentLoaded', async () => {
       client.tick();
       accumulator -= TICK;
     }
-    client.animationController.advanceTimed(ticker.deltaMS);
     const interpolation = client.configController.interpolation
       ? accumulator / TICK
       : 1;
     client.render(interpolation);
+    // Advance AFTER render so a finishing animation still draws its
+    // progress=1 frame before deletion — otherwise fast rates (the point
+    // of the speed split) snap the last ~frame of every step.
+    client.animationController.advanceTimed(ticker.deltaMS);
   });
 
   const response = await fetch('/maps/00001.emf');
