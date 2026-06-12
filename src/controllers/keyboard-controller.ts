@@ -574,7 +574,7 @@ export class KeyboardController {
           this.client.playerId,
         );
         this.nextFaceAt = now + FACE_MS;
-        this.nextWalkAt = now + moveMs * 0.75; // old gate was 2 ticks = 240ms; 0.75 × moveMs is animation-dominated — no visible change
+        this.nextWalkAt = now + moveMs * 0.5; // old post-face gate: 2 ticks = 240ms = 0.5 × walk cadence (no animation dominates a face — 0.75 felt sluggish on direction change)
         this.nextAttackAt = now + attackMs * 0.4; // old: ATTACK_TICKS-3 = 2 ticks = 240ms = 0.4 × 600
         return;
       }
