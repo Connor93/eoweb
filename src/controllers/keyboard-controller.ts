@@ -499,7 +499,7 @@ export class KeyboardController {
           this.client.playerId,
         );
         this.nextFaceAt = now + FACE_MS;
-        this.nextWalkAt = now + moveMs * 0.75; // old: WALK_TICKS-1 = 3 ticks = 360ms = 0.75 × walk cadence
+        this.nextWalkAt = now + moveMs * 0.75; // old gate was 2 ticks = 240ms; 0.75 × moveMs is animation-dominated — no visible change
         this.nextAttackAt = now + attackMs * 0.4; // old: ATTACK_TICKS-3 = 2 ticks = 240ms = 0.4 × 600
         return;
       }
@@ -529,7 +529,8 @@ export class KeyboardController {
               EOResourceID.STATUS_LABEL_YOU_HAVE_NO_ARROWS,
             ),
           );
-          // No-arrows fail: reset all three gates to full durations.
+          // No-arrows fail: reset all three gates to full durations (walk was
+          // 3 ticks = 360ms before; full moveMs is deliberately conservative).
           const { attackMs, moveMs } = this.client.getPlayerRates(
             this.client.playerId,
           );
@@ -556,7 +557,7 @@ export class KeyboardController {
       );
       this.nextAttackAt = now + attackMs;
       this.nextFaceAt = now + FACE_MS;
-      this.nextWalkAt = now + moveMs * 0.75; // old: WALK_TICKS-1 = 3 ticks = 360ms = 0.75 × walk cadence
+      this.nextWalkAt = now + moveMs * 0.75; // old gate was 2 ticks = 240ms; 0.75 × moveMs is animation-dominated — no visible change
       return;
     }
 
@@ -573,7 +574,7 @@ export class KeyboardController {
           this.client.playerId,
         );
         this.nextFaceAt = now + FACE_MS;
-        this.nextWalkAt = now + moveMs * 0.75; // old: WALK_TICKS-1 = 3 ticks = 360ms = 0.75 × walk cadence
+        this.nextWalkAt = now + moveMs * 0.75; // old gate was 2 ticks = 240ms; 0.75 × moveMs is animation-dominated — no visible change
         this.nextAttackAt = now + attackMs * 0.4; // old: ATTACK_TICKS-3 = 2 ticks = 240ms = 0.4 × 600
         return;
       }
