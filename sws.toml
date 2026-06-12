@@ -1,0 +1,24 @@
+# static-web-server config for the eoweb client image.
+# Config-file options take precedence over the base image's SERVER_* env vars.
+
+[general]
+host = "::"
+port = 80
+root = "/home/sws/public"
+
+# Serve pre-compressed siblings (e.g. gfx021.egf.br) with Content-Encoding when
+# the client sends Accept-Encoding. The browser's fetch() decompresses
+# transparently, so the GFX loader needs no changes. (On-the-fly `compression`
+# is intentionally left off — we ship pre-compressed files instead.)
+compression-static = true
+
+[advanced]
+
+# Cache the GFX for a day. Filenames are stable, so same-day/repeat loads come
+# straight from the browser cache; a future GFX change still propagates within
+# ~a day with no cache-busting needed. (config.json and hashed JS/CSS keep the
+# server defaults — only /gfx is overridden here.)
+[[advanced.headers]]
+source = "/gfx/**"
+[advanced.headers.headers]
+Cache-Control = "public, max-age=86400"

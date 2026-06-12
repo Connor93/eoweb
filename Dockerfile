@@ -15,8 +15,21 @@ ARG VITE_WS_HOST=""
 ENV VITE_WS_HOST=$VITE_WS_HOST
 RUN pnpm build
 
+# Pre-compress the GFX (huge PE files full of zero-padded/redundant DIB bitmaps
+# — they brotli down to ~1-20% of original). Done once here so the runtime can
+# serve the .br sibling with Content-Encoding: br and zero per-request CPU.
+# Originals are kept so non-br clients still work via compression-static.
+RUN apk add --no-cache brotli \
+ && find dist/gfx -name '*.egf' -print0 \
+    | xargs -0 -P "$(nproc)" -n 1 brotli -q 10 -f
+
 FROM joseluisq/static-web-server:2-alpine AS runtime
 
 COPY --from=builder /app/dist /home/sws/public
+COPY sws.toml /etc/sws.toml
+
+# Serve pre-compressed .br siblings + apply the /gfx cache policy from the
+# config. Config-file options take precedence over the base image's env.
+ENV SERVER_CONFIG_FILE=/etc/sws.toml
 
 EXPOSE 80
