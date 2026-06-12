@@ -25,6 +25,10 @@ function handleAttackPlayer(client: Client, reader: EoReader) {
     return;
   }
 
+  if (client.animationController.isCharacterDying(packet.playerId)) {
+    return;
+  }
+
   character.direction = packet.direction;
 
   const metadata = client.getWeaponMetadata(character.equipment.weapon);

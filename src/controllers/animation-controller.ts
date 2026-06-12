@@ -1,4 +1,4 @@
-import { MapTileSpec } from 'eolib';
+import { type Direction, MapTileSpec } from 'eolib';
 import type { Client } from '@/client';
 import { SPELL_COOLDOWN_TICKS, SPLOOSHIE_EFFECT_ID } from '@/consts';
 import type { ChatBubble } from '@/render';
@@ -28,6 +28,14 @@ export class AnimationController {
   // which animation wins the per-index slot — so a walk's destination isn't
   // lost when an attack for the same NPC arrives in the same tick.
   pendingNpcCoords: Map<number, { x: number; y: number }> = new Map();
+  // Authoritative character tile commits, applied at drain time independently
+  // of which animation wins the per-player slot — so a walk's destination
+  // isn't lost when an attack for the same player arrives in the same tick.
+  // Mirrors pendingNpcCoords (see the NPC desync fix).
+  pendingCharacterCoords: Map<
+    number,
+    { x: number; y: number; direction: Direction }
+  > = new Map();
   characterChats: Map<number, ChatBubble> = new Map();
   npcChats: Map<number, ChatBubble> = new Map();
   characterEmotes: Map<number, Emote> = new Map();
@@ -80,6 +88,17 @@ export class AnimationController {
     );
   }
 
+  // A character is "dying" while its death animation is queued (pending) or
+  // active. Walk/attack handlers consult this so a stray update can't clobber
+  // the queued death animation in the per-player slot (mirrors isNpcDying).
+  isCharacterDying(playerId: number): boolean {
+    return (
+      this.pendingCharacterAnimations.get(playerId) instanceof
+        CharacterDeathAnimation ||
+      this.characterAnimations.get(playerId) instanceof CharacterDeathAnimation
+    );
+  }
+
   isJump(coords: Vector2[]): boolean {
     for (const c of coords) {
       const spec = this.client.mapRenderer.getTileSpecAt(c);
@@ -95,17 +114,25 @@ export class AnimationController {
     activeCharIds: Set<number>,
     activeNpcIds: Set<number>,
   ): { playerWalking: boolean; playerDying: boolean } {
+    // Commit authoritative character coords first, decoupled from which
+    // animation won the per-player slot — so a walk's destination survives an
+    // attack overwriting the slot in the same tick. Applied here (not in the
+    // packet handler) so coords change in lockstep with the walk animation
+    // activating, which avoids a one-frame "snap to destination then back"
+    // flicker. Mirrors the NPC coords drain below.
+    for (const [id, pending] of this.pendingCharacterCoords) {
+      const character = this.client.getCharacterById(id);
+      if (character) {
+        character.direction = pending.direction;
+        character.coords.x = pending.x;
+        character.coords.y = pending.y;
+      }
+    }
+    this.pendingCharacterCoords.clear();
+
     // Drain pending animations so they're created inside the tick loop,
     // allowing the renderedFirstFrame no-op to happen in this same tick.
     for (const [id, animation] of this.pendingCharacterAnimations) {
-      if (animation instanceof CharacterWalkAnimation) {
-        const character = this.client.getCharacterById(id);
-        if (character) {
-          character.direction = animation.direction;
-          character.coords.x = animation.to.x;
-          character.coords.y = animation.to.y;
-        }
-      }
       this.characterAnimations.set(id, animation);
     }
     this.pendingCharacterAnimations.clear();
