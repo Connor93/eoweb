@@ -169,6 +169,9 @@ export class Client {
   serverSettings: ServerSettings | null = null;
   motd = '';
   nearby: NearbyInfo;
+  // Live per-player action rates from the server (PlayerRates deep packet,
+  // family 55). Missing entry = server defaults (attack 600ms / walk 480ms).
+  playerRates: Map<number, { attackMs: number; moveMs: number }> = new Map();
   eif!: Eif;
   ecf!: Ecf;
   enf!: Enf;
@@ -420,6 +423,10 @@ export class Client {
 
   getCharacterById(id: number): CharacterMapInfo | undefined {
     return this.nearby.characters.find((c) => c.playerId === id);
+  }
+
+  getPlayerRates(playerId: number): { attackMs: number; moveMs: number } {
+    return this.playerRates.get(playerId) ?? { attackMs: 600, moveMs: 480 };
   }
 
   getPlayerCharacter(): CharacterMapInfo | undefined {

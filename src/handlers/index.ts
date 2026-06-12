@@ -35,6 +35,7 @@ import { registerPlayersHandlers } from './players';
 import { registerPriestHandlers } from './priest';
 import { registerQuestHandlers } from './quest';
 import { registerRangeHandlers } from './range';
+import { registerRatesHandlers } from './rates';
 import { registerRecoverHandlers } from './recover';
 import { registerRefreshHandlers } from './refresh';
 import { registerReputationHandlers } from './reputation';
@@ -97,4 +98,5 @@ export function registerAllHandlers(client: Client): void {
   registerBossHandlers(client);
   registerReputationHandlers(client);
   registerInstanceHandlers(client);
+  registerRatesHandlers(client);
 }
