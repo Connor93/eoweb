@@ -45,6 +45,7 @@ function handleWalkPlayer(client: Client, reader: EoReader) {
 
   const isJump = client.animationController.isJump([prevCoords, packet.coords]);
 
+  const { moveMs } = client.getPlayerRates(packet.playerId);
   client.animationController.pendingCharacterAnimations.set(
     packet.playerId,
     new CharacterWalkAnimation(
@@ -52,7 +53,7 @@ function handleWalkPlayer(client: Client, reader: EoReader) {
       packet.coords,
       packet.direction,
       isJump,
-      480, // TODO(T11/T12): live rate
+      moveMs,
     ),
   );
 

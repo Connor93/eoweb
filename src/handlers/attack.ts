@@ -32,11 +32,12 @@ function handleAttackPlayer(client: Client, reader: EoReader) {
   character.direction = packet.direction;
 
   const metadata = client.getWeaponMetadata(character.equipment.weapon);
+  const { attackMs } = client.getPlayerRates(packet.playerId);
   client.animationController.pendingCharacterAnimations.set(
     packet.playerId,
     metadata.ranged
-      ? new CharacterRangedAttackAnimation(480) // TODO(T11/T12): live rate
-      : new CharacterAttackAnimation(600), // TODO(T11/T12): live rate
+      ? new CharacterRangedAttackAnimation(attackMs)
+      : new CharacterAttackAnimation(attackMs),
   );
 
   const index = randomRange(0, metadata.sfx.length - 1);
