@@ -42,6 +42,22 @@ function handleNpcPlayer(client: Client, reader: EoReader) {
       continue;
     }
 
+    // A dying NPC is being removed; don't move its corpse, and don't let a
+    // stray walk overwrite the queued death animation in the per-index slot.
+    if (client.animationController.isNpcDying(npc.index)) {
+      continue;
+    }
+
+    // Queue the authoritative destination in a dedicated map so it's committed
+    // at the next drain in lockstep with the walk animation (no early-commit
+    // flicker), yet survives the per-index animation slot being overwritten by
+    // an attack bundled in the same packet — which would otherwise drop the
+    // coords update and leave the NPC attacking from a stale tile.
+    client.animationController.pendingNpcCoords.set(npc.index, {
+      x: position.coords.x,
+      y: position.coords.y,
+    });
+
     client.animationController.pendingNpcAnimations.set(
       npc.index,
       new NpcWalkAnimation(
@@ -69,12 +85,18 @@ function handleNpcPlayer(client: Client, reader: EoReader) {
       continue;
     }
 
-    npc.direction = attack.direction;
-    client.audioController.playAtPosition(SfxId.PunchAttack, npc.coords);
-    client.animationController.pendingNpcAnimations.set(
-      npc.index,
-      new NpcAttackAnimation(),
-    );
+    // Skip the corpse's own attack visuals if it's already dying, so the
+    // attack animation can't clobber the queued death animation in the
+    // per-index slot. The player-side damage above/below still applies — the
+    // hit was real on the server.
+    if (!client.animationController.isNpcDying(npc.index)) {
+      npc.direction = attack.direction;
+      client.audioController.playAtPosition(SfxId.PunchAttack, npc.coords);
+      client.animationController.pendingNpcAnimations.set(
+        npc.index,
+        new NpcAttackAnimation(),
+      );
+    }
     const attackedChar = client.getCharacterById(attack.playerId);
     const attackedCoords = attackedChar?.coords ?? client.getPlayerCoords();
     client.combatOverlayController.setHpBar({
@@ -143,6 +165,9 @@ function handleNpcAgree(client: Client, reader: EoReader) {
   for (const npc of packet.npcs) {
     const existing = client.nearby.npcs.find((n) => n.index === npc.index);
     if (existing) {
+      if (client.animationController.isNpcDying(existing.index)) {
+        continue;
+      }
       existing.coords = npc.coords;
       existing.direction = npc.direction;
     } else {

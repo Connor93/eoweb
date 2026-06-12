@@ -24,6 +24,10 @@ export class AnimationController {
   pendingCharacterAnimations: Map<number, Animation> = new Map();
   npcAnimations: Map<number, Animation> = new Map();
   pendingNpcAnimations: Map<number, Animation> = new Map();
+  // Authoritative NPC tile commits, applied at drain time independently of
+  // which animation wins the per-index slot — so a walk's destination isn't
+  // lost when an attack for the same NPC arrives in the same tick.
+  pendingNpcCoords: Map<number, { x: number; y: number }> = new Map();
   characterChats: Map<number, ChatBubble> = new Map();
   npcChats: Map<number, ChatBubble> = new Map();
   characterEmotes: Map<number, Emote> = new Map();
@@ -65,6 +69,17 @@ export class AnimationController {
     }
   }
 
+  // An NPC is "dying" while its death animation is queued (pending) or
+  // active. Update handlers consult this so a stray/late walk or attack for
+  // the same index can't clobber the queued death (which would otherwise
+  // leave the NPC on screen forever — see NPC desync fix).
+  isNpcDying(index: number): boolean {
+    return (
+      this.pendingNpcAnimations.get(index) instanceof NpcDeathAnimation ||
+      this.npcAnimations.get(index) instanceof NpcDeathAnimation
+    );
+  }
+
   isJump(coords: Vector2[]): boolean {
     for (const c of coords) {
       const spec = this.client.mapRenderer.getTileSpecAt(c);
@@ -95,13 +110,28 @@ export class AnimationController {
     }
     this.pendingCharacterAnimations.clear();
 
+    // Commit authoritative NPC coords first, decoupled from which animation
+    // won the per-index slot — so a walk's destination survives an attack for
+    // the same NPC overwriting the slot in the same tick. Applied here (not in
+    // the packet handler) so coords change in lockstep with the walk animation
+    // activating, which avoids a one-frame "snap to destination then back"
+    // flicker.
+    for (const [id, coords] of this.pendingNpcCoords) {
+      const npc = this.client.nearby.npcs.find((n) => n.index === id);
+      if (npc) {
+        npc.coords.x = coords.x;
+        npc.coords.y = coords.y;
+      }
+    }
+    this.pendingNpcCoords.clear();
+
     for (const [id, animation] of this.pendingNpcAnimations) {
+      // Face the walk direction only when the walk is the active animation; an
+      // attack that won the slot keeps the direction its handler already set.
       if (animation instanceof NpcWalkAnimation) {
         const npc = this.client.nearby.npcs.find((n) => n.index === id);
         if (npc) {
           npc.direction = animation.direction;
-          npc.coords.x = animation.to.x;
-          npc.coords.y = animation.to.y;
         }
       }
       this.npcAnimations.set(id, animation);
