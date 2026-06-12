@@ -656,6 +656,19 @@ export class Client {
     this.minimapRenderer.update(interpolation);
   }
 
+  // Called once per render frame, AFTER client.render(), so that finishing
+  // animations draw their final frame before deletion (advanceTimed) and
+  // input dispatched this frame appears next frame (~16ms latency — same
+  // order as before, just finer-grained than the old 120ms tick latency).
+  // Replaces the direct animationController.advanceTimed call in main.tsx.
+  frameUpdate(deltaMs: number) {
+    // advanceTimed MUST come before update() so a just-finished animation
+    // is deleted before update() reads the animation slot — otherwise the
+    // finishing frame would block the next walk/attack for one extra frame.
+    this.animationController.advanceTimed(deltaMs);
+    this.keyboardController.update(performance.now());
+  }
+
   setMap(map: Emf) {
     if (
       this.map &&

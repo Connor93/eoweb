@@ -70,7 +70,13 @@ export class MovementController {
 
     this.client.animationController.characterAnimations.set(
       this.client.playerId,
-      new CharacterWalkAnimation(from, to, direction, isJump, 480), // TODO(T11/T12): live rate
+      new CharacterWalkAnimation(
+        from,
+        to,
+        direction,
+        isJump,
+        this.client.getPlayerRates(this.client.playerId).moveMs,
+      ),
     );
 
     if (spec && spec === MapTileSpec.Water) {

@@ -1,10 +1,7 @@
 import { Direction, Emote, ItemSubtype, MapTileSpec, SitState } from 'eolib';
 import type { Client } from '@/client';
 import {
-  ATTACK_TICKS,
-  FACE_TICKS,
   HOTBAR_COOLDOWN_TICKS,
-  SIT_TICKS,
   WALK_TICKS as WALK_ANIMATION_TICKS,
 } from '@/consts';
 import { EOResourceID } from '@/edf';
@@ -78,12 +75,22 @@ function inputToDirection(input: Input): Direction | null {
 const WALK_TICKS = WALK_ANIMATION_TICKS - 1;
 //const DRAG_THRESHOLD = 30;
 
+// ms constants for the two rates that had no server-side configurability
+// before the speed-split (face = 1 tick = 120ms; sit = 4 ticks = 480ms).
+const FACE_MS = 120;
+const SIT_MS = 480;
+
 export class KeyboardController {
   private client: Client;
-  private walkTicks = WALK_TICKS;
-  private faceTicks = FACE_TICKS;
-  private sitTicks = SIT_TICKS;
-  private attackTicks = ATTACK_TICKS;
+
+  // ms-deadline gates for the four action inputs (face/attack/walk/sit).
+  // Initialised to 0 so the first action fires immediately on spawn.
+  private nextWalkAt = 0;
+  private nextAttackAt = 0;
+  private nextFaceAt = 0;
+  private nextSitAt = 0;
+
+  // Tick-based gates retained for actions that stay in tick().
   private hotbarTicks = HOTBAR_COOLDOWN_TICKS;
   private minimapTicks = WALK_TICKS;
   private refreshTicks = WALK_TICKS;
@@ -426,11 +433,249 @@ export class KeyboardController {
     this.frozen = false;
   }
 
+  // A rate change re-derives pending deadlines from the moment of the last
+  // action rather than letting the old (possibly much slower) deadline play
+  // out — buffs feel instant, debuffs apply from the next action.
+  retargetGates(attackMs: number, moveMs: number): void {
+    const now = performance.now();
+    this.nextAttackAt = Math.min(this.nextAttackAt, now + attackMs);
+    this.nextWalkAt = Math.min(this.nextWalkAt, now + moveMs);
+  }
+
+  // Per-frame action dispatch: walk / attack / face / sit gates use ms
+  // deadlines instead of 120ms tick counters so server-driven rates of any
+  // value are respected without quantisation to 120ms multiples.
+  //
+  // clearUnheldInput is intentionally NOT called here — it stays in tick()
+  // so that a key tap shorter than ~16ms (one frame) is still present when
+  // the next 120ms tick reads it for hotbar/dialog/etc. Moving it here would
+  // prune released keys within a single frame and cause quick-taps to be
+  // missed by those tick-paced handlers.
+  update(now: number): void {
+    if (
+      this.frozen ||
+      this.client.state !== GameState.InGame ||
+      this.client.typing
+    ) {
+      return;
+    }
+
+    const character = this.client.getPlayerCharacter();
+    if (!character) {
+      return;
+    }
+
+    const animation = this.client.animationController.characterAnimations.get(
+      character.playerId,
+    );
+    const lastHeldDirection = this.getLastHeldDirection();
+    const attackHeld = this.wasInputHeldLastTick(Input.Attack);
+    const sitStandHeld = this.wasInputHeldLastTick(Input.SitStand);
+    // NOTE: clearUnheldInput is NOT called here — see method comment above.
+
+    if (
+      lastHeldDirection !== null &&
+      this.client.movementController.autoWalkPath.length
+    ) {
+      this.client.movementController.autoWalkPath = [];
+    }
+
+    if (isAnimationActive(animation)) {
+      return;
+    }
+
+    const lastDirectionHeld =
+      lastHeldDirection !== null ? inputToDirection(lastHeldDirection) : null;
+
+    if (character.sitState === SitState.Stand && lastDirectionHeld !== null) {
+      if (
+        now >= this.nextFaceAt &&
+        character.direction !== lastDirectionHeld &&
+        !animation
+      ) {
+        character.direction = lastDirectionHeld;
+        this.client.movementController.face(lastDirectionHeld);
+        const { attackMs, moveMs } = this.client.getPlayerRates(
+          this.client.playerId,
+        );
+        this.nextFaceAt = now + FACE_MS;
+        this.nextWalkAt = now + moveMs * 0.75; // old: WALK_TICKS-1 = 3 ticks = 360ms = 0.75 × walk cadence
+        this.nextAttackAt = now + attackMs * 0.4; // old: ATTACK_TICKS-3 = 2 ticks = 240ms = 0.4 × 600
+        return;
+      }
+    }
+
+    if (
+      now >= this.nextAttackAt &&
+      attackHeld &&
+      character.sitState === SitState.Stand
+    ) {
+      const metadata = this.client.getWeaponMetadata(
+        character.equipment.weapon,
+      );
+
+      if (
+        metadata.ranged &&
+        metadata.sfx[0] !== SfxId.Gun &&
+        metadata.sfx[0] !== SfxId.Harp1 &&
+        metadata.sfx[0] !== SfxId.Guitar1
+      ) {
+        const shield = this.client.equipment.shield;
+        const record = this.client.getEifRecordById(shield);
+        if (!record || record.subtype !== ItemSubtype.Arrows) {
+          this.client.audioController.playById(SfxId.NoArrows);
+          this.client.toastController.showWarning(
+            this.client.getResourceString(
+              EOResourceID.STATUS_LABEL_YOU_HAVE_NO_ARROWS,
+            ),
+          );
+          // No-arrows fail: reset all three gates to full durations.
+          const { attackMs, moveMs } = this.client.getPlayerRates(
+            this.client.playerId,
+          );
+          this.nextAttackAt = now + attackMs;
+          this.nextFaceAt = now + FACE_MS;
+          this.nextWalkAt = now + moveMs;
+          return;
+        }
+      }
+
+      const { attackMs, moveMs } = this.client.getPlayerRates(
+        this.client.playerId,
+      );
+      this.client.animationController.characterAnimations.set(
+        character.playerId,
+        metadata.ranged
+          ? new CharacterRangedAttackAnimation(attackMs)
+          : new CharacterAttackAnimation(attackMs),
+      );
+
+      this.client.movementController.attack(
+        character.direction,
+        getTimestamp(),
+      );
+      this.nextAttackAt = now + attackMs;
+      this.nextFaceAt = now + FACE_MS;
+      this.nextWalkAt = now + moveMs * 0.75; // old: WALK_TICKS-1 = 3 ticks = 360ms = 0.75 × walk cadence
+      return;
+    }
+
+    if (character.sitState === SitState.Stand && lastDirectionHeld !== null) {
+      if (
+        now >= this.nextFaceAt &&
+        character.direction !== lastDirectionHeld &&
+        !animation &&
+        !this.isInputHeld(Input.Attack)
+      ) {
+        character.direction = lastDirectionHeld;
+        this.client.movementController.face(lastDirectionHeld);
+        const { attackMs, moveMs } = this.client.getPlayerRates(
+          this.client.playerId,
+        );
+        this.nextFaceAt = now + FACE_MS;
+        this.nextWalkAt = now + moveMs * 0.75; // old: WALK_TICKS-1 = 3 ticks = 360ms = 0.75 × walk cadence
+        this.nextAttackAt = now + attackMs * 0.4; // old: ATTACK_TICKS-3 = 2 ticks = 240ms = 0.4 × 600
+        return;
+      }
+
+      if (this.client.warpQueued) {
+        return;
+      }
+
+      if (
+        now >= this.nextWalkAt &&
+        (character.direction === lastDirectionHeld ||
+          animation instanceof CharacterWalkAnimation)
+      ) {
+        const from = bigCoordsToCoords(character.coords);
+        const to = getNextCoords(
+          from,
+          lastDirectionHeld,
+          this.client.map!.width,
+          this.client.map!.height,
+        );
+
+        const door = this.client.mapController.getDoor(to);
+        if (door && !door.open) {
+          this.client.mapController.openDoor(to);
+          this.nextWalkAt =
+            now + this.client.getPlayerRates(this.client.playerId).moveMs;
+          return;
+        }
+
+        if (this.client.mapController.chestAt(to)) {
+          this.client.chestController.openChest(to);
+          this.nextWalkAt =
+            now + this.client.getPlayerRates(this.client.playerId).moveMs;
+          return;
+        }
+
+        if (this.client.lockerController.lockerAt(to)) {
+          this.client.lockerController.openLocker(to);
+          this.nextWalkAt =
+            now + this.client.getPlayerRates(this.client.playerId).moveMs;
+          return;
+        }
+
+        const boardSpec = this.client.mapController.boardAt(to);
+        if (boardSpec !== undefined) {
+          this.client.boardController.openBoard(boardSpec - MapTileSpec.Board1);
+          this.nextWalkAt =
+            now + this.client.getPlayerRates(this.client.playerId).moveMs;
+          return;
+        }
+
+        if (this.client.mapController.jukeboxAt(to)) {
+          this.client.jukeboxController.openJukebox(to);
+          this.nextWalkAt =
+            now + this.client.getPlayerRates(this.client.playerId).moveMs;
+          return;
+        }
+
+        if (
+          this.client.mapController.isFacingChairAt(to) &&
+          !this.client.mapController.occupied(to)
+        ) {
+          this.client.mapController.sitChair(to);
+          this.nextWalkAt =
+            now + this.client.getPlayerRates(this.client.playerId).moveMs;
+          return;
+        }
+
+        if (!this.client.mapController.canWalk(to)) {
+          this.nextWalkAt =
+            now + this.client.getPlayerRates(this.client.playerId).moveMs;
+          return;
+        }
+
+        character.direction = lastDirectionHeld;
+        character.coords.x = to.x;
+        character.coords.y = to.y;
+        this.client.movementController.walk(
+          lastDirectionHeld,
+          from,
+          to,
+          getTimestamp(),
+        );
+        const { moveMs } = this.client.getPlayerRates(this.client.playerId);
+        this.nextWalkAt = now + moveMs;
+        this.nextFaceAt = now + FACE_MS;
+        this.nextSitAt = now + SIT_MS;
+        return;
+      }
+    }
+
+    if (now >= this.nextSitAt && sitStandHeld) {
+      if (character.sitState === SitState.Stand) {
+        this.client.movementController.sit();
+      } else {
+        this.client.movementController.stand();
+      }
+      this.nextSitAt = now + SIT_MS;
+    }
+  }
+
   tick() {
-    this.faceTicks = Math.max(this.faceTicks - 1, 0);
-    this.walkTicks = Math.max(this.walkTicks - 1, 0);
-    this.sitTicks = Math.max(this.sitTicks - 1, 0);
-    this.attackTicks = Math.max(this.attackTicks - 1, -1);
     this.hotbarTicks = Math.max(this.hotbarTicks - 1, 0);
     this.minimapTicks = Math.max(this.minimapTicks - 1, 0);
     this.refreshTicks = Math.max(this.refreshTicks - 1, 0);
@@ -502,192 +747,11 @@ export class KeyboardController {
       this.dialogOpenTicks = WALK_TICKS;
     }
 
-    const animation = this.client.animationController.characterAnimations.get(
-      character.playerId,
-    );
-    const lastHeldDirection = this.getLastHeldDirection();
-    const attackHeld = this.wasInputHeldLastTick(Input.Attack);
-    const sitStandHeld = this.wasInputHeldLastTick(Input.SitStand);
+    // clearUnheldInput is called once per 120ms tick — this is intentional.
+    // update() runs per-frame (~16ms) but deliberately does NOT prune released
+    // keys, so a quick tap that is already released when update() runs is still
+    // visible to tick()'s hotbar/dialog handlers via wasInputHeldLastTick.
     this.clearUnheldInput();
-
-    if (
-      lastHeldDirection !== null &&
-      this.client.movementController.autoWalkPath.length
-    ) {
-      this.client.movementController.autoWalkPath = [];
-    }
-
-    if (isAnimationActive(animation)) {
-      return;
-    }
-
-    const lastDirectionHeld =
-      lastHeldDirection !== null ? inputToDirection(lastHeldDirection) : null;
-
-    if (character.sitState === SitState.Stand && lastDirectionHeld !== null) {
-      if (
-        !this.faceTicks &&
-        character.direction !== lastDirectionHeld &&
-        !animation
-      ) {
-        character.direction = lastDirectionHeld;
-        this.client.movementController.face(lastDirectionHeld);
-        this.faceTicks = FACE_TICKS;
-        this.walkTicks = WALK_TICKS - 1;
-        this.attackTicks = ATTACK_TICKS - 3;
-        return;
-      }
-    }
-
-    if (
-      this.attackTicks <= 0 &&
-      attackHeld &&
-      character.sitState === SitState.Stand
-    ) {
-      const metadata = this.client.getWeaponMetadata(
-        character.equipment.weapon,
-      );
-
-      if (
-        metadata.ranged &&
-        metadata.sfx[0] !== SfxId.Gun &&
-        metadata.sfx[0] !== SfxId.Harp1 &&
-        metadata.sfx[0] !== SfxId.Guitar1
-      ) {
-        const shield = this.client.equipment.shield;
-        const record = this.client.getEifRecordById(shield);
-        if (!record || record.subtype !== ItemSubtype.Arrows) {
-          this.client.audioController.playById(SfxId.NoArrows);
-          this.client.toastController.showWarning(
-            this.client.getResourceString(
-              EOResourceID.STATUS_LABEL_YOU_HAVE_NO_ARROWS,
-            ),
-          );
-          this.attackTicks = ATTACK_TICKS;
-          this.faceTicks = FACE_TICKS;
-          this.walkTicks = WALK_TICKS;
-          return;
-        }
-      }
-
-      this.client.animationController.characterAnimations.set(
-        character.playerId,
-        metadata.ranged
-          ? new CharacterRangedAttackAnimation(480) // TODO(T11/T12): live rate
-          : new CharacterAttackAnimation(600), // TODO(T11/T12): live rate
-      );
-
-      this.client.movementController.attack(
-        character.direction,
-        getTimestamp(),
-      );
-      this.attackTicks = ATTACK_TICKS;
-      this.faceTicks = FACE_TICKS;
-      this.walkTicks = WALK_TICKS - 1;
-      return;
-    }
-
-    if (character.sitState === SitState.Stand && lastDirectionHeld !== null) {
-      if (
-        !this.faceTicks &&
-        character.direction !== lastDirectionHeld &&
-        !animation &&
-        !this.isInputHeld(Input.Attack)
-      ) {
-        character.direction = lastDirectionHeld;
-        this.client.movementController.face(lastDirectionHeld);
-        this.faceTicks = FACE_TICKS;
-        this.walkTicks = WALK_TICKS - 1;
-        return;
-      }
-
-      if (this.client.warpQueued) {
-        return;
-      }
-
-      if (
-        !this.walkTicks &&
-        (character.direction === lastDirectionHeld ||
-          animation instanceof CharacterWalkAnimation)
-      ) {
-        const from = bigCoordsToCoords(character.coords);
-        const to = getNextCoords(
-          from,
-          lastDirectionHeld,
-          this.client.map!.width,
-          this.client.map!.height,
-        );
-
-        const door = this.client.mapController.getDoor(to);
-        if (door && !door.open) {
-          this.client.mapController.openDoor(to);
-          this.walkTicks = WALK_TICKS;
-          return;
-        }
-
-        if (this.client.mapController.chestAt(to)) {
-          this.client.chestController.openChest(to);
-          this.walkTicks = WALK_TICKS;
-          return;
-        }
-
-        if (this.client.lockerController.lockerAt(to)) {
-          this.client.lockerController.openLocker(to);
-          this.walkTicks = WALK_TICKS;
-          return;
-        }
-
-        const boardSpec = this.client.mapController.boardAt(to);
-        if (boardSpec !== undefined) {
-          this.client.boardController.openBoard(boardSpec - MapTileSpec.Board1);
-          this.walkTicks = WALK_TICKS;
-          return;
-        }
-
-        if (this.client.mapController.jukeboxAt(to)) {
-          this.client.jukeboxController.openJukebox(to);
-          this.walkTicks = WALK_TICKS;
-          return;
-        }
-
-        if (
-          this.client.mapController.isFacingChairAt(to) &&
-          !this.client.mapController.occupied(to)
-        ) {
-          this.client.mapController.sitChair(to);
-          this.walkTicks = WALK_TICKS;
-          return;
-        }
-
-        if (!this.client.mapController.canWalk(to)) {
-          this.walkTicks = WALK_TICKS;
-          return;
-        }
-
-        character.direction = lastDirectionHeld;
-        character.coords.x = to.x;
-        character.coords.y = to.y;
-        this.client.movementController.walk(
-          lastDirectionHeld,
-          from,
-          to,
-          getTimestamp(),
-        );
-        this.walkTicks = WALK_TICKS;
-        this.faceTicks = FACE_TICKS;
-        this.sitTicks = SIT_TICKS;
-        return;
-      }
-    }
-
-    if (!this.sitTicks && sitStandHeld) {
-      if (character.sitState === SitState.Stand) {
-        this.client.movementController.sit();
-      } else {
-        this.client.movementController.stand();
-      }
-      this.sitTicks = SIT_TICKS;
-    }
 
     const emote = this.client.animationController.characterEmotes.get(
       this.client.playerId,

@@ -14,6 +14,11 @@ function parseEntries(client: Client, reader: EoReader) {
     const attackMs = reader.getThree();
     const moveMs = reader.getThree();
     client.playerRates.set(playerId, { attackMs, moveMs });
+    // Re-derive local deadlines immediately so rate buffs feel instant;
+    // debuffs apply from the next action (Math.min never extends a gate).
+    if (playerId === client.playerId) {
+      client.keyboardController.retargetGates(attackMs, moveMs);
+    }
   }
 }
 
