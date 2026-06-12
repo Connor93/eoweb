@@ -74,7 +74,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     client.render(interpolation);
   });
 
-  const response = await fetch('/maps/00005.emf');
+  const response = await fetch('/maps/00001.emf');
   const map = await response.arrayBuffer();
   const reader = new EoReader(new Uint8Array(map));
   const emf = Emf.deserialize(reader);
@@ -84,8 +84,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   const character = new CharacterMapInfo();
   character.playerId = 0;
   character.coords = new BigCoords();
-  character.coords.x = 35;
-  character.coords.y = 38;
+  character.coords.x = 10;
+  character.coords.y = 10;
   character.gender = Gender.Female;
   character.sitState = SitState.Floor;
   character.skin = 0;

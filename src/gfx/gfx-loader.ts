@@ -215,10 +215,14 @@ export class GfxLoader {
     const imageData = new ImageData(pixels, result.width, result.height);
     const bm = await createImageBitmap(imageData);
 
-    // LRU eviction — evict from both caches together
+    // LRU eviction — drop our references but don't close() the bitmap.
+    // The atlas keeps a separate reference in `bmpsToLoad[].img` and may
+    // still draw from it during a later updateAtlas; closing here detaches
+    // the underlying source and makes drawImage throw "image source is
+    // detached" (reproduces on map 5 once the cache fills past 500). Let
+    // GC reclaim the bitmap once all references are dropped.
     if (this.bitmapCache.size >= LRU_MAX_SIZE) {
       const firstKey = this.bitmapCache.keys().next().value as string;
-      this.bitmapCache.get(firstKey)?.close();
       this.bitmapCache.delete(firstKey);
       this.pixelCache.delete(firstKey);
     }
