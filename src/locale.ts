@@ -125,6 +125,8 @@ export const locales = {
       speedFast: 'Fast',
       speedMedium: 'Medium',
       speedSlow: 'Slow',
+      speedCapped: 'capped',
+      speedCappedHint: 'Capped — gear/mods exceed the server speed floor',
       statPoints: 'Stat Points: {count}',
       trainBtn: '+',
     },
@@ -729,6 +731,9 @@ export const locales = {
       speedFast: 'Snel',
       speedMedium: 'Gemiddeld',
       speedSlow: 'Langzaam',
+      speedCapped: 'beperkt',
+      speedCappedHint:
+        'Begrensd — uitrusting/mods overschrijden de serversnelheidslimiet',
       statPoints: 'Statistiekpunten: {count}',
       trainBtn: '+',
     },
@@ -1336,6 +1341,9 @@ export const locales = {
       speedFast: 'Snabb',
       speedMedium: 'Medel',
       speedSlow: 'Långsam',
+      speedCapped: 'begränsad',
+      speedCappedHint:
+        'Begränsad — utrustning/mods överstiger serverns hastighetsgräns',
       statPoints: 'Statistikpoäng: {count}',
       trainBtn: '+',
     },
@@ -1943,6 +1951,9 @@ export const locales = {
       speedFast: 'Rápido',
       speedMedium: 'Médio',
       speedSlow: 'Lento',
+      speedCapped: 'limitado',
+      speedCappedHint:
+        'Limitado — equipamento/mods excedem o limite de velocidade do servidor',
       statPoints: 'Pontos de Atributo: {count}',
       trainBtn: '+',
     },

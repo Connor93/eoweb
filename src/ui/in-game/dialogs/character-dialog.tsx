@@ -693,27 +693,53 @@ function StatsTab() {
                   : ms >= baseline * 1.1
                     ? locale.stats.speedSlow
                     : locale.stats.speedMedium;
+              const SpeedValue = ({
+                label,
+                capped,
+                tooltipDetail,
+              }: {
+                label: string;
+                capped: boolean;
+                tooltipDetail: string;
+              }) => (
+                <span class='group relative'>
+                  {label}
+                  {capped && (
+                    <span class='ml-1 text-warning text-xs'>
+                      ({locale.stats.speedCapped})
+                    </span>
+                  )}
+                  <div class='pointer-events-none absolute bottom-full right-0 z-50 mb-1 w-max max-w-52 rounded bg-base-300 px-2 py-1 text-left text-xs shadow-lg hidden group-hover:block'>
+                    <div>{tooltipDetail}</div>
+                    {capped && (
+                      <div class='mt-0.5 text-warning'>
+                        {locale.stats.speedCappedHint}
+                      </div>
+                    )}
+                  </div>
+                </span>
+              );
               return (
                 <>
                   <div class='flex justify-between'>
                     <span class='text-primary/60'>
                       {locale.stats.labelAttackSpeed}
                     </span>
-                    <span
-                      title={`${(1000 / rates.attackMs).toFixed(2)} attacks/sec (${rates.attackMs}ms)`}
-                    >
-                      {speedLabel(rates.attackMs, 600)}
-                    </span>
+                    <SpeedValue
+                      label={speedLabel(rates.attackMs, 600)}
+                      capped={rates.attackCapped}
+                      tooltipDetail={`${(1000 / rates.attackMs).toFixed(2)} attacks/sec (${rates.attackMs}ms)`}
+                    />
                   </div>
                   <div class='flex justify-between'>
                     <span class='text-primary/60'>
                       {locale.stats.labelMoveSpeed}
                     </span>
-                    <span
-                      title={`${(1000 / rates.moveMs).toFixed(2)} tiles/sec (${rates.moveMs}ms)`}
-                    >
-                      {speedLabel(rates.moveMs, 480)}
-                    </span>
+                    <SpeedValue
+                      label={speedLabel(rates.moveMs, 480)}
+                      capped={rates.moveCapped}
+                      tooltipDetail={`${(1000 / rates.moveMs).toFixed(2)} tiles/sec (${rates.moveMs}ms)`}
+                    />
                   </div>
                 </>
               );
