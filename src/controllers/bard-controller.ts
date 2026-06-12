@@ -56,7 +56,7 @@ export class BardController {
     if (!existing) {
       this.client.animationController.characterAnimations.set(
         playerId,
-        new CharacterRangedAttackAnimation(),
+        new CharacterRangedAttackAnimation(480), // TODO(T11/T12): live rate
       );
 
       this.client.animationController.characterEmotes.set(

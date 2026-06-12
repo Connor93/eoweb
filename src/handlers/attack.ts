@@ -35,8 +35,8 @@ function handleAttackPlayer(client: Client, reader: EoReader) {
   client.animationController.pendingCharacterAnimations.set(
     packet.playerId,
     metadata.ranged
-      ? new CharacterRangedAttackAnimation()
-      : new CharacterAttackAnimation(),
+      ? new CharacterRangedAttackAnimation(480) // TODO(T11/T12): live rate
+      : new CharacterAttackAnimation(600), // TODO(T11/T12): live rate
   );
 
   const index = randomRange(0, metadata.sfx.length - 1);

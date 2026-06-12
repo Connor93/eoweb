@@ -1,4 +1,4 @@
-export { Animation } from './animation';
+export { Animation, TimedAnimation } from './animation';
 export { CharacterAttackAnimation } from './character-attack';
 export { CharacterRangedAttackAnimation } from './character-attack-ranged';
 export { CharacterDeathAnimation } from './character-death';

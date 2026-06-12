@@ -68,6 +68,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       client.tick();
       accumulator -= TICK;
     }
+    client.animationController.advanceTimed(ticker.deltaMS);
     const interpolation = client.configController.interpolation
       ? accumulator / TICK
       : 1;

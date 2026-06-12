@@ -10,13 +10,23 @@ import {
 import { EOResourceID } from '@/edf';
 import { GameState } from '@/game-state';
 import {
+  type Animation,
   CharacterAttackAnimation,
   CharacterRangedAttackAnimation,
   CharacterWalkAnimation,
+  TimedAnimation,
 } from '@/render';
 import { SfxId } from '@/sfx';
 import { bigCoordsToCoords, getNextCoords } from '@/utils';
 import { getTimestamp } from './movement-controller';
+
+// Shim for the transition period (T9→T12): tick-based animations gate input
+// via ticks > 0; timed animations (ticks always 0) gate via !finished instead.
+function isAnimationActive(a: Animation | undefined): boolean {
+  if (!a) return false;
+  if (a instanceof TimedAnimation) return !a.finished;
+  return Boolean(a.ticks);
+}
 
 enum Input {
   Up = 0,
@@ -507,7 +517,7 @@ export class KeyboardController {
       this.client.movementController.autoWalkPath = [];
     }
 
-    if (animation?.ticks) {
+    if (isAnimationActive(animation)) {
       return;
     }
 
@@ -563,8 +573,8 @@ export class KeyboardController {
       this.client.animationController.characterAnimations.set(
         character.playerId,
         metadata.ranged
-          ? new CharacterRangedAttackAnimation()
-          : new CharacterAttackAnimation(),
+          ? new CharacterRangedAttackAnimation(480) // TODO(T11/T12): live rate
+          : new CharacterAttackAnimation(600), // TODO(T11/T12): live rate
       );
 
       this.client.movementController.attack(

@@ -52,6 +52,7 @@ function handleWalkPlayer(client: Client, reader: EoReader) {
       packet.coords,
       packet.direction,
       isJump,
+      480, // TODO(T11/T12): live rate
     ),
   );
 

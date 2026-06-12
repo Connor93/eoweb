@@ -13,6 +13,7 @@ import {
   type Emote,
   NpcDeathAnimation,
   NpcWalkAnimation,
+  TimedAnimation,
 } from '@/render';
 import { SfxId } from '@/sfx';
 import type { EffectMetadata } from '@/utils';
@@ -183,6 +184,19 @@ export class AnimationController {
     let playerWalking = false;
     let playerDying = false;
     for (const [id, animation] of this.characterAnimations) {
+      // TimedAnimation instances are driven by advanceTimed() per render frame,
+      // not by the 120ms tick. Skip the tick-based removal check entirely —
+      // TimedAnimation.ticks is always 0 from construction, which would
+      // otherwise remove them immediately on the first tick.
+      if (animation instanceof TimedAnimation) {
+        if (
+          id === this.client.playerId &&
+          animation instanceof CharacterWalkAnimation
+        ) {
+          playerWalking = true;
+        }
+        continue;
+      }
       if (!animation.ticks || !activeCharIds.has(id)) {
         if (
           id === this.client.playerId &&
@@ -309,6 +323,19 @@ export class AnimationController {
         continue;
       }
       effect.tick();
+    }
+  }
+
+  // Called once per render frame (not per 120ms tick) to advance all
+  // wall-clock-paced character animations and remove finished ones.
+  advanceTimed(deltaMs: number): void {
+    for (const [id, animation] of this.characterAnimations) {
+      if (animation instanceof TimedAnimation) {
+        animation.advance(deltaMs);
+        if (animation.finished) {
+          this.characterAnimations.delete(id);
+        }
+      }
     }
   }
 }
