@@ -105,6 +105,8 @@ export class MouseController {
         if (isInUI(e.target)) return;
         e.preventDefault();
         clearTimeout(longPressTimer);
+        // Finger lifted — clear the hover tooltip regardless of gesture type.
+        this.client.hoveredItemUid = null;
         if (!isLongPress) {
           const diffX =
             e.changedTouches[0].clientX - this.touchStartPosition!.x;
@@ -124,6 +126,7 @@ export class MouseController {
     window.addEventListener('touchcancel', () => {
       clearTimeout(longPressTimer);
       isLongPress = false;
+      this.client.hoveredItemUid = null;
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -158,6 +161,15 @@ export class MouseController {
           this.client.hoveredItemUid = null;
         }
       } else {
+        this.client.hoveredItemUid = null;
+      }
+    });
+
+    // Clear the hover tooltip when the pointer leaves the browser window
+    // entirely. `mouseout` at window level fires with relatedTarget === null
+    // only when the cursor crosses the window boundary.
+    window.addEventListener('mouseout', (e) => {
+      if (e.relatedTarget === null) {
         this.client.hoveredItemUid = null;
       }
     });

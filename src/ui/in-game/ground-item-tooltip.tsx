@@ -116,19 +116,22 @@ export function GroundItemTooltip() {
     <div
       style={{
         position: 'absolute',
-        left: `${x}px`,
-        top: `${y}px`,
+        inset: 0,
         transform: `scale(${zoom})`,
         transformOrigin: 'top left',
+        width: `${100 / zoom}%`,
+        height: `${100 / zoom}%`,
         pointerEvents: 'none',
         zIndex: 9998,
       }}
     >
-      <div
-        class='w-max max-w-56 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
-        style={{ transform: 'translate(-50%, -100%)' }}
-      >
-        {content}
+      <div style={{ position: 'absolute', left: `${x}px`, top: `${y}px` }}>
+        <div
+          class='w-max max-w-56 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
+          style={{ transform: 'translate(-50%, -100%)' }}
+        >
+          {content}
+        </div>
       </div>
     </div>
   );
