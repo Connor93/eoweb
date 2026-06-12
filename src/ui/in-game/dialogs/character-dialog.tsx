@@ -684,6 +684,40 @@ function StatsTab() {
             <span class='text-primary/60'>{locale.stats.labelTp}</span>
             {statRow('maxTp', maxTp)}
           </div>
+          {isOwnCharacter &&
+            (() => {
+              const rates = client.getPlayerRates(client.playerId);
+              const speedLabel = (ms: number, baseline: number) =>
+                ms <= baseline * 0.9
+                  ? locale.stats.speedFast
+                  : ms >= baseline * 1.1
+                    ? locale.stats.speedSlow
+                    : locale.stats.speedMedium;
+              return (
+                <>
+                  <div class='flex justify-between'>
+                    <span class='text-primary/60'>
+                      {locale.stats.labelAttackSpeed}
+                    </span>
+                    <span
+                      title={`${(1000 / rates.attackMs).toFixed(2)} attacks/sec (${rates.attackMs}ms)`}
+                    >
+                      {speedLabel(rates.attackMs, 600)}
+                    </span>
+                  </div>
+                  <div class='flex justify-between'>
+                    <span class='text-primary/60'>
+                      {locale.stats.labelMoveSpeed}
+                    </span>
+                    <span
+                      title={`${(1000 / rates.moveMs).toFixed(2)} tiles/sec (${rates.moveMs}ms)`}
+                    >
+                      {speedLabel(rates.moveMs, 480)}
+                    </span>
+                  </div>
+                </>
+              );
+            })()}
         </div>
       </div>
       {isOwnCharacter && <EffectsSection />}
