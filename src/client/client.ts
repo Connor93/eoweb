@@ -183,6 +183,10 @@ export class Client {
   // Authored weapon swing speeds (item_id -> ms), from the family-55 Reply
   // packet. Sparse: only items that author attack_rate_ms appear.
   itemAttackRates: Map<number, number> = new Map();
+  // uid of the ground item under the mouse cursor, or null. Drives the
+  // ground-item hover tooltip; resolved on mousemove (tile-based, same
+  // filter clickItem uses).
+  hoveredItemUid: number | null = null;
   eif!: Eif;
   ecf!: Ecf;
   enf!: Enf;

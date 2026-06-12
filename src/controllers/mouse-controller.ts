@@ -142,6 +142,24 @@ export class MouseController {
           canvas.height,
         ),
       });
+      // Resolve the topmost ground item on the cursor's tile — same
+      // filter/pick order as clickItem() — and update the hover state
+      // that drives the ground-item tooltip overlay.
+      const mc = this.client.mouseCoords;
+      if (mc) {
+        const itemsAtTile = this.client.nearby.items.filter(
+          (i) => i.coords.x === mc.x && i.coords.y === mc.y,
+        );
+        if (itemsAtTile.length) {
+          // clickItem sorts descending by uid (highest uid = topmost).
+          itemsAtTile.sort((a, b) => b.uid - a.uid);
+          this.client.hoveredItemUid = itemsAtTile[0].uid;
+        } else {
+          this.client.hoveredItemUid = null;
+        }
+      } else {
+        this.client.hoveredItemUid = null;
+      }
     });
 
     let mouseDownPosition: { x: number; y: number } | null = null;
