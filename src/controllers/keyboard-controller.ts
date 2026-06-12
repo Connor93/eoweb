@@ -82,7 +82,7 @@ const SIT_MS = 480;
 // Turn-then-walk gate from STANDSTILL — keeps tap-to-face possible (a tap
 // shorter than this faces without stepping). Mid-movement turns bypass it
 // entirely (see wasJustWalking). Feel-tuned with the user; vanilla was 240ms.
-const TURN_WALK_DELAY_MS = 60;
+const TURN_WALK_DELAY_MS = 100;
 // How long after a step completes the player still counts as "in motion"
 // for instant turn chaining (covers frame jitter at the step boundary).
 const MOVING_GRACE_MS = 100;
