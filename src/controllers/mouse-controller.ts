@@ -147,9 +147,12 @@ export class MouseController {
       });
       // Resolve the topmost ground item on the cursor's tile — same
       // filter/pick order as clickItem() — and update the hover state
-      // that drives the ground-item tooltip overlay.
+      // that drives the ground-item tooltip overlay. Suppressed when the
+      // pointer is over a UI panel so the tooltip can't bleed through windows.
       const mc = this.client.mouseCoords;
-      if (mc) {
+      if (isInUI(e.target)) {
+        this.client.hoveredItemUid = null;
+      } else if (mc) {
         const itemsAtTile = this.client.nearby.items.filter(
           (i) => i.coords.x === mc.x && i.coords.y === mc.y,
         );
