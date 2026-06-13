@@ -14,6 +14,7 @@ export { Input } from './input';
 export { InputDialog } from './input-dialog';
 export { InventoryGrid } from './inventory-grid';
 export { ItemIcon } from './item-icon';
+export { PortalTooltip } from './portal-tooltip';
 export { ProgressBar } from './progress-bar';
 export { QuestBookList } from './quest-book-list';
 export { Select } from './select';

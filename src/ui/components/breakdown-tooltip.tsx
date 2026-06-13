@@ -2,6 +2,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { InstanceRarity } from '@/controllers';
 import type { GearSource } from '@/utils';
+import { PortalTooltip } from './portal-tooltip';
 
 function rarityTextClass(r: InstanceRarity | null): string {
   switch (r) {
@@ -38,7 +39,8 @@ interface Props {
 
 /** Hover/touch tooltip listing the base line + one rarity-colored line
  *  per contributing equipped item. Wraps its children as the hover
- *  target. */
+ *  target. Renders the tooltip via a portal into #ui so it escapes
+ *  any overflow-hidden container. */
 export function BreakdownTooltip({
   baseLabel,
   baseValue,
@@ -46,12 +48,14 @@ export function BreakdownTooltip({
   children,
 }: Props) {
   const [touchOpen, setTouchOpen] = useState(false);
-  const ref = useRef<HTMLSpanElement>(null);
+  // ref forwarded to PortalTooltip's wrapper span for outside-tap detection
+  const triggerRef = useRef<HTMLSpanElement>(null);
 
+  // Close touch tooltip when tapping outside the trigger
   useEffect(() => {
     const handler = (e: PointerEvent) => {
       if (e.pointerType !== 'touch') return;
-      if (!ref.current?.contains(e.target as Node)) {
+      if (!triggerRef.current?.contains(e.target as Node)) {
         setTouchOpen(false);
       }
     };
@@ -60,37 +64,41 @@ export function BreakdownTooltip({
   }, []);
 
   const hasContent = baseLabel !== undefined || sources.length > 0;
+  if (!hasContent) {
+    return <span>{children}</span>;
+  }
+
+  const tooltipContent = (
+    <>
+      {baseLabel !== undefined && (
+        <div class='flex justify-between gap-3'>
+          <span class='opacity-70'>{baseLabel}</span>
+          <span>{baseValue}</span>
+        </div>
+      )}
+      {sources.map((s, i) => (
+        <div key={i} class='flex justify-between gap-3'>
+          <span class={rarityTextClass(s.rarity)}>
+            {s.level !== null ? `Lv${s.level} ` : ''}
+            {s.name}
+          </span>
+          <span class='text-success'>{formatAmount(s)}</span>
+        </div>
+      ))}
+    </>
+  );
 
   return (
-    <span
-      ref={ref}
-      class='group relative'
-      onPointerDown={(e) => {
+    <PortalTooltip
+      tooltip={tooltipContent}
+      align='center'
+      forceOpen={touchOpen}
+      triggerRef={triggerRef}
+      onPointerDown={(e: PointerEvent) => {
         if (e.pointerType === 'touch') setTouchOpen(true);
       }}
     >
       {children}
-      {hasContent && (
-        <div
-          class={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1 w-max max-w-52 -translate-x-1/2 rounded bg-base-300 px-2 py-1 text-left text-xs shadow-lg ${touchOpen ? 'block' : 'hidden group-hover:block'}`}
-        >
-          {baseLabel !== undefined && (
-            <div class='flex justify-between gap-3'>
-              <span class='opacity-70'>{baseLabel}</span>
-              <span>{baseValue}</span>
-            </div>
-          )}
-          {sources.map((s, i) => (
-            <div key={i} class='flex justify-between gap-3'>
-              <span class={rarityTextClass(s.rarity)}>
-                {s.level !== null ? `Lv${s.level} ` : ''}
-                {s.name}
-              </span>
-              <span class='text-success'>{formatAmount(s)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </span>
+    </PortalTooltip>
   );
 }

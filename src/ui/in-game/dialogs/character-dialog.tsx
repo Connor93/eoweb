@@ -25,6 +25,7 @@ import {
   BreakdownTooltip,
   Button,
   ItemIcon,
+  PortalTooltip,
   QuestBookList,
   Tabs,
 } from '@/ui/components';
@@ -717,22 +718,26 @@ function StatsTab() {
                 capped: boolean;
                 tooltipDetail: string;
               }) => (
-                <span class='group relative'>
+                <PortalTooltip
+                  align='right'
+                  tooltip={
+                    <>
+                      <div>{tooltipDetail}</div>
+                      {capped && (
+                        <div class='mt-0.5 text-warning'>
+                          {locale.stats.speedCappedHint}
+                        </div>
+                      )}
+                    </>
+                  }
+                >
                   {label}
                   {capped && (
                     <span class='ml-1 text-warning text-xs'>
                       ({locale.stats.speedCapped})
                     </span>
                   )}
-                  <div class='pointer-events-none absolute bottom-full right-0 z-50 mb-1 w-max max-w-52 rounded bg-base-300 px-2 py-1 text-left text-xs shadow-lg hidden group-hover:block'>
-                    <div>{tooltipDetail}</div>
-                    {capped && (
-                      <div class='mt-0.5 text-warning'>
-                        {locale.stats.speedCappedHint}
-                      </div>
-                    )}
-                  </div>
-                </span>
+                </PortalTooltip>
               );
               return (
                 <>
