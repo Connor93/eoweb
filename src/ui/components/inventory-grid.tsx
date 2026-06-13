@@ -27,6 +27,7 @@ import {
   InstanceRarity,
   instanceRarityLabel,
 } from '@/controllers';
+import { getEquipmentSlotForItemType } from '@/equipment';
 import { playSfxById, SfxId } from '@/sfx';
 import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
@@ -106,6 +107,7 @@ type StackableCardProps = {
   item: Item;
   isDragging: boolean;
   onPointerDown: (e: PointerEvent, item: Item, target: HTMLElement) => void;
+  onRightClick: (e: MouseEvent, item: Item) => void;
   onTooltipShow: (key: string, x: number, y: number) => void;
   onTooltipHide: (key: string) => void;
 };
@@ -114,6 +116,7 @@ function StackableCard({
   item,
   isDragging,
   onPointerDown,
+  onRightClick,
   onTooltipShow,
   onTooltipHide,
 }: StackableCardProps) {
@@ -146,7 +149,10 @@ function StackableCard({
       data-inventory-item={item.id}
       class={`flex cursor-grab select-none flex-col items-center gap-2 rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10 active:bg-base-content/15${isDragging ? ' opacity-30' : ''}`}
       onPointerDown={handlePointerDown}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onRightClick(e, item);
+      }}
       onMouseEnter={showTooltip}
       onMouseLeave={() => onTooltipHide(tooltipKey)}
     >
@@ -185,6 +191,7 @@ type InstanceCardProps = {
     inst: InstanceItem,
     target: HTMLElement,
   ) => void;
+  onRightClick: (e: MouseEvent, inst: InstanceItem) => void;
   onTooltipShow: (key: string, x: number, y: number) => void;
   onTooltipHide: (key: string) => void;
 };
@@ -193,6 +200,7 @@ function InstanceCard({
   inst,
   isDragging,
   onPointerDown,
+  onRightClick,
   onTooltipShow,
   onTooltipHide,
 }: InstanceCardProps) {
@@ -227,7 +235,10 @@ function InstanceCard({
       data-instance-item={inst.instanceId}
       class={`flex cursor-grab select-none flex-col items-center gap-2 rounded border-2 ${borderClass} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10${isDragging ? ' opacity-30' : ''}`}
       onPointerDown={handlePointerDown}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onRightClick(e, inst);
+      }}
       onMouseEnter={showTooltip}
       onMouseLeave={() => onTooltipHide(tooltipKey)}
     >
@@ -644,6 +655,57 @@ export function InventoryGrid({ itemIds }: Props) {
     [client, startDrag],
   );
 
+  /**
+   * Resolve the right EquipmentSlot for a dual-slot item type (Ring/Armlet/Bracer).
+   * Prefers the first sub-slot if it is empty; otherwise falls back to sub-slot 0
+   * (the server will swap whatever is there).
+   */
+  const dualSubLocForType = useCallback(
+    (slot1: number, slot2: number): number => {
+      const equipment = client.inventoryController.getEquipmentArray();
+      if (!equipment[slot1]) return 0; // slot1 empty → use it (subLoc 0)
+      if (!equipment[slot2]) return 1; // slot2 empty → use it (subLoc 1)
+      return 0; // both occupied → swap slot1
+    },
+    [client],
+  );
+
+  const handleStackableRightClick = useCallback(
+    (_e: MouseEvent, item: Item) => {
+      const record = client.getEifRecordById(item.id);
+      if (!record) return;
+      const slot = getEquipmentSlotForItemType(record.type);
+      if (slot === undefined) return; // not equippable
+      // Ring1=9,Ring2=10 / Armlet1=11,Armlet2=12 / Bracer1=13,Bracer2=14
+      // For dual-slot primary slots, pick the open sub-slot when possible.
+      let resolvedSlot = slot;
+      if (slot === 9 || slot === 11 || slot === 13) {
+        const subLoc = dualSubLocForType(slot, slot + 1);
+        resolvedSlot = subLoc === 1 ? slot + 1 : slot;
+      }
+      client.inventoryController.equipItem(resolvedSlot, item.id);
+    },
+    [client, dualSubLocForType],
+  );
+
+  const handleInstanceRightClick = useCallback(
+    (_e: MouseEvent, inst: InstanceItem) => {
+      const record = client.getEifRecordById(inst.baseItemId);
+      if (!record) return;
+      const slot = getEquipmentSlotForItemType(record.type);
+      if (slot === undefined) return; // not equippable
+      // Requirement pre-check mirrors the drag path (instance equip has no server reject reply).
+      if (!client.inventoryController.checkEquipRequirements(record)) return;
+      // Dual-slot handling: pick the open sub-slot.
+      let subLoc = 0;
+      if (slot === 9 || slot === 11 || slot === 13) {
+        subLoc = dualSubLocForType(slot, slot + 1);
+      }
+      client.instanceController.sendEquip(inst.instanceId, subLoc);
+    },
+    [client, dualSubLocForType],
+  );
+
   const onTooltipShow = useCallback((key: string, x: number, y: number) => {
     setTooltip({ key, x, y });
   }, []);
@@ -781,6 +843,7 @@ export function InventoryGrid({ itemIds }: Props) {
                       currentDrag?.instanceId === inst.instanceId
                     }
                     onPointerDown={handleInstancePointerDown}
+                    onRightClick={handleInstanceRightClick}
                     onTooltipShow={onTooltipShow}
                     onTooltipHide={onTooltipHide}
                   />
@@ -794,6 +857,7 @@ export function InventoryGrid({ itemIds }: Props) {
                       currentDrag.itemId === item.id
                     }
                     onPointerDown={handleItemPointerDown}
+                    onRightClick={handleStackableRightClick}
                     onTooltipShow={onTooltipShow}
                     onTooltipHide={onTooltipHide}
                   />
