@@ -47,6 +47,28 @@ const WALK_OFFSETS = [
   },
 ];
 
+// Continuous walk offset: progress 0..1 spans exactly the old FRAME_0..3
+// table range (4 × WALK_WIDTH_FACTOR = HALF_TILE_WIDTH per axis sign).
+function continuousWalkOffset(
+  progress: number,
+  direction: Direction,
+): { x: number; y: number } {
+  const dx = 4 * WALK_WIDTH_FACTOR * progress;
+  const dy = 4 * WALK_HEIGHT_FACTOR * progress;
+  // Floor the SIGNED offsets — fractional positions shimmer on the scaled
+  // canvas (see map.ts continuousWalkOffset).
+  switch (direction) {
+    case Direction.Down:
+      return { x: Math.floor(-dx), y: Math.floor(dy) };
+    case Direction.Right:
+      return { x: Math.floor(dx), y: Math.floor(dy) };
+    case Direction.Up:
+      return { x: Math.floor(dx), y: Math.floor(-dy) };
+    default: // Direction.Left
+      return { x: Math.floor(-dx), y: Math.floor(-dy) };
+  }
+}
+
 enum MiniMapIcon {
   Wall = 0,
   Character = 1,
@@ -155,8 +177,8 @@ export class MinimapRenderer {
 
     if (mainCharacterAnimation instanceof CharacterWalkAnimation) {
       playerScreen = isoToScreen(mainCharacterAnimation.from);
-      const walkOffset = this.interpolateWalkOffset(
-        mainCharacterAnimation.animationFrame,
+      const walkOffset = continuousWalkOffset(
+        mainCharacterAnimation.progress,
         mainCharacterAnimation.direction,
       );
       playerScreen.x += walkOffset.x;
@@ -288,10 +310,7 @@ export class MinimapRenderer {
         coords = animation.from;
         offset = dying
           ? WALK_OFFSETS[animation.animationFrame][animation.direction]
-          : this.interpolateWalkOffset(
-              animation.animationFrame,
-              animation.direction,
-            );
+          : continuousWalkOffset(animation.progress, animation.direction);
       }
 
       const tileScreen = isoToScreen(coords);

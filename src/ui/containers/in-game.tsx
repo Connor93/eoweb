@@ -25,6 +25,7 @@ import {
   CommandPalette,
   DesktopEmoteButton,
   DialogArena,
+  GroundItemTooltip,
   GuildDialog,
   HotBar,
   InnKeeperDialog,
@@ -306,6 +307,7 @@ function InGameContent() {
   return (
     <>
       <CombatOverlay />
+      <GroundItemTooltip />
       {commandPaletteOpen && <CommandPalette onClose={onCommandPaletteClose} />}
       <PlayerHud />
       <MobileNav />

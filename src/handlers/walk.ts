@@ -26,6 +26,16 @@ function handleWalkPlayer(client: Client, reader: EoReader) {
     return;
   }
 
+  if (client.animationController.isCharacterDying(packet.playerId)) {
+    return;
+  }
+
+  client.animationController.pendingCharacterCoords.set(packet.playerId, {
+    x: packet.coords.x,
+    y: packet.coords.y,
+    direction: packet.direction,
+  });
+
   const prevCoords = getPrevCoords(
     packet.coords,
     packet.direction,
@@ -35,6 +45,7 @@ function handleWalkPlayer(client: Client, reader: EoReader) {
 
   const isJump = client.animationController.isJump([prevCoords, packet.coords]);
 
+  const { moveMs } = client.getPlayerRates(packet.playerId);
   client.animationController.pendingCharacterAnimations.set(
     packet.playerId,
     new CharacterWalkAnimation(
@@ -42,6 +53,7 @@ function handleWalkPlayer(client: Client, reader: EoReader) {
       packet.coords,
       packet.direction,
       isJump,
+      moveMs,
     ),
   );
 

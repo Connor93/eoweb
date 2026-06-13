@@ -31,6 +31,8 @@ export { SkillMasterDialog } from './dialogs/skill-master-dialog';
 export { SocialDialog } from './dialogs/social-dialog';
 export { SpellsDialog } from './dialogs/spells-dialog';
 export { TradeDialog } from './dialogs/trade-dialog';
+// Ground-item hover overlay
+export { GroundItemTooltip } from './ground-item-tooltip';
 // HUD components
 export { BossTracker } from './hud/boss-tracker';
 export { DesktopEmoteButton } from './hud/desktop-emote-button';

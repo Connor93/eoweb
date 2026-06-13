@@ -1,18 +1,14 @@
-import { ATTACK_TICKS } from '@/consts';
-import { Animation } from './animation';
+import { TimedAnimation } from './animation';
 
-export class CharacterAttackAnimation extends Animation {
-  constructor() {
-    super();
-    this.ticks = ATTACK_TICKS - 1;
-  }
+// Fraction of the swing duration spent in the wind-up pose (frame 0) before
+// flipping to the swing pose (frame 1). The old tick client showed wind-up
+// for ~one frame only; 50/50 read wrong in testing — a short wind-up with a
+// long swing/follow-through (15/85) matches the hit landing at action start.
+const WIND_UP_FRACTION = 0.15;
 
-  tick() {
-    if (this.ticks === 0 || !this.renderedFirstFrame) {
-      return;
-    }
-
-    this.animationFrame = 1;
-    this.ticks = Math.max(this.ticks - 1, 0);
+export class CharacterAttackAnimation extends TimedAnimation {
+  advance(deltaMs: number): void {
+    super.advance(deltaMs);
+    this.animationFrame = this.progress >= WIND_UP_FRACTION ? 1 : 0;
   }
 }

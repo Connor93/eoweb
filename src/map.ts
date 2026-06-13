@@ -3,7 +3,6 @@ import {
   Coords,
   Direction,
   Emote as EmoteType,
-  ItemSpecial,
   MapTileSpec,
   SitState,
 } from 'eolib';
@@ -193,7 +192,33 @@ const WALK_OFFSETS = [
   },
 ];
 
-const JUMP_OFFSETS = [-8, -16, -16, -8];
+// Continuous walk offset: progress 0..1 spans exactly the old FRAME_0..3
+// table range (4 × WALK_WIDTH_FACTOR = HALF_TILE_WIDTH per axis sign).
+// Sign mapping verified against WALK_OFFSETS[0] (FRAME_0) above:
+//   Down:  x negative, y positive
+//   Right: x positive, y positive
+//   Up:    x positive, y negative
+//   Left:  x negative, y negative
+function continuousWalkOffset(
+  progress: number,
+  direction: Direction,
+): { x: number; y: number } {
+  const dx = 4 * WALK_WIDTH_FACTOR * progress;
+  const dy = 4 * WALK_HEIGHT_FACTOR * progress;
+  // Math.floor the SIGNED offsets (matching the old interpolateWalkOffset) —
+  // fractional positions land sprites on sub-pixel coordinates that shimmer
+  // against the CSS-scaled canvas ("vibrating" while walking).
+  switch (direction) {
+    case Direction.Down:
+      return { x: Math.floor(-dx), y: Math.floor(dy) };
+    case Direction.Right:
+      return { x: Math.floor(dx), y: Math.floor(dy) };
+    case Direction.Up:
+      return { x: Math.floor(dx), y: Math.floor(-dy) };
+    default: // Direction.Left
+      return { x: Math.floor(-dx), y: Math.floor(-dy) };
+  }
+}
 
 /** Rarity → sprite tint for ground drops. White (common) is the
  *  identity tint — the sprite renders unmodified. The Rare / Epic /
@@ -605,12 +630,12 @@ export class MapRenderer {
 
     if (mainCharacterAnimation instanceof CharacterWalkAnimation) {
       playerScreen = isoToScreen(mainCharacterAnimation.from);
-      const interOffset = this.interpolateWalkOffset(
-        mainCharacterAnimation.animationFrame,
+      const offset = continuousWalkOffset(
+        mainCharacterAnimation.progress,
         mainCharacterAnimation.direction,
       );
-      playerScreen.x += interOffset.x;
-      playerScreen.y += interOffset.y;
+      playerScreen.x += offset.x;
+      playerScreen.y += offset.y;
     }
 
     playerScreen.x += this.client.quakeController.quakeOffset;
@@ -1019,10 +1044,7 @@ export class MapRenderer {
       case animation instanceof CharacterWalkAnimation: {
         walkOffset = dying
           ? WALK_OFFSETS[animation.animationFrame][animation.direction]
-          : this.interpolateWalkOffset(
-              animation.animationFrame,
-              animation.direction,
-            );
+          : continuousWalkOffset(animation.progress, animation.direction);
         coords = animation.from;
 
         const frame = animation.jump ? 0 : animation.animationFrame;
@@ -1031,13 +1053,10 @@ export class MapRenderer {
           : CharacterFrame.WalkingUpLeft1 + frame;
 
         if (animation.jump) {
-          const prevJumpOffset =
-            animation.animationFrame > 0
-              ? JUMP_OFFSETS[animation.animationFrame - 1]
-              : 0;
-          const jumpOffset = JUMP_OFFSETS[animation.animationFrame];
-          walkOffset.y += Math.floor(
-            prevJumpOffset + (jumpOffset - prevJumpOffset) * this.interpolation,
+          // Continuous jump arc: sine peak of 16px at progress=0.5, matching
+          // the old per-frame table peak (JUMP_OFFSETS max = -16 at frames 1+2).
+          walkOffset.y -= Math.round(
+            Math.sin(animation.progress * Math.PI) * 16,
           );
         }
         break;
@@ -1843,7 +1862,7 @@ export class MapRenderer {
     const coords = { x: 0, y: 0 };
     const offset = { x: 0, y: 0 };
     let name = '';
-    let color = COLORS.Nameplate;
+    const color = COLORS.Nameplate;
     const characterRect = getCharacterIntersecting(this.client.mousePosition);
     if (characterRect) {
       const character = this.client.getCharacterById(characterRect.id);
@@ -1894,10 +1913,7 @@ export class MapRenderer {
         if (animation instanceof CharacterWalkAnimation) {
           const walkOffset = dying
             ? WALK_OFFSETS[animation.animationFrame][animation.direction]
-            : this.interpolateWalkOffset(
-                animation.animationFrame,
-                animation.direction,
-              );
+            : continuousWalkOffset(animation.progress, animation.direction);
           offset.x += walkOffset.x;
           offset.y += walkOffset.y;
           coords.x = animation.from.x;
@@ -1951,49 +1967,8 @@ export class MapRenderer {
       }
     }
 
-    if (!name) {
-      if (!this.client.mouseCoords) return;
-
-      let topItem: (typeof this.client.nearby.items)[0] | undefined;
-      for (const i of this.client.nearby.items) {
-        if (
-          i.coords.x === this.client.mouseCoords!.x &&
-          i.coords.y === this.client.mouseCoords!.y &&
-          (topItem === undefined || i.uid > topItem.uid)
-        ) {
-          topItem = i;
-        }
-      }
-      if (!topItem) return;
-      const item = topItem;
-      const data = this.client.getEifRecordById(item.id);
-      if (!data) return;
-
-      switch (data.special) {
-        case ItemSpecial.Rare:
-          color = COLORS.NameplateRare;
-          break;
-        case ItemSpecial.Legendary:
-          color = COLORS.NameplateLegendary;
-          break;
-        case ItemSpecial.Unique:
-          color = COLORS.NameplateUnique;
-          break;
-        case ItemSpecial.Lore:
-          color = COLORS.NameplateLore;
-          break;
-      }
-
-      name =
-        item.id === 1
-          ? `${item.amount} ${data.name}`
-          : item.amount > 1
-            ? `${data.name} x${item.amount}`
-            : data.name;
-      coords.x = item.coords.x;
-      coords.y = item.coords.y;
-      offset.y -= HALF_TILE_HEIGHT + 6;
-    }
+    // (Ground-item name labels removed — the rich GroundItemTooltip replaces
+    // them. Character/NPC nameplates above still apply; pickup is unaffected.)
 
     if (!name) return;
 
@@ -2298,8 +2273,8 @@ export class MapRenderer {
       let walkOffset = { x: 0, y: 0 };
       if (animation instanceof CharacterWalkAnimation) {
         coords = animation.from;
-        const off = this.interpolateWalkOffset(
-          animation.animationFrame,
+        const off = continuousWalkOffset(
+          animation.progress,
           animation.direction,
         );
         walkOffset = { x: off.x, y: off.y };

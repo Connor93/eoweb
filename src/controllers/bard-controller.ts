@@ -56,7 +56,9 @@ export class BardController {
     if (!existing) {
       this.client.animationController.characterAnimations.set(
         playerId,
-        new CharacterRangedAttackAnimation(),
+        new CharacterRangedAttackAnimation(
+          this.client.getPlayerRates(playerId).attackMs,
+        ),
       );
 
       this.client.animationController.characterEmotes.set(

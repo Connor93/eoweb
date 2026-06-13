@@ -1,29 +1,35 @@
 import type { Direction } from 'eolib';
-import { WALK_TICKS } from '@/consts';
 import type { Vector2 } from '@/vector';
-import { Animation } from './animation';
+import { TimedAnimation } from './animation';
 
-export class CharacterWalkAnimation extends Animation {
+const WALK_FRAMES = 4;
+
+export class CharacterWalkAnimation extends TimedAnimation {
   from: Vector2;
   to: Vector2;
   direction: Direction;
   jump: boolean;
 
-  constructor(from: Vector2, to: Vector2, direction: Direction, jump: boolean) {
-    super();
-    this.ticks = WALK_TICKS - 1;
+  constructor(
+    from: Vector2,
+    to: Vector2,
+    direction: Direction,
+    jump: boolean,
+    durationMs: number,
+  ) {
+    super(durationMs);
     this.from = from;
     this.to = to;
     this.direction = direction;
     this.jump = jump;
   }
 
-  tick() {
-    if (this.ticks === 0 || !this.renderedFirstFrame) {
-      return;
-    }
-
-    this.animationFrame = this.animationFrame + 1;
-    this.ticks = Math.max(this.ticks - 1, 0);
+  advance(deltaMs: number): void {
+    super.advance(deltaMs);
+    // 4 sprite poses spread evenly over the duration.
+    this.animationFrame = Math.min(
+      Math.floor(this.progress * WALK_FRAMES),
+      WALK_FRAMES - 1,
+    );
   }
 }

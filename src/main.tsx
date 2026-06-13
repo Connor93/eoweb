@@ -72,6 +72,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       ? accumulator / TICK
       : 1;
     client.render(interpolation);
+    // frameUpdate runs AFTER render so a finishing animation still draws its
+    // progress=1 frame before deletion — otherwise fast rates (the point of
+    // the speed split) snap the last ~frame of every step. advanceTimed and
+    // keyboardController.update are both called inside frameUpdate.
+    client.frameUpdate(ticker.deltaMS);
   });
 
   const response = await fetch('/maps/00001.emf');

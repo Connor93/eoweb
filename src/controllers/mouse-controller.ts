@@ -105,6 +105,8 @@ export class MouseController {
         if (isInUI(e.target)) return;
         e.preventDefault();
         clearTimeout(longPressTimer);
+        // Finger lifted — clear the hover tooltip regardless of gesture type.
+        this.client.hoveredItemUid = null;
         if (!isLongPress) {
           const diffX =
             e.changedTouches[0].clientX - this.touchStartPosition!.x;
@@ -124,6 +126,7 @@ export class MouseController {
     window.addEventListener('touchcancel', () => {
       clearTimeout(longPressTimer);
       isLongPress = false;
+      this.client.hoveredItemUid = null;
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -142,6 +145,36 @@ export class MouseController {
           canvas.height,
         ),
       });
+      // Resolve the topmost ground item on the cursor's tile — same
+      // filter/pick order as clickItem() — and update the hover state
+      // that drives the ground-item tooltip overlay. Suppressed when the
+      // pointer is over a UI panel so the tooltip can't bleed through windows.
+      const mc = this.client.mouseCoords;
+      if (isInUI(e.target)) {
+        this.client.hoveredItemUid = null;
+      } else if (mc) {
+        const itemsAtTile = this.client.nearby.items.filter(
+          (i) => i.coords.x === mc.x && i.coords.y === mc.y,
+        );
+        if (itemsAtTile.length) {
+          // clickItem sorts descending by uid (highest uid = topmost).
+          itemsAtTile.sort((a, b) => b.uid - a.uid);
+          this.client.hoveredItemUid = itemsAtTile[0].uid;
+        } else {
+          this.client.hoveredItemUid = null;
+        }
+      } else {
+        this.client.hoveredItemUid = null;
+      }
+    });
+
+    // Clear the hover tooltip when the pointer leaves the browser window
+    // entirely. `mouseout` at window level fires with relatedTarget === null
+    // only when the cursor crosses the window boundary.
+    window.addEventListener('mouseout', (e) => {
+      if (e.relatedTarget === null) {
+        this.client.hoveredItemUid = null;
+      }
     });
 
     let mouseDownPosition: { x: number; y: number } | null = null;

@@ -169,6 +169,24 @@ export class Client {
   serverSettings: ServerSettings | null = null;
   motd = '';
   nearby: NearbyInfo;
+  // Live per-player action rates from the server (PlayerRates deep packet,
+  // family 55). Missing entry = server defaults (attack 600ms / walk 480ms).
+  playerRates: Map<
+    number,
+    {
+      attackMs: number;
+      moveMs: number;
+      attackCapped: boolean;
+      moveCapped: boolean;
+    }
+  > = new Map();
+  // Authored weapon swing speeds (item_id -> ms), from the family-55 Reply
+  // packet. Sparse: only items that author attack_rate_ms appear.
+  itemAttackRates: Map<number, number> = new Map();
+  // uid of the ground item under the mouse cursor, or null. Drives the
+  // ground-item hover tooltip; resolved on mousemove (tile-based, same
+  // filter clickItem uses).
+  hoveredItemUid: number | null = null;
   eif!: Eif;
   ecf!: Ecf;
   enf!: Enf;
@@ -422,6 +440,22 @@ export class Client {
     return this.nearby.characters.find((c) => c.playerId === id);
   }
 
+  getPlayerRates(playerId: number): {
+    attackMs: number;
+    moveMs: number;
+    attackCapped: boolean;
+    moveCapped: boolean;
+  } {
+    return (
+      this.playerRates.get(playerId) ?? {
+        attackMs: 600,
+        moveMs: 480,
+        attackCapped: false,
+        moveCapped: false,
+      }
+    );
+  }
+
   getPlayerCharacter(): CharacterMapInfo | undefined {
     return this.nearby.characters.find((c) => c.playerId === this.playerId);
   }
@@ -647,6 +681,19 @@ export class Client {
   render(interpolation: number) {
     this.mapRenderer.update(interpolation);
     this.minimapRenderer.update(interpolation);
+  }
+
+  // Called once per render frame, AFTER client.render(), so that finishing
+  // animations draw their final frame before deletion (advanceTimed) and
+  // input dispatched this frame appears next frame (~16ms latency — same
+  // order as before, just finer-grained than the old 120ms tick latency).
+  // Replaces the direct animationController.advanceTimed call in main.tsx.
+  frameUpdate(deltaMs: number) {
+    // advanceTimed MUST come before update() so a just-finished animation
+    // is deleted before update() reads the animation slot — otherwise the
+    // finishing frame would block the next walk/attack for one extra frame.
+    this.animationController.advanceTimed(deltaMs);
+    this.keyboardController.update(performance.now());
   }
 
   setMap(map: Emf) {

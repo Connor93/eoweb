@@ -25,14 +25,19 @@ function handleAttackPlayer(client: Client, reader: EoReader) {
     return;
   }
 
+  if (client.animationController.isCharacterDying(packet.playerId)) {
+    return;
+  }
+
   character.direction = packet.direction;
 
   const metadata = client.getWeaponMetadata(character.equipment.weapon);
+  const { attackMs } = client.getPlayerRates(packet.playerId);
   client.animationController.pendingCharacterAnimations.set(
     packet.playerId,
     metadata.ranged
-      ? new CharacterRangedAttackAnimation()
-      : new CharacterAttackAnimation(),
+      ? new CharacterRangedAttackAnimation(attackMs)
+      : new CharacterAttackAnimation(attackMs),
   );
 
   const index = randomRange(0, metadata.sfx.length - 1);

@@ -25,6 +25,7 @@ import {
   BreakdownTooltip,
   Button,
   ItemIcon,
+  PortalTooltip,
   QuestBookList,
   Tabs,
 } from '@/ui/components';
@@ -32,6 +33,7 @@ import { UI_PANEL_BORDER, UI_STICKY_BG } from '@/ui/consts';
 import { useCharacterInfo, useClient, useLocale } from '@/ui/context';
 import { useBackdropBlur, useItemDrag, usePlayerStats } from '@/ui/in-game';
 import {
+  attackSpeedLine,
   capitalize,
   classicEquipsFromPaperdoll,
   computeEffects,
@@ -45,8 +47,15 @@ import { DialogBase } from './dialog-base';
 
 const EQUIP_CELL = 23;
 
-function getEquipTooltipLines(record: EifRecord): string[] {
-  return [record.name, ...getItemMeta(record)];
+function getEquipTooltipLines(
+  record: EifRecord,
+  speedLine: string | null,
+): string[] {
+  return [
+    record.name,
+    ...(speedLine ? [speedLine] : []),
+    ...getItemMeta(record),
+  ];
 }
 
 function rarityBorderClass(r: InstanceRarity): string {
@@ -65,12 +74,16 @@ function rarityBorderClass(r: InstanceRarity): string {
 function getInstanceTooltipLines(
   inst: InstanceItem,
   record: EifRecord | null | undefined,
+  speedLine: string | null,
 ): string[] {
   const name = record?.name ?? `Item ${inst.baseItemId}`;
   const lines = [
     `${name} (${instanceRarityLabel(inst.rarity)})`,
     `Level ${inst.level}`,
   ];
+  if (speedLine) {
+    lines.push(speedLine);
+  }
   if (record) {
     lines.push(...formatInstanceBaseStats(record, inst.level));
   }
@@ -111,10 +124,13 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
     : undefined;
 
   const record = itemId ? client.getEifRecordById(itemId) : null;
+  // itemId is the slot's base item id for both plain and instanced equips, so
+  // it keys the authored weapon swing speed for either case.
+  const speedLine = itemId ? attackSpeedLine(client, itemId) : null;
   const tooltipLines = equippedInstance
-    ? getInstanceTooltipLines(equippedInstance, record)
+    ? getInstanceTooltipLines(equippedInstance, record, speedLine)
     : record
-      ? getEquipTooltipLines(record)
+      ? getEquipTooltipLines(record, speedLine)
       : null;
   const rarityBorder = equippedInstance
     ? rarityBorderClass(equippedInstance.rarity)
@@ -684,6 +700,70 @@ function StatsTab() {
             <span class='text-primary/60'>{locale.stats.labelTp}</span>
             {statRow('maxTp', maxTp)}
           </div>
+          {isOwnCharacter &&
+            (() => {
+              const rates = client.getPlayerRates(client.playerId);
+              const speedLabel = (ms: number, baseline: number) =>
+                ms <= baseline * 0.9
+                  ? locale.stats.speedFast
+                  : ms >= baseline * 1.1
+                    ? locale.stats.speedSlow
+                    : locale.stats.speedMedium;
+              const SpeedValue = ({
+                label,
+                capped,
+                tooltipDetail,
+              }: {
+                label: string;
+                capped: boolean;
+                tooltipDetail: string;
+              }) => (
+                <PortalTooltip
+                  align='right'
+                  tooltip={
+                    <>
+                      <div>{tooltipDetail}</div>
+                      {capped && (
+                        <div class='mt-0.5 text-warning'>
+                          {locale.stats.speedCappedHint}
+                        </div>
+                      )}
+                    </>
+                  }
+                >
+                  {label}
+                  {capped && (
+                    <span class='ml-1 text-warning text-xs'>
+                      ({locale.stats.speedCapped})
+                    </span>
+                  )}
+                </PortalTooltip>
+              );
+              return (
+                <>
+                  <div class='flex justify-between'>
+                    <span class='text-primary/60'>
+                      {locale.stats.labelAttackSpeed}
+                    </span>
+                    <SpeedValue
+                      label={speedLabel(rates.attackMs, 600)}
+                      capped={rates.attackCapped}
+                      tooltipDetail={`${(1000 / rates.attackMs).toFixed(2)} attacks/sec (${rates.attackMs}ms)`}
+                    />
+                  </div>
+                  <div class='flex justify-between'>
+                    <span class='text-primary/60'>
+                      {locale.stats.labelMoveSpeed}
+                    </span>
+                    <SpeedValue
+                      label={speedLabel(rates.moveMs, 480)}
+                      capped={rates.moveCapped}
+                      tooltipDetail={`${(1000 / rates.moveMs).toFixed(2)} tiles/sec (${rates.moveMs}ms)`}
+                    />
+                  </div>
+                </>
+              );
+            })()}
         </div>
       </div>
       {isOwnCharacter && <EffectsSection />}

@@ -27,12 +27,14 @@ import {
   InstanceRarity,
   instanceRarityLabel,
 } from '@/controllers';
+import { getEquipmentSlotForItemType } from '@/equipment';
 import { playSfxById, SfxId } from '@/sfx';
 import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { SlotType } from '@/ui/enums';
 import { useItemDrag } from '@/ui/in-game';
 import {
+  attackSpeedLine,
   formatInstanceBaseStats,
   formatInstanceMod,
   getItemMeta,
@@ -105,6 +107,7 @@ type StackableCardProps = {
   item: Item;
   isDragging: boolean;
   onPointerDown: (e: PointerEvent, item: Item, target: HTMLElement) => void;
+  onRightClick: (e: MouseEvent, item: Item) => void;
   onTooltipShow: (key: string, x: number, y: number) => void;
   onTooltipHide: (key: string) => void;
 };
@@ -113,6 +116,7 @@ function StackableCard({
   item,
   isDragging,
   onPointerDown,
+  onRightClick,
   onTooltipShow,
   onTooltipHide,
 }: StackableCardProps) {
@@ -145,7 +149,10 @@ function StackableCard({
       data-inventory-item={item.id}
       class={`flex cursor-grab select-none flex-col items-center gap-2 rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10 active:bg-base-content/15${isDragging ? ' opacity-30' : ''}`}
       onPointerDown={handlePointerDown}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onRightClick(e, item);
+      }}
       onMouseEnter={showTooltip}
       onMouseLeave={() => onTooltipHide(tooltipKey)}
     >
@@ -184,6 +191,7 @@ type InstanceCardProps = {
     inst: InstanceItem,
     target: HTMLElement,
   ) => void;
+  onRightClick: (e: MouseEvent, inst: InstanceItem) => void;
   onTooltipShow: (key: string, x: number, y: number) => void;
   onTooltipHide: (key: string) => void;
 };
@@ -192,6 +200,7 @@ function InstanceCard({
   inst,
   isDragging,
   onPointerDown,
+  onRightClick,
   onTooltipShow,
   onTooltipHide,
 }: InstanceCardProps) {
@@ -226,7 +235,10 @@ function InstanceCard({
       data-instance-item={inst.instanceId}
       class={`flex cursor-grab select-none flex-col items-center gap-2 rounded border-2 ${borderClass} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10${isDragging ? ' opacity-30' : ''}`}
       onPointerDown={handlePointerDown}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onRightClick(e, inst);
+      }}
       onMouseEnter={showTooltip}
       onMouseLeave={() => onTooltipHide(tooltipKey)}
     >
@@ -288,6 +300,9 @@ function InstanceTooltipContent({
 
 /** EquipmentSlot indexes that are the "second" of a two-slot pair. */
 const SUB_LOC_1_SLOTS = new Set([10, 12, 14]);
+/** EquipmentSlot indexes that are the "first" of a two-slot pair
+ *  (Ring1=9, Armlet1=11, Bracer1=13). */
+const DUAL_PRIMARY_SLOTS = new Set([9, 11, 13]);
 
 function subLocForSlot(slot: number): number {
   return SUB_LOC_1_SLOTS.has(slot) ? 1 : 0;
@@ -643,6 +658,51 @@ export function InventoryGrid({ itemIds }: Props) {
     [client, startDrag],
   );
 
+  /**
+   * Resolve the sub-slot for a dual-slot item type (Ring/Armlet/Bracer).
+   * Mirrors InventoryController.useItem exactly: first sub-slot when it's
+   * empty, otherwise the second (fills the open finger if there is one, else
+   * swaps the second) — so right-click and double-click agree.
+   */
+  const dualSubLocForType = useCallback(
+    (slot1: number): number => {
+      const equipment = client.inventoryController.getEquipmentArray();
+      return equipment[slot1] ? 1 : 0;
+    },
+    [client],
+  );
+
+  const handleStackableRightClick = useCallback(
+    (_e: MouseEvent, item: Item) => {
+      const record = client.getEifRecordById(item.id);
+      if (!record) return;
+      const slot = getEquipmentSlotForItemType(record.type);
+      if (slot === undefined) return; // not equippable
+      // For dual-slot primary slots, pick the open sub-slot when possible.
+      let resolvedSlot = slot;
+      if (DUAL_PRIMARY_SLOTS.has(slot)) {
+        resolvedSlot = dualSubLocForType(slot) === 1 ? slot + 1 : slot;
+      }
+      client.inventoryController.equipItem(resolvedSlot, item.id);
+    },
+    [client, dualSubLocForType],
+  );
+
+  const handleInstanceRightClick = useCallback(
+    (_e: MouseEvent, inst: InstanceItem) => {
+      const record = client.getEifRecordById(inst.baseItemId);
+      if (!record) return;
+      const slot = getEquipmentSlotForItemType(record.type);
+      if (slot === undefined) return; // not equippable
+      // Requirement pre-check mirrors the drag path (instance equip has no server reject reply).
+      if (!client.inventoryController.checkEquipRequirements(record)) return;
+      // Dual-slot handling: pick the open sub-slot.
+      const subLoc = DUAL_PRIMARY_SLOTS.has(slot) ? dualSubLocForType(slot) : 0;
+      client.instanceController.sendEquip(inst.instanceId, subLoc);
+    },
+    [client, dualSubLocForType],
+  );
+
   const onTooltipShow = useCallback((key: string, x: number, y: number) => {
     setTooltip({ key, x, y });
   }, []);
@@ -667,7 +727,12 @@ export function InventoryGrid({ itemIds }: Props) {
       if (!item || !record) return [];
       const meta = getItemMeta(record);
       const qty = item.amount > 1 ? ` x${item.amount.toLocaleString()}` : '';
-      return [record.name + qty, ...meta];
+      const lines = [record.name + qty, ...meta];
+      const speed = attackSpeedLine(client, item.id);
+      if (speed) {
+        lines.push(speed);
+      }
+      return lines;
     }
     if (key.startsWith('instance:')) {
       const id = key.slice(9);
@@ -679,6 +744,10 @@ export function InventoryGrid({ itemIds }: Props) {
         `${name} (${instanceRarityLabel(inst.rarity)})`,
         `Level ${inst.level}`,
       ];
+      const speed = attackSpeedLine(client, inst.baseItemId);
+      if (speed) {
+        lines.push(speed);
+      }
       if (record) {
         lines.push(...formatInstanceBaseStats(record, inst.level));
       }
@@ -771,6 +840,7 @@ export function InventoryGrid({ itemIds }: Props) {
                       currentDrag?.instanceId === inst.instanceId
                     }
                     onPointerDown={handleInstancePointerDown}
+                    onRightClick={handleInstanceRightClick}
                     onTooltipShow={onTooltipShow}
                     onTooltipHide={onTooltipHide}
                   />
@@ -784,6 +854,7 @@ export function InventoryGrid({ itemIds }: Props) {
                       currentDrag.itemId === item.id
                     }
                     onPointerDown={handleItemPointerDown}
+                    onRightClick={handleStackableRightClick}
                     onTooltipShow={onTooltipShow}
                     onTooltipHide={onTooltipHide}
                   />
