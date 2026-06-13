@@ -300,6 +300,9 @@ function InstanceTooltipContent({
 
 /** EquipmentSlot indexes that are the "second" of a two-slot pair. */
 const SUB_LOC_1_SLOTS = new Set([10, 12, 14]);
+/** EquipmentSlot indexes that are the "first" of a two-slot pair
+ *  (Ring1=9, Armlet1=11, Bracer1=13). */
+const DUAL_PRIMARY_SLOTS = new Set([9, 11, 13]);
 
 function subLocForSlot(slot: number): number {
   return SUB_LOC_1_SLOTS.has(slot) ? 1 : 0;
@@ -656,16 +659,15 @@ export function InventoryGrid({ itemIds }: Props) {
   );
 
   /**
-   * Resolve the right EquipmentSlot for a dual-slot item type (Ring/Armlet/Bracer).
-   * Prefers the first sub-slot if it is empty; otherwise falls back to sub-slot 0
-   * (the server will swap whatever is there).
+   * Resolve the sub-slot for a dual-slot item type (Ring/Armlet/Bracer).
+   * Mirrors InventoryController.useItem exactly: first sub-slot when it's
+   * empty, otherwise the second (fills the open finger if there is one, else
+   * swaps the second) — so right-click and double-click agree.
    */
   const dualSubLocForType = useCallback(
-    (slot1: number, slot2: number): number => {
+    (slot1: number): number => {
       const equipment = client.inventoryController.getEquipmentArray();
-      if (!equipment[slot1]) return 0; // slot1 empty → use it (subLoc 0)
-      if (!equipment[slot2]) return 1; // slot2 empty → use it (subLoc 1)
-      return 0; // both occupied → swap slot1
+      return equipment[slot1] ? 1 : 0;
     },
     [client],
   );
@@ -676,12 +678,10 @@ export function InventoryGrid({ itemIds }: Props) {
       if (!record) return;
       const slot = getEquipmentSlotForItemType(record.type);
       if (slot === undefined) return; // not equippable
-      // Ring1=9,Ring2=10 / Armlet1=11,Armlet2=12 / Bracer1=13,Bracer2=14
       // For dual-slot primary slots, pick the open sub-slot when possible.
       let resolvedSlot = slot;
-      if (slot === 9 || slot === 11 || slot === 13) {
-        const subLoc = dualSubLocForType(slot, slot + 1);
-        resolvedSlot = subLoc === 1 ? slot + 1 : slot;
+      if (DUAL_PRIMARY_SLOTS.has(slot)) {
+        resolvedSlot = dualSubLocForType(slot) === 1 ? slot + 1 : slot;
       }
       client.inventoryController.equipItem(resolvedSlot, item.id);
     },
@@ -697,10 +697,7 @@ export function InventoryGrid({ itemIds }: Props) {
       // Requirement pre-check mirrors the drag path (instance equip has no server reject reply).
       if (!client.inventoryController.checkEquipRequirements(record)) return;
       // Dual-slot handling: pick the open sub-slot.
-      let subLoc = 0;
-      if (slot === 9 || slot === 11 || slot === 13) {
-        subLoc = dualSubLocForType(slot, slot + 1);
-      }
+      const subLoc = DUAL_PRIMARY_SLOTS.has(slot) ? dualSubLocForType(slot) : 0;
       client.instanceController.sendEquip(inst.instanceId, subLoc);
     },
     [client, dualSubLocForType],
