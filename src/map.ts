@@ -3,7 +3,6 @@ import {
   Coords,
   Direction,
   Emote as EmoteType,
-  ItemSpecial,
   MapTileSpec,
   SitState,
 } from 'eolib';
@@ -1863,7 +1862,7 @@ export class MapRenderer {
     const coords = { x: 0, y: 0 };
     const offset = { x: 0, y: 0 };
     let name = '';
-    let color = COLORS.Nameplate;
+    const color = COLORS.Nameplate;
     const characterRect = getCharacterIntersecting(this.client.mousePosition);
     if (characterRect) {
       const character = this.client.getCharacterById(characterRect.id);
@@ -1968,49 +1967,8 @@ export class MapRenderer {
       }
     }
 
-    if (!name) {
-      if (!this.client.mouseCoords) return;
-
-      let topItem: (typeof this.client.nearby.items)[0] | undefined;
-      for (const i of this.client.nearby.items) {
-        if (
-          i.coords.x === this.client.mouseCoords!.x &&
-          i.coords.y === this.client.mouseCoords!.y &&
-          (topItem === undefined || i.uid > topItem.uid)
-        ) {
-          topItem = i;
-        }
-      }
-      if (!topItem) return;
-      const item = topItem;
-      const data = this.client.getEifRecordById(item.id);
-      if (!data) return;
-
-      switch (data.special) {
-        case ItemSpecial.Rare:
-          color = COLORS.NameplateRare;
-          break;
-        case ItemSpecial.Legendary:
-          color = COLORS.NameplateLegendary;
-          break;
-        case ItemSpecial.Unique:
-          color = COLORS.NameplateUnique;
-          break;
-        case ItemSpecial.Lore:
-          color = COLORS.NameplateLore;
-          break;
-      }
-
-      name =
-        item.id === 1
-          ? `${item.amount} ${data.name}`
-          : item.amount > 1
-            ? `${data.name} x${item.amount}`
-            : data.name;
-      coords.x = item.coords.x;
-      coords.y = item.coords.y;
-      offset.y -= HALF_TILE_HEIGHT + 6;
-    }
+    // (Ground-item name labels removed — the rich GroundItemTooltip replaces
+    // them. Character/NPC nameplates above still apply; pickup is unaffected.)
 
     if (!name) return;
 

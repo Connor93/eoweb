@@ -32,6 +32,7 @@ import { UI_PANEL_BORDER, UI_STICKY_BG } from '@/ui/consts';
 import { useCharacterInfo, useClient, useLocale } from '@/ui/context';
 import { useBackdropBlur, useItemDrag, usePlayerStats } from '@/ui/in-game';
 import {
+  attackSpeedLine,
   capitalize,
   classicEquipsFromPaperdoll,
   computeEffects,
@@ -45,8 +46,15 @@ import { DialogBase } from './dialog-base';
 
 const EQUIP_CELL = 23;
 
-function getEquipTooltipLines(record: EifRecord): string[] {
-  return [record.name, ...getItemMeta(record)];
+function getEquipTooltipLines(
+  record: EifRecord,
+  speedLine: string | null,
+): string[] {
+  return [
+    record.name,
+    ...(speedLine ? [speedLine] : []),
+    ...getItemMeta(record),
+  ];
 }
 
 function rarityBorderClass(r: InstanceRarity): string {
@@ -65,12 +73,16 @@ function rarityBorderClass(r: InstanceRarity): string {
 function getInstanceTooltipLines(
   inst: InstanceItem,
   record: EifRecord | null | undefined,
+  speedLine: string | null,
 ): string[] {
   const name = record?.name ?? `Item ${inst.baseItemId}`;
   const lines = [
     `${name} (${instanceRarityLabel(inst.rarity)})`,
     `Level ${inst.level}`,
   ];
+  if (speedLine) {
+    lines.push(speedLine);
+  }
   if (record) {
     lines.push(...formatInstanceBaseStats(record, inst.level));
   }
@@ -111,10 +123,13 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
     : undefined;
 
   const record = itemId ? client.getEifRecordById(itemId) : null;
+  // itemId is the slot's base item id for both plain and instanced equips, so
+  // it keys the authored weapon swing speed for either case.
+  const speedLine = itemId ? attackSpeedLine(client, itemId) : null;
   const tooltipLines = equippedInstance
-    ? getInstanceTooltipLines(equippedInstance, record)
+    ? getInstanceTooltipLines(equippedInstance, record, speedLine)
     : record
-      ? getEquipTooltipLines(record)
+      ? getEquipTooltipLines(record, speedLine)
       : null;
   const rarityBorder = equippedInstance
     ? rarityBorderClass(equippedInstance.rarity)

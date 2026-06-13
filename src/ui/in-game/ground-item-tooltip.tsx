@@ -128,7 +128,13 @@ export function GroundItemTooltip() {
       <div style={{ position: 'absolute', left: `${x}px`, top: `${y}px` }}>
         <div
           class='w-max max-w-56 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
-          style={{ transform: 'translate(-50%, -100%)' }}
+          // scale(0.3): the tooltip already rides the wrapper's scale(zoom),
+          // so this brings it to ~30% of its prior on-screen size. origin
+          // center-bottom keeps the bubble's tip anchored over the tile.
+          style={{
+            transform: 'translate(-50%, -100%) scale(0.3)',
+            transformOrigin: 'center bottom',
+          }}
         >
           {content}
         </div>
