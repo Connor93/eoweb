@@ -60,6 +60,7 @@ import {
   JukeboxController,
   KeyboardController,
   LockerController,
+  LookupController,
   MapController,
   MarriageController,
   MouseController,
@@ -217,6 +218,7 @@ export class Client {
   instanceController: InstanceController;
   inventoryController: InventoryController;
   lockerController: LockerController;
+  lookupController: LookupController;
   mapController: MapController;
   mouseController: MouseController;
   npcController: NpcController;
@@ -363,6 +365,7 @@ export class Client {
     this.itemProtectionController = new ItemProtectionController();
     this.alertController = new AlertController();
     this.lockerController = new LockerController(this);
+    this.lookupController = new LookupController(this);
     this.mapController = new MapController(this);
     this.mouseController = new MouseController(this);
     this.npcController = new NpcController(this);

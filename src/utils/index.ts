@@ -3,10 +3,14 @@ export { bigCoordsToCoords } from './big-coords-to-coords';
 export { getExpForLevel } from './calculate-tnl';
 export { capitalize } from './capitalize';
 export { formatBigNumber } from './format-big-number';
-export { formatInstanceBaseStats } from './format-instance-base-stats';
+export {
+  formatInstanceBaseStats,
+  levelCurve,
+} from './format-instance-base-stats';
 export {
   type FormattableInstanceMod,
   formatInstanceMod,
+  prettyTarget,
 } from './format-instance-mod';
 export {
   EffectAnimationType,
@@ -28,6 +32,13 @@ export {
 } from './inventory-tab';
 export { isMobile } from './is-mobile';
 export { isoToScreen } from './iso-to-screen';
+export {
+  emptyItemFilter,
+  type ItemFilter,
+  instanceMatches,
+  isItemFilterActive,
+  stackableMatches,
+} from './item-filter';
 export { makeDrunk } from './make-drunk';
 export { padWithZeros } from './pad-with-zeros';
 export { randomRange } from './random-range';

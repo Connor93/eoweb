@@ -8,7 +8,7 @@ import {
   useState,
 } from 'preact/hooks';
 import type { IconType } from 'react-icons';
-import { FaCoins, FaTrash } from 'react-icons/fa';
+import { FaCoins, FaSearch, FaTrash } from 'react-icons/fa';
 import {
   GiBroadsword,
   GiCubes,
@@ -22,11 +22,7 @@ import {
   combatElementLabel,
 } from '@/combat-overlay';
 import { GOLD_ITEM_ID } from '@/consts';
-import {
-  type InstanceItem,
-  InstanceRarity,
-  instanceRarityLabel,
-} from '@/controllers';
+import { type InstanceItem, instanceRarityLabel } from '@/controllers';
 import { getEquipmentSlotForItemType } from '@/equipment';
 import { playSfxById, SfxId } from '@/sfx';
 import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
@@ -35,14 +31,20 @@ import { SlotType } from '@/ui/enums';
 import { useItemDrag } from '@/ui/in-game';
 import {
   attackSpeedLine,
+  emptyItemFilter,
   formatInstanceBaseStats,
   formatInstanceMod,
   getItemMeta,
   INVENTORY_TAB_COUNT,
   InventoryTab,
+  instanceMatches,
   inventoryTabForItemType,
+  isItemFilterActive,
+  stackableMatches,
 } from '@/utils';
+import { InventoryFilterBar } from './inventory-filter-bar';
 import { ItemIcon } from './item-icon';
+import { rarityBorderClass, rarityTextClass } from './rarity-style';
 
 const TAB_ICONS: IconType[] = [
   GiBroadsword,
@@ -54,32 +56,6 @@ const TAB_ICONS: IconType[] = [
 
 const DOUBLE_TAP_MS = 250;
 const CARD_SIZE_PX = 56;
-
-function rarityBorderClass(r: InstanceRarity): string {
-  switch (r) {
-    case InstanceRarity.Common:
-      return UI_PANEL_BORDER;
-    case InstanceRarity.Rare:
-      return 'border-info/70';
-    case InstanceRarity.Epic:
-      return 'border-secondary/70';
-    case InstanceRarity.Legendary:
-      return 'border-warning/70';
-  }
-}
-
-function rarityTextClass(r: InstanceRarity): string {
-  switch (r) {
-    case InstanceRarity.Common:
-      return 'text-base-content/70';
-    case InstanceRarity.Rare:
-      return 'text-info';
-    case InstanceRarity.Epic:
-      return 'text-secondary';
-    case InstanceRarity.Legendary:
-      return 'text-warning';
-  }
-}
 
 type JunkDropZoneProps = { zone: 'drop' | 'junk' };
 
@@ -321,6 +297,7 @@ export function InventoryGrid({ itemIds }: Props) {
     InventoryTab.Weapons,
   );
   const [refresh, setRefresh] = useState(0);
+  const [filter, setFilter] = useState(emptyItemFilter());
   const [tooltip, setTooltip] = useState<{
     key: string;
     x: number;
@@ -412,6 +389,25 @@ export function InventoryGrid({ itemIds }: Props) {
     }
     return buckets;
   }, [visibleInstances, client]);
+
+  // When a filter is active the grid drops the per-tab split and shows
+  // every match across all categories in one list (the intent is "find
+  // items with X", not "browse one tab"). Empty when no filter is set.
+  const filteredInstances = useMemo(() => {
+    if (!isItemFilterActive(filter)) return [];
+    return visibleInstances
+      .filter((inst) =>
+        instanceMatches(inst, client.getEifRecordById(inst.baseItemId), filter),
+      )
+      .sort((a, b) => b.rarity - a.rarity || b.level - a.level);
+  }, [visibleInstances, filter, client]);
+
+  const filteredItems = useMemo(() => {
+    if (!isItemFilterActive(filter)) return [];
+    return visibleItems.filter((i) =>
+      stackableMatches(client.getEifRecordById(i.id), filter),
+    );
+  }, [visibleItems, filter, client]);
 
   const tabCounts = itemsByTab.map(
     (b, i) => b.length + instancesByTab[i].length,
@@ -759,7 +755,10 @@ export function InventoryGrid({ itemIds }: Props) {
     return [];
   };
 
-  const isEmpty = activeItems.length === 0 && activeInstances.length === 0;
+  const filterActive = isItemFilterActive(filter);
+  const displayInstances = filterActive ? filteredInstances : activeInstances;
+  const displayItems = filterActive ? filteredItems : activeItems;
+  const isEmpty = displayInstances.length === 0 && displayItems.length === 0;
 
   return (
     <div class='flex flex-col gap-1'>
@@ -776,38 +775,42 @@ export function InventoryGrid({ itemIds }: Props) {
         </div>
       </div>
 
+      <InventoryFilterBar filter={filter} onChange={setFilter} />
+
       <div class='flex gap-1'>
-        <div
-          role='tablist'
-          aria-orientation='vertical'
-          class='flex flex-col gap-1'
-        >
-          {TAB_LABELS.map((label, index) => {
-            const Icon = TAB_ICONS[index];
-            const isActive = index === activeTab;
-            return (
-              <button
-                key={label}
-                type='button'
-                role='tab'
-                aria-selected={isActive}
-                aria-label={`${label} (${tabCounts[index]})`}
-                title={label}
-                onClick={() => setActiveTab(index as InventoryTab)}
-                class={`flex h-11 w-11 flex-col items-center justify-center rounded border transition-colors ${
-                  isActive
-                    ? `${UI_PANEL_BORDER} bg-primary/20 text-primary`
-                    : `${UI_PANEL_BORDER} ${UI_ITEM_BG} text-base-content/70 hover:bg-base-content/10`
-                }`}
-              >
-                <Icon size={16} />
-                <span class='text-[10px] tabular-nums leading-tight'>
-                  {tabCounts[index]}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {!filterActive && (
+          <div
+            role='tablist'
+            aria-orientation='vertical'
+            class='flex flex-col gap-1'
+          >
+            {TAB_LABELS.map((label, index) => {
+              const Icon = TAB_ICONS[index];
+              const isActive = index === activeTab;
+              return (
+                <button
+                  key={label}
+                  type='button'
+                  role='tab'
+                  aria-selected={isActive}
+                  aria-label={`${label} (${tabCounts[index]})`}
+                  title={label}
+                  onClick={() => setActiveTab(index as InventoryTab)}
+                  class={`flex h-11 w-11 flex-col items-center justify-center rounded border transition-colors ${
+                    isActive
+                      ? `${UI_PANEL_BORDER} bg-primary/20 text-primary`
+                      : `${UI_PANEL_BORDER} ${UI_ITEM_BG} text-base-content/70 hover:bg-base-content/10`
+                  }`}
+                >
+                  <Icon size={16} />
+                  <span class='text-[10px] tabular-nums leading-tight'>
+                    {tabCounts[index]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <div
           class={`flex max-h-72 min-h-48 flex-1 flex-col overflow-hidden rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG}`}
@@ -815,23 +818,39 @@ export function InventoryGrid({ itemIds }: Props) {
           <div
             class={`flex items-center gap-1 border-b ${UI_PANEL_BORDER} px-2 py-1 text-xs`}
           >
-            {(() => {
-              const Icon = TAB_ICONS[activeTab];
-              return <Icon size={11} />;
-            })()}
-            <span class='font-semibold'>{TAB_LABELS[activeTab]}</span>
-            <span class='ml-auto tabular-nums opacity-60'>
-              {tabCounts[activeTab]}
-            </span>
+            {filterActive ? (
+              <>
+                <FaSearch size={11} />
+                <span class='font-semibold'>
+                  {locale.inventory.filterResults}
+                </span>
+                <span class='ml-auto tabular-nums opacity-60'>
+                  {displayInstances.length + displayItems.length}
+                </span>
+              </>
+            ) : (
+              <>
+                {(() => {
+                  const Icon = TAB_ICONS[activeTab];
+                  return <Icon size={11} />;
+                })()}
+                <span class='font-semibold'>{TAB_LABELS[activeTab]}</span>
+                <span class='ml-auto tabular-nums opacity-60'>
+                  {tabCounts[activeTab]}
+                </span>
+              </>
+            )}
           </div>
           <div class='flex-1 overflow-y-auto p-2'>
             {isEmpty ? (
               <p class='py-4 text-center text-sm opacity-50'>
-                {locale.inventory.empty}
+                {filterActive
+                  ? locale.inventory.filterNoMatches
+                  : locale.inventory.empty}
               </p>
             ) : (
               <div class='grid grid-cols-2 gap-2 lg:grid-cols-3'>
-                {activeInstances.map((inst) => (
+                {displayInstances.map((inst) => (
                   <InstanceCard
                     key={inst.instanceId}
                     inst={inst}
@@ -845,7 +864,7 @@ export function InventoryGrid({ itemIds }: Props) {
                     onTooltipHide={onTooltipHide}
                   />
                 ))}
-                {activeItems.map((item) => (
+                {displayItems.map((item) => (
                   <StackableCard
                     key={item.id}
                     item={item}

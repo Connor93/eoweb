@@ -21,6 +21,7 @@ export { InventoryDialog } from './dialogs/inventory-dialog';
 export { JukeboxDialog } from './dialogs/jukebox-dialog';
 export { LawDialog } from './dialogs/law-dialog';
 export { LockerDialog } from './dialogs/locker-dialog';
+export { LookupDialog } from './dialogs/lookup-dialog';
 export { PacketLogDialog } from './dialogs/packet-log-dialog';
 export { PingDialog } from './dialogs/ping-dialog';
 export { QuestNpcDialog } from './dialogs/quest-npc-dialog';

@@ -46,6 +46,19 @@ export { ItemProtectionController } from './item-protection-controller';
 export { JukeboxController } from './jukebox-controller';
 export { KeyboardController } from './keyboard-controller';
 export { LockerController } from './locker-controller';
+export {
+  type ItemLookup,
+  LookupController,
+  type LookupDropSource,
+  type LookupModInfo,
+  type LookupNotFound,
+  type LookupNpcDrop,
+  type LookupResult,
+  type LookupSpawnMap,
+  type LookupStatLine,
+  type LookupTierCount,
+  type NpcLookup,
+} from './lookup-controller';
 export { MapController } from './map-controller';
 export { MarriageController } from './marriage-controller';
 export { MouseController } from './mouse-controller';

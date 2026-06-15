@@ -34,6 +34,7 @@ import {
   JukeboxDialog,
   LawDialog,
   LockerDialog,
+  LookupDialog,
   MobileNav,
   NavSidebar,
   PacketLogDialog,
@@ -81,6 +82,7 @@ const ALL_DIALOG_IDS: DialogId[] = [
   'law',
   'packet-log',
   'ping',
+  'lookup',
   'trade',
 ];
 
@@ -130,6 +132,8 @@ function DialogById({ id }: { id: DialogId }) {
       return <PacketLogDialog />;
     case 'ping':
       return <PingDialog />;
+    case 'lookup':
+      return <LookupDialog />;
     case 'trade':
       return <TradeDialog />;
   }

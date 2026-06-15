@@ -8,6 +8,7 @@ import {
   useState,
 } from 'preact/hooks';
 import type { IconType } from 'react-icons';
+import { FaSearch } from 'react-icons/fa';
 import {
   GiBroadsword,
   GiCubes,
@@ -15,23 +16,28 @@ import {
   GiScrollQuill,
   GiShield,
 } from 'react-icons/gi';
-import {
-  type InstanceItem,
-  InstanceRarity,
-  instanceRarityLabel,
-} from '@/controllers';
+import { type InstanceItem, instanceRarityLabel } from '@/controllers';
 import { playSfxById, SfxId } from '@/sfx';
-import { ItemIcon } from '@/ui/components';
+import {
+  InventoryFilterBar,
+  ItemIcon,
+  rarityBorderClass,
+  rarityTextClass,
+} from '@/ui/components';
 import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { useItemDrag } from '@/ui/in-game';
 import {
+  emptyItemFilter,
   formatInstanceBaseStats,
   formatInstanceMod,
   getItemMeta,
   INVENTORY_TAB_COUNT,
   InventoryTab,
+  instanceMatches,
   inventoryTabForItemType,
+  isItemFilterActive,
+  stackableMatches,
 } from '@/utils';
 import { DialogBase } from './dialog-base';
 
@@ -42,32 +48,6 @@ const TAB_ICONS: IconType[] = [
   GiCubes,
   GiScrollQuill,
 ];
-
-function rarityBorderClass(r: InstanceRarity): string {
-  switch (r) {
-    case InstanceRarity.Common:
-      return UI_PANEL_BORDER;
-    case InstanceRarity.Rare:
-      return 'border-info/70';
-    case InstanceRarity.Epic:
-      return 'border-secondary/70';
-    case InstanceRarity.Legendary:
-      return 'border-warning/70';
-  }
-}
-
-function rarityTextClass(r: InstanceRarity): string {
-  switch (r) {
-    case InstanceRarity.Common:
-      return 'text-base-content/70';
-    case InstanceRarity.Rare:
-      return 'text-info';
-    case InstanceRarity.Epic:
-      return 'text-secondary';
-    case InstanceRarity.Legendary:
-      return 'text-warning';
-  }
-}
 
 type StackableLockerCardProps = {
   item: ThreeItem;
@@ -254,6 +234,7 @@ export function LockerDialog() {
   const [instances, setInstances] = useState<InstanceItem[]>(() =>
     client.instanceController.lockerList(),
   );
+  const [filter, setFilter] = useState(emptyItemFilter());
   const [tooltip, setTooltip] = useState<{
     key: string;
     x: number;
@@ -321,12 +302,33 @@ export function LockerDialog() {
     return buckets;
   }, [instances, client]);
 
+  // With a filter active, show every match across categories in one list
+  // instead of the active tab's bucket. Empty when no filter is set.
+  const filteredInstances = useMemo(() => {
+    if (!isItemFilterActive(filter)) return [];
+    return instances
+      .filter((inst) =>
+        instanceMatches(inst, client.getEifRecordById(inst.baseItemId), filter),
+      )
+      .sort((a, b) => b.rarity - a.rarity || b.level - a.level);
+  }, [instances, filter, client]);
+
+  const filteredItems = useMemo(() => {
+    if (!isItemFilterActive(filter)) return [];
+    return items.filter((i) =>
+      stackableMatches(client.getEifRecordById(i.id), filter),
+    );
+  }, [items, filter, client]);
+
   const tabCounts = itemsByTab.map(
     (b, i) => b.length + instancesByTab[i].length,
   );
   const activeItems = itemsByTab[activeTab];
   const activeInstances = instancesByTab[activeTab];
-  const isEmpty = activeItems.length === 0 && activeInstances.length === 0;
+  const filterActive = isItemFilterActive(filter);
+  const displayInstances = filterActive ? filteredInstances : activeInstances;
+  const displayItems = filterActive ? filteredItems : activeItems;
+  const isEmpty = displayInstances.length === 0 && displayItems.length === 0;
 
   const onTooltipShow = useCallback((key: string, x: number, y: number) => {
     setTooltip({ key, x, y });
@@ -380,38 +382,42 @@ export function LockerDialog() {
   return (
     <DialogBase id='locker' title={locale.locker.title} size='md' avoidBottom>
       <div class='flex flex-col gap-1'>
+        <InventoryFilterBar filter={filter} onChange={setFilter} />
+
         <div class='flex gap-1'>
-          <div
-            role='tablist'
-            aria-orientation='vertical'
-            class='flex flex-col gap-1'
-          >
-            {TAB_LABELS.map((label, index) => {
-              const Icon = TAB_ICONS[index];
-              const isActive = index === activeTab;
-              return (
-                <button
-                  key={label}
-                  type='button'
-                  role='tab'
-                  aria-selected={isActive}
-                  aria-label={`${label} (${tabCounts[index]})`}
-                  title={label}
-                  onClick={() => setActiveTab(index as InventoryTab)}
-                  class={`flex h-11 w-11 flex-col items-center justify-center rounded border transition-colors ${
-                    isActive
-                      ? `${UI_PANEL_BORDER} bg-primary/20 text-primary`
-                      : `${UI_PANEL_BORDER} ${UI_ITEM_BG} text-base-content/70 hover:bg-base-content/10`
-                  }`}
-                >
-                  <Icon size={16} />
-                  <span class='text-[10px] tabular-nums leading-tight'>
-                    {tabCounts[index]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          {!filterActive && (
+            <div
+              role='tablist'
+              aria-orientation='vertical'
+              class='flex flex-col gap-1'
+            >
+              {TAB_LABELS.map((label, index) => {
+                const Icon = TAB_ICONS[index];
+                const isActive = index === activeTab;
+                return (
+                  <button
+                    key={label}
+                    type='button'
+                    role='tab'
+                    aria-selected={isActive}
+                    aria-label={`${label} (${tabCounts[index]})`}
+                    title={label}
+                    onClick={() => setActiveTab(index as InventoryTab)}
+                    class={`flex h-11 w-11 flex-col items-center justify-center rounded border transition-colors ${
+                      isActive
+                        ? `${UI_PANEL_BORDER} bg-primary/20 text-primary`
+                        : `${UI_PANEL_BORDER} ${UI_ITEM_BG} text-base-content/70 hover:bg-base-content/10`
+                    }`}
+                  >
+                    <Icon size={16} />
+                    <span class='text-[10px] tabular-nums leading-tight'>
+                      {tabCounts[index]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           <div
             data-locker-drop
@@ -422,23 +428,39 @@ export function LockerDialog() {
             <div
               class={`flex items-center gap-1 border-b ${UI_PANEL_BORDER} px-2 py-1 text-xs`}
             >
-              {(() => {
-                const Icon = TAB_ICONS[activeTab];
-                return <Icon size={11} />;
-              })()}
-              <span class='font-semibold'>{TAB_LABELS[activeTab]}</span>
-              <span class='ml-auto tabular-nums opacity-60'>
-                {tabCounts[activeTab]}
-              </span>
+              {filterActive ? (
+                <>
+                  <FaSearch size={11} />
+                  <span class='font-semibold'>
+                    {locale.inventory.filterResults}
+                  </span>
+                  <span class='ml-auto tabular-nums opacity-60'>
+                    {displayInstances.length + displayItems.length}
+                  </span>
+                </>
+              ) : (
+                <>
+                  {(() => {
+                    const Icon = TAB_ICONS[activeTab];
+                    return <Icon size={11} />;
+                  })()}
+                  <span class='font-semibold'>{TAB_LABELS[activeTab]}</span>
+                  <span class='ml-auto tabular-nums opacity-60'>
+                    {tabCounts[activeTab]}
+                  </span>
+                </>
+              )}
             </div>
             <div class='flex-1 overflow-y-auto p-2'>
               {isEmpty ? (
                 <p class='py-4 text-center text-sm opacity-50'>
-                  {locale.locker.empty}
+                  {filterActive
+                    ? locale.inventory.filterNoMatches
+                    : locale.locker.empty}
                 </p>
               ) : (
                 <div class='grid grid-cols-2 gap-2 lg:grid-cols-3'>
-                  {activeInstances.map((inst) => (
+                  {displayInstances.map((inst) => (
                     <InstanceLockerCard
                       key={inst.instanceId}
                       inst={inst}
@@ -447,7 +469,7 @@ export function LockerDialog() {
                       onTooltipHide={onTooltipHide}
                     />
                   ))}
-                  {activeItems.map((item) => (
+                  {displayItems.map((item) => (
                     <StackableLockerCard
                       key={item.id}
                       item={item}

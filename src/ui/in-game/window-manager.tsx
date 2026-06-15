@@ -34,6 +34,7 @@ export type DialogId =
   | 'law'
   | 'packet-log'
   | 'ping'
+  | 'lookup'
   | 'trade';
 
 type DialogMeta = {
@@ -253,6 +254,17 @@ export function WindowManagerProvider({
       client.keyboardController.unsubscribeToggleDialog(onToggleDialog);
     };
   }, [client, state.stack, isOpen, openDialog, closeDialog]);
+
+  // A `#item` / `#npc` lookup reply force-opens (or refreshes) the lookup
+  // dialog; the dialog reads the result off the controller itself.
+  useEffect(() => {
+    const onLookup = () => {
+      playSfxById(SfxId.ServerMessage);
+      openDialog('lookup');
+    };
+    client.lookupController.subscribe(onLookup);
+    return () => client.lookupController.unsubscribe(onLookup);
+  }, [client, openDialog]);
 
   return (
     <WindowManagerContext.Provider

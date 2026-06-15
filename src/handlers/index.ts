@@ -25,6 +25,7 @@ import { registerItemHandlers } from './item';
 import { registerJukeboxHandlers } from './jukebox';
 import { registerLockerHandlers } from './locker';
 import { registerLoginHandlers } from './login';
+import { registerLookupHandlers } from './lookup';
 import { registerMarriageHandlers } from './marriage';
 import { registerMessageHandlers } from './message';
 import { registerMusicHandlers } from './music';
@@ -99,4 +100,5 @@ export function registerAllHandlers(client: Client): void {
   registerReputationHandlers(client);
   registerInstanceHandlers(client);
   registerRatesHandlers(client);
+  registerLookupHandlers(client);
 }
