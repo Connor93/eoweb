@@ -192,6 +192,13 @@ function handleInitFileEcf(
   client.ecf = Ecf.deserialize(reader);
   saveEcf(client.ecf);
 
+  // Live hot-reload: server pushed a fresh pub while we're already in-game.
+  // Swap it in and re-sync the scene instead of advancing the login flow.
+  if (client.state === GameState.InGame) {
+    client.refresh();
+    return;
+  }
+
   if (client.downloadQueue.length > 0) {
     const download = client.downloadQueue.pop();
     client.sessionController.requestFile(download!.type, download!.id);
@@ -207,6 +214,13 @@ function handleInitFileEif(
   const reader = new EoReader(data.pubFile.content);
   client.eif = Eif.deserialize(reader);
   saveEif(client.eif);
+
+  // Live hot-reload: server pushed a fresh pub while we're already in-game.
+  // Swap it in and re-sync the scene instead of advancing the login flow.
+  if (client.state === GameState.InGame) {
+    client.refresh();
+    return;
+  }
 
   if (client.downloadQueue.length > 0) {
     const download = client.downloadQueue.pop();
@@ -224,6 +238,13 @@ function handleInitFileEnf(
   client.enf = Enf.deserialize(reader);
   saveEnf(client.enf);
 
+  // Live hot-reload: server pushed a fresh pub while we're already in-game.
+  // Swap it in and re-sync the scene instead of advancing the login flow.
+  if (client.state === GameState.InGame) {
+    client.refresh();
+    return;
+  }
+
   if (client.downloadQueue.length > 0) {
     const download = client.downloadQueue.pop();
     client.sessionController.requestFile(download!.type, download!.id);
@@ -239,6 +260,13 @@ function handleInitFileEsf(
   const reader = new EoReader(data.pubFile.content);
   client.esf = Esf.deserialize(reader);
   saveEsf(client.esf);
+
+  // Live hot-reload: server pushed a fresh pub while we're already in-game.
+  // Swap it in and re-sync the scene instead of advancing the login flow.
+  if (client.state === GameState.InGame) {
+    client.refresh();
+    return;
+  }
 
   if (client.downloadQueue.length > 0) {
     const download = client.downloadQueue.pop();
