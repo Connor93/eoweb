@@ -48,6 +48,7 @@ export { TouchActionButtons } from './hud/touch-action-buttons';
 export { TouchJoystick } from './hud/touch-joystick';
 // Drag
 export { ItemDragProvider, useItemDrag } from './item-drag-context';
+export { NpcTooltip } from './npc-tooltip';
 export { useBackdropBlur } from './use-backdrop-blur';
 export { useConfigSetting } from './use-config-setting';
 export { useDrag } from './use-drag';
