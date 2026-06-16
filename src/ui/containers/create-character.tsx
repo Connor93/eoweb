@@ -58,6 +58,13 @@ export function CreateCharacter() {
   const [hairStyle, setHairStyle] = useState(MIN_HAIR_STYLE);
   const [hairColor, setHairColor] = useState(MIN_HAIR_COLOR);
   const [skin, setSkin] = useState(MIN_SKIN);
+  const [classId, setClassId] = useState(1);
+
+  // client.ecf.classes ends with an "eof" sentinel record (server appends it),
+  // so the number of selectable classes is length - 1. Falls back to 1 until
+  // the ECF arrives (pushed right after login, before this screen).
+  const classCount = Math.max(1, (client.ecf?.classes.length ?? 2) - 1);
+  const classRecord = client.getEcfRecordById(classId);
   const [direction, setDirection] = useState<Direction>(Direction.Down);
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(() =>
     drawCharacterPreview(
@@ -105,9 +112,10 @@ export function CreateCharacter() {
         hairStyle,
         hairColor,
         skin,
+        classId,
       });
     },
-    [client, name, gender, hairStyle, hairColor, skin],
+    [client, name, gender, hairStyle, hairColor, skin, classId],
   );
 
   const cancel = useCallback(() => {
@@ -127,6 +135,26 @@ export function CreateCharacter() {
   );
 
   const formatOneBased = useCallback((value: number) => String(value + 1), []);
+
+  const formatClassName = useCallback(
+    (value: number) => client.getEcfRecordById(value)?.name ?? `Class ${value}`,
+    [client],
+  );
+
+  const classBonuses = useCallback(
+    (record = classRecord) => {
+      if (!record) return '';
+      const parts: string[] = [];
+      if (record.str) parts.push(`STR +${record.str}`);
+      if (record.intl) parts.push(`INT +${record.intl}`);
+      if (record.wis) parts.push(`WIS +${record.wis}`);
+      if (record.agi) parts.push(`AGI +${record.agi}`);
+      if (record.con) parts.push(`CON +${record.con}`);
+      if (record.cha) parts.push(`CHA +${record.cha}`);
+      return parts.join(' · ');
+    },
+    [classRecord],
+  );
 
   return (
     <div class='card bg-base-100 shadow-sm'>
@@ -179,6 +207,18 @@ export function CreateCharacter() {
               format={formatOneBased}
               onChange={setSkin}
             />
+            <CycleInput
+              label={locale.createCharacter.class}
+              value={classId}
+              min={1}
+              max={classCount}
+              format={formatClassName}
+              onChange={setClassId}
+            />
+            <div class='text-xs opacity-70'>{classBonuses() || ' '}</div>
+            <div class='text-warning text-xs'>
+              {locale.createCharacter.classWarning}
+            </div>
             <div class='card-actions'>
               <Button type='submit' variant='primary'>
                 {locale.createCharacter.btn}

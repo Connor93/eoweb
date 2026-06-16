@@ -76,6 +76,8 @@ export const locales = {
       female: 'Female',
       male: 'Male',
       btn: 'Create',
+      class: 'Class',
+      classWarning: 'Class is permanent — it cannot be changed later.',
     },
     hud: {
       hp: 'HP',
@@ -697,6 +699,8 @@ export const locales = {
       female: 'Vrouw',
       male: 'Man',
       btn: 'Aanmaken',
+      class: 'Class',
+      classWarning: 'Class is permanent — it cannot be changed later.',
     },
     hud: {
       hp: 'HP',
@@ -1322,6 +1326,8 @@ export const locales = {
       female: 'Kvinna',
       male: 'Man',
       btn: 'Skapa',
+      class: 'Class',
+      classWarning: 'Class is permanent — it cannot be changed later.',
     },
     hud: {
       hp: 'HP',
@@ -1947,6 +1953,8 @@ export const locales = {
       female: 'Feminino',
       male: 'Masculino',
       btn: 'Criar',
+      class: 'Class',
+      classWarning: 'Class is permanent — it cannot be changed later.',
     },
     hud: {
       hp: 'HP',
