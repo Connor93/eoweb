@@ -2,6 +2,7 @@ import { Element, type EnfRecord, NpcType } from 'eolib';
 import { useEffect, useState } from 'preact/hooks';
 import { combatElementColor, combatElementLabel } from '@/combat-overlay';
 import { eolibToCombatElement } from '@/combat-overlay/element-colors';
+import { NpcDeathAnimation } from '@/render';
 import { useClient } from '@/ui/context';
 import { isoToScreen } from '@/utils';
 
@@ -86,6 +87,12 @@ export function NpcTooltip() {
 
   const record = client.getEnfRecordById(npc.id);
   if (!record) return null;
+
+  // Match the old sprite nameplate: suppress while the NPC is dying or while
+  // a chat bubble is showing (the bubble would otherwise overlap the tooltip).
+  if (client.animationController.npcChats.get(index)) return null;
+  const animation = client.animationController.npcAnimations.get(index);
+  if (animation instanceof NpcDeathAnimation) return null;
 
   const model = buildNpcTooltipModel(record);
 
