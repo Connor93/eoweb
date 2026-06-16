@@ -199,6 +199,12 @@ function handleInitFileEcf(
     return;
   }
 
+  // Pushed outside the Welcome download sequence (e.g. right after login to
+  // populate the class picker). Store it, but don't drive the login flow.
+  if (!client.awaitingGameFiles) {
+    return;
+  }
+
   if (client.downloadQueue.length > 0) {
     const download = client.downloadQueue.pop();
     client.sessionController.requestFile(download!.type, download!.id);

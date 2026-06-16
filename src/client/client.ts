@@ -195,6 +195,10 @@ export class Client {
   map!: Emf;
   mapRenderer: MapRenderer;
   downloadQueue: { type: FileType; id: number }[] = [];
+  // True only while the Welcome file-download sequence is in progress. Lets
+  // the FileEcf handler tell a real download apart from the post-login ECF
+  // push (which must NOT advance into the game).
+  awaitingGameFiles = false;
   mousePosition: Vector2 | undefined;
   mouseCoords: Vector2 | undefined;
   viewportController: ViewportController;

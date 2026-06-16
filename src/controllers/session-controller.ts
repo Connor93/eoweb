@@ -70,6 +70,7 @@ export class SessionController {
   }
 
   enterGame(): void {
+    this.client.awaitingGameFiles = false;
     const packet = new WelcomeMsgClientPacket();
     packet.characterId = this.client.characterId;
     packet.sessionId = this.client.sessionId;

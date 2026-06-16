@@ -81,6 +81,8 @@ function handleSelectCharacter(
   client.equipment.armlet = data.equipment.armlet;
   client.equipment.bracer = data.equipment.bracer;
 
+  client.awaitingGameFiles = true;
+
   if (
     !client.ecf ||
     client.ecf.rid[0] !== data.ecfRid[0] ||
