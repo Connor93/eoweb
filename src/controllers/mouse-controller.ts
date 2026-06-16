@@ -107,6 +107,7 @@ export class MouseController {
         clearTimeout(longPressTimer);
         // Finger lifted — clear the hover tooltip regardless of gesture type.
         this.client.hoveredItemUid = null;
+        this.client.hoveredNpcIndex = null;
         if (!isLongPress) {
           const diffX =
             e.changedTouches[0].clientX - this.touchStartPosition!.x;
@@ -127,6 +128,7 @@ export class MouseController {
       clearTimeout(longPressTimer);
       isLongPress = false;
       this.client.hoveredItemUid = null;
+      this.client.hoveredNpcIndex = null;
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -145,6 +147,14 @@ export class MouseController {
           canvas.height,
         ),
       });
+      // Resolve the NPC under the cursor (pixel-space hit rects) to drive the
+      // NPC hover tooltip. Suppressed over UI panels, same as item hover.
+      if (isInUI(e.target)) {
+        this.client.hoveredNpcIndex = null;
+      } else {
+        const npcAt = getNpcIntersecting(this.client.mousePosition!);
+        this.client.hoveredNpcIndex = npcAt ? npcAt.id : null;
+      }
       // Resolve the topmost ground item on the cursor's tile — same
       // filter/pick order as clickItem() — and update the hover state
       // that drives the ground-item tooltip overlay. Suppressed when the
@@ -174,6 +184,7 @@ export class MouseController {
     window.addEventListener('mouseout', (e) => {
       if (e.relatedTarget === null) {
         this.client.hoveredItemUid = null;
+        this.client.hoveredNpcIndex = null;
       }
     });
 

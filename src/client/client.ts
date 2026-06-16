@@ -188,6 +188,9 @@ export class Client {
   // ground-item hover tooltip; resolved on mousemove (tile-based, same
   // filter clickItem uses).
   hoveredItemUid: number | null = null;
+  // NPC index (instance index, matches getNpcByIndex) currently under the
+  // cursor — drives the <NpcTooltip> overlay. Null when no NPC is hovered.
+  hoveredNpcIndex: number | null = null;
   eif!: Eif;
   ecf!: Ecf;
   enf!: Enf;
