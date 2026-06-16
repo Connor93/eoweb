@@ -18,7 +18,6 @@ import type { Client } from '@/client';
 import {
   getCharacterIntersecting,
   getCharacterRectangle,
-  getNpcIntersecting,
   getNpcRectangle,
   Rectangle,
   setBoardRectangle,
@@ -1922,53 +1921,10 @@ export class MapRenderer {
       }
     }
 
-    if (!name) {
-      const npcRect = getNpcIntersecting(this.client.mousePosition);
-      if (npcRect) {
-        const npc = this.client.getNpcByIndex(npcRect.id);
-        const bubble =
-          npc && !!this.client.animationController.npcChats.get(npc.index);
-        let animation =
-          npc && this.client.animationController.npcAnimations.get(npc.index);
-        let dying = false;
-
-        if (animation instanceof NpcDeathAnimation) {
-          dying = true;
-          if (animation.base) animation = animation.base;
-        }
-
-        if (!bubble && !(animation instanceof NpcDeathAnimation) && npc) {
-          const record = this.client.getEnfRecordById(npc.id);
-          if (record) {
-            name = record.name;
-            coords.x = npc.coords.x;
-            coords.y = npc.coords.y;
-            offset.y -= TILE_HEIGHT;
-
-            const meta = this.client.getNpcMetadata(record.graphicId);
-            if (meta) {
-              offset.y -= meta.nameLabelOffset - 4;
-            }
-
-            if (animation instanceof NpcWalkAnimation) {
-              const walkOffset = dying
-                ? WALK_OFFSETS[animation.animationFrame][animation.direction]
-                : this.interpolateWalkOffset(
-                    animation.animationFrame,
-                    animation.direction,
-                  );
-              offset.x += walkOffset.x;
-              offset.y += walkOffset.y;
-              coords.x = animation.from.x;
-              coords.y = animation.from.y;
-            }
-          }
-        }
-      }
-    }
-
-    // (Ground-item name labels removed — the rich GroundItemTooltip replaces
-    // them. Character/NPC nameplates above still apply; pickup is unaffected.)
+    // NPC name labels moved to the DOM <NpcTooltip> overlay (combat NPCs show
+    // name/level/element there). Ground-item labels likewise live in
+    // <GroundItemTooltip>. Only character nameplates remain on this sprite
+    // path; chat bubbles and pickup are unaffected.
 
     if (!name) return;
 

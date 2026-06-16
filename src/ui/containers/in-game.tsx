@@ -37,6 +37,7 @@ import {
   LookupDialog,
   MobileNav,
   NavSidebar,
+  NpcTooltip,
   PacketLogDialog,
   PartyPanel,
   PingDialog,
@@ -312,6 +313,7 @@ function InGameContent() {
     <>
       <CombatOverlay />
       <GroundItemTooltip />
+      <NpcTooltip />
       {commandPaletteOpen && <CommandPalette onClose={onCommandPaletteClose} />}
       <PlayerHud />
       <MobileNav />
