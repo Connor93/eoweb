@@ -4,7 +4,6 @@ import {
   AccountReply,
   AccountReplySequenceStart,
   AccountRequestClientPacket,
-  CharacterCreateClientPacket,
   CharacterMapInfo,
   CharacterRemoveClientPacket,
   CharacterReply,
@@ -26,6 +25,7 @@ import type { Client } from '@/client';
 import { MAX_CHARACTER_NAME_LENGTH, MIN_CHARACTER_NAME_LENGTH } from '@/consts';
 import { DialogResourceID } from '@/edf';
 import { GameState } from '@/game-state';
+import { CharacterCreateWithClassClientPacket } from '@/packets/character-create-with-class-client-packet';
 import { SfxId } from '@/sfx';
 
 const SESSIONS_KEY = 'eoweb:sessions';
@@ -51,6 +51,7 @@ type CharacterCreateData = {
   hairStyle: number;
   hairColor: number;
   skin: number;
+  classId: number;
 };
 
 const LOGIN_REPLY_DIALOG_IDS: Partial<Record<LoginReply, DialogResourceID>> = {
@@ -413,13 +414,14 @@ export class AuthenticationController {
       return;
     }
 
-    const reply = new CharacterCreateClientPacket();
+    const reply = new CharacterCreateWithClassClientPacket();
     reply.sessionId = sessionId;
     reply.name = this.characterCreateData.name;
     reply.gender = this.characterCreateData.gender;
     reply.hairColor = this.characterCreateData.hairColor;
     reply.hairStyle = this.characterCreateData.hairStyle;
     reply.skin = this.characterCreateData.skin;
+    reply.classId = this.characterCreateData.classId;
 
     this.client.bus!.send(reply);
   }
