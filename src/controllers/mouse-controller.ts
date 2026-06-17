@@ -108,6 +108,7 @@ export class MouseController {
         // Finger lifted — clear the hover tooltip regardless of gesture type.
         this.client.hoveredItemUid = null;
         this.client.hoveredNpcIndex = null;
+        this.client.hoveredCharacterId = null;
         if (!isLongPress) {
           const diffX =
             e.changedTouches[0].clientX - this.touchStartPosition!.x;
@@ -129,6 +130,7 @@ export class MouseController {
       isLongPress = false;
       this.client.hoveredItemUid = null;
       this.client.hoveredNpcIndex = null;
+      this.client.hoveredCharacterId = null;
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -154,6 +156,13 @@ export class MouseController {
       } else {
         const npcAt = getNpcIntersecting(this.client.mousePosition!);
         this.client.hoveredNpcIndex = npcAt ? npcAt.id : null;
+      }
+      // Resolve the player under the cursor to drive the player hover tooltip.
+      if (isInUI(e.target)) {
+        this.client.hoveredCharacterId = null;
+      } else {
+        const charAt = getCharacterIntersecting(this.client.mousePosition!);
+        this.client.hoveredCharacterId = charAt ? charAt.id : null;
       }
       // Resolve the topmost ground item on the cursor's tile — same
       // filter/pick order as clickItem() — and update the hover state
@@ -185,6 +194,7 @@ export class MouseController {
       if (e.relatedTarget === null) {
         this.client.hoveredItemUid = null;
         this.client.hoveredNpcIndex = null;
+        this.client.hoveredCharacterId = null;
       }
     });
 

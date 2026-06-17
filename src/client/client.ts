@@ -191,6 +191,9 @@ export class Client {
   // NPC index (instance index, matches getNpcByIndex) currently under the
   // cursor — drives the <NpcTooltip> overlay. Null when no NPC is hovered.
   hoveredNpcIndex: number | null = null;
+  // Player id (matches getCharacterById) currently under the cursor — drives
+  // the <PlayerTooltip> overlay. Null when no player is hovered.
+  hoveredCharacterId: number | null = null;
   eif!: Eif;
   ecf!: Ecf;
   enf!: Enf;
