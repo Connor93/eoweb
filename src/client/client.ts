@@ -194,6 +194,14 @@ export class Client {
   // Player id (matches getCharacterById) currently under the cursor — drives
   // the <PlayerTooltip> overlay. Null when no player is hovered.
   hoveredCharacterId: number | null = null;
+
+  /** Clear all hover-tooltip state (ground item, NPC, player). */
+  clearHoverState(): void {
+    this.hoveredItemUid = null;
+    this.hoveredNpcIndex = null;
+    this.hoveredCharacterId = null;
+  }
+
   eif!: Eif;
   ecf!: Ecf;
   enf!: Enf;

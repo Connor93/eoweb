@@ -106,9 +106,7 @@ export class MouseController {
         e.preventDefault();
         clearTimeout(longPressTimer);
         // Finger lifted — clear the hover tooltip regardless of gesture type.
-        this.client.hoveredItemUid = null;
-        this.client.hoveredNpcIndex = null;
-        this.client.hoveredCharacterId = null;
+        this.client.clearHoverState();
         if (!isLongPress) {
           const diffX =
             e.changedTouches[0].clientX - this.touchStartPosition!.x;
@@ -128,9 +126,7 @@ export class MouseController {
     window.addEventListener('touchcancel', () => {
       clearTimeout(longPressTimer);
       isLongPress = false;
-      this.client.hoveredItemUid = null;
-      this.client.hoveredNpcIndex = null;
-      this.client.hoveredCharacterId = null;
+      this.client.clearHoverState();
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -149,41 +145,31 @@ export class MouseController {
           canvas.height,
         ),
       });
-      // Resolve the NPC under the cursor (pixel-space hit rects) to drive the
-      // NPC hover tooltip. Suppressed over UI panels, same as item hover.
-      if (isInUI(e.target)) {
-        this.client.hoveredNpcIndex = null;
-      } else {
-        const npcAt = getNpcIntersecting(this.client.mousePosition!);
-        this.client.hoveredNpcIndex = npcAt ? npcAt.id : null;
-      }
-      // Resolve the player under the cursor to drive the player hover tooltip.
-      if (isInUI(e.target)) {
-        this.client.hoveredCharacterId = null;
-      } else {
-        const charAt = getCharacterIntersecting(this.client.mousePosition!);
-        this.client.hoveredCharacterId = charAt ? charAt.id : null;
-      }
-      // Resolve the topmost ground item on the cursor's tile — same
-      // filter/pick order as clickItem() — and update the hover state
-      // that drives the ground-item tooltip overlay. Suppressed when the
-      // pointer is over a UI panel so the tooltip can't bleed through windows.
+      // Resolve hover targets under the cursor (NPC, player, ground item) for
+      // the hover tooltips. All are suppressed over UI panels so the tooltips
+      // can't bleed through open windows — compute that gate once.
+      const overUI = isInUI(e.target);
+
+      this.client.hoveredNpcIndex = overUI
+        ? null
+        : (getNpcIntersecting(this.client.mousePosition!)?.id ?? null);
+
+      this.client.hoveredCharacterId = overUI
+        ? null
+        : (getCharacterIntersecting(this.client.mousePosition!)?.id ?? null);
+
+      // Topmost ground item on the cursor's tile — same filter/pick order as
+      // clickItem() (highest uid = topmost).
       const mc = this.client.mouseCoords;
-      if (isInUI(e.target)) {
+      if (overUI || !mc) {
         this.client.hoveredItemUid = null;
-      } else if (mc) {
-        const itemsAtTile = this.client.nearby.items.filter(
-          (i) => i.coords.x === mc.x && i.coords.y === mc.y,
-        );
-        if (itemsAtTile.length) {
-          // clickItem sorts descending by uid (highest uid = topmost).
-          itemsAtTile.sort((a, b) => b.uid - a.uid);
-          this.client.hoveredItemUid = itemsAtTile[0].uid;
-        } else {
-          this.client.hoveredItemUid = null;
-        }
       } else {
-        this.client.hoveredItemUid = null;
+        const itemsAtTile = this.client.nearby.items
+          .filter((i) => i.coords.x === mc.x && i.coords.y === mc.y)
+          .sort((a, b) => b.uid - a.uid);
+        this.client.hoveredItemUid = itemsAtTile.length
+          ? itemsAtTile[0].uid
+          : null;
       }
     });
 
@@ -192,9 +178,7 @@ export class MouseController {
     // only when the cursor crosses the window boundary.
     window.addEventListener('mouseout', (e) => {
       if (e.relatedTarget === null) {
-        this.client.hoveredItemUid = null;
-        this.client.hoveredNpcIndex = null;
-        this.client.hoveredCharacterId = null;
+        this.client.clearHoverState();
       }
     });
 
