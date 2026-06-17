@@ -16,7 +16,6 @@ import {
 } from '@/atlas';
 import type { Client } from '@/client';
 import {
-  getCharacterIntersecting,
   getCharacterRectangle,
   getNpcRectangle,
   Rectangle,
@@ -30,7 +29,6 @@ import {
 } from '@/collision';
 import {
   ANIMATION_TICKS,
-  COLORS,
   DEATH_TICKS,
   DOOR_HEIGHT,
   EMOTE_ANIMATION_TICKS,
@@ -64,12 +62,7 @@ import {
   NpcDeathAnimation,
   NpcWalkAnimation,
 } from '@/render';
-import {
-  capitalize,
-  getItemGraphicId,
-  isoToScreen,
-  screenToIso,
-} from '@/utils';
+import { getItemGraphicId, isoToScreen, screenToIso } from '@/utils';
 import type { Vector2 } from '@/vector';
 
 enum EntityType {
@@ -852,7 +845,6 @@ export class MapRenderer {
       this.addCharacterSprites(main, playerScreen, true, 0.4);
     }
 
-    this.addNameplateSprites(playerScreen);
     this.addPlayerMenuSprites();
     this.endFrame();
   }
@@ -1852,102 +1844,6 @@ export class MapRenderer {
           HALF_TILE_HEIGHT +
           frame.yOffset,
       ),
-    );
-  }
-
-  private addNameplateSprites(playerScreen: Vector2) {
-    if (!this.client.mousePosition) return;
-
-    const coords = { x: 0, y: 0 };
-    const offset = { x: 0, y: 0 };
-    let name = '';
-    const color = COLORS.Nameplate;
-    const characterRect = getCharacterIntersecting(this.client.mousePosition);
-    if (characterRect) {
-      const character = this.client.getCharacterById(characterRect.id);
-      const bubble =
-        character &&
-        !!this.client.animationController.characterChats.get(
-          character.playerId,
-        );
-      let animation =
-        character &&
-        this.client.animationController.characterAnimations.get(
-          character.playerId,
-        );
-      let dying = false;
-
-      if (animation instanceof CharacterDeathAnimation) {
-        dying = true;
-        if (animation.base) animation = animation.base;
-      }
-
-      if (
-        !bubble &&
-        !(animation instanceof CharacterDeathAnimation) &&
-        !(animation instanceof CharacterSpellChantAnimation) &&
-        character &&
-        (!character.invisible || this.client.admin !== AdminLevel.Player)
-      ) {
-        name = capitalize(character.name);
-        coords.x = character.coords.x;
-        coords.y = character.coords.y;
-
-        switch (character.sitState) {
-          case SitState.Floor:
-            offset.y -= 50;
-            break;
-          case SitState.Chair:
-            offset.y -= 56;
-            break;
-          case SitState.Stand:
-            offset.y -= 72;
-            break;
-        }
-
-        if (character.guildTag !== '   ') {
-          name += ` ${character.guildTag}`;
-        }
-
-        if (animation instanceof CharacterWalkAnimation) {
-          const walkOffset = dying
-            ? WALK_OFFSETS[animation.animationFrame][animation.direction]
-            : continuousWalkOffset(animation.progress, animation.direction);
-          offset.x += walkOffset.x;
-          offset.y += walkOffset.y;
-          coords.x = animation.from.x;
-          coords.y = animation.from.y;
-        }
-      }
-    }
-
-    // NPC name labels moved to the DOM <NpcTooltip> overlay (combat NPCs show
-    // name/level/element there). Ground-item labels likewise live in
-    // <GroundItemTooltip>. Only character nameplates remain on this sprite
-    // path; chat bubbles and pickup are unaffected.
-
-    if (!name) return;
-
-    const positionX = (coords.x - coords.y) * HALF_TILE_WIDTH;
-    const positionY = (coords.x + coords.y) * HALF_TILE_HEIGHT;
-    const drawX = Math.floor(
-      positionX - playerScreen.x + this._halfGameWidth + offset.x,
-    );
-    const drawY = Math.floor(
-      positionY - playerScreen.y + this._halfGameHeight + offset.y,
-    );
-
-    this.addAtlasTextSprites(
-      'ui:nameplate:shadow',
-      name,
-      { x: drawX + 1, y: drawY + 1 },
-      '#000',
-    );
-    this.addAtlasTextSprites(
-      'ui:nameplate:text',
-      name,
-      { x: drawX, y: drawY },
-      color,
     );
   }
 

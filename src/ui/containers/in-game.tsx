@@ -42,6 +42,7 @@ import {
   PartyPanel,
   PingDialog,
   PlayerHud,
+  PlayerTooltip,
   QuestNpcDialog,
   QuestsDialog,
   QuestTracker,
@@ -314,6 +315,7 @@ function InGameContent() {
       <CombatOverlay />
       <GroundItemTooltip />
       <NpcTooltip />
+      <PlayerTooltip />
       {commandPaletteOpen && <CommandPalette onClose={onCommandPaletteClose} />}
       <PlayerHud />
       <MobileNav />
