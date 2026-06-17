@@ -4,7 +4,6 @@ import { combatElementColor, combatElementLabel } from '@/combat-overlay';
 import { eolibToCombatElement } from '@/combat-overlay/element-colors';
 import { NpcDeathAnimation } from '@/render';
 import { useClient } from '@/ui/context';
-import { isoToScreen } from '@/utils';
 
 // A single colored badge row in an entity tooltip — a damage type, a
 // weakness, and (in a later slice) per-instance affixes. Kept generic so a
@@ -105,9 +104,16 @@ export function NpcTooltip() {
   const meta = client.getNpcMetadata(record.graphicId);
   const up = TOOLTIP_BASE_UP + meta.nameLabelOffset;
 
-  const tileScreen = isoToScreen(npc.coords);
-  const x = Math.floor(tileScreen.x - cameraX + halfW);
-  const y = Math.floor(tileScreen.y - cameraY + halfH - up);
+  // Smooth-follow the NPC sprite (incl. walk interpolation) via the shared
+  // map-renderer helper that CombatOverlay's HP bars use — the same path the
+  // sprite is drawn with, so the tooltip stays pixel-locked instead of
+  // snapping to the destination tile mid-walk.
+  const liveScreen =
+    client.mapRenderer?.getEntityIsoScreenPosition(`npc:${index}`) ?? null;
+  if (!liveScreen) return null;
+
+  const x = Math.floor(liveScreen.x - cameraX + halfW);
+  const y = Math.floor(liveScreen.y - cameraY + halfH - up);
 
   return (
     <div
