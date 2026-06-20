@@ -109,19 +109,29 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
   const [, setRefresh] = useState(0);
   const isOwnCharacter = info?.details.playerId === client.playerId;
 
-  // Re-render when the instance controller's snapshot changes so a
-  // freshly equipped instance picks up the rarity tint immediately.
+  // Re-render when the relevant snapshot changes: the live instance list
+  // for your own paperdoll, or the viewed-paperdoll push (which can land a
+  // tick after the Paperdoll Reply that opened the dialog) for others.
   useEffect(() => {
-    if (!isOwnCharacter) return;
     const handler = () => setRefresh((n) => n + 1);
-    client.instanceController.subscribeChanged(handler);
-    return () => client.instanceController.unsubscribeChanged(handler);
+    if (isOwnCharacter) {
+      client.instanceController.subscribeChanged(handler);
+      return () => client.instanceController.unsubscribeChanged(handler);
+    }
+    client.instanceController.subscribeViewedPaperdoll(handler);
+    return () => client.instanceController.unsubscribeViewedPaperdoll(handler);
   }, [client, isOwnCharacter]);
 
-  // Equipped instance occupying this slot, if any.
+  // Equipped instance occupying this slot, if any. For your own paperdoll
+  // it comes from the live instance list; for another player's it comes
+  // from the viewed-paperdoll snapshot pushed alongside their Paperdoll
+  // Reply (guarded by player id inside the controller).
   const equippedInstance = isOwnCharacter
     ? client.instanceController.equippedAtSlot(slot)
-    : undefined;
+    : client.instanceController.viewedEquippedAtSlot(
+        info?.details.playerId ?? -1,
+        slot,
+      );
 
   const record = itemId ? client.getEifRecordById(itemId) : null;
   // itemId is the slot's base item id for both plain and instanced equips, so
