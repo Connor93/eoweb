@@ -154,6 +154,41 @@ export class InstanceController {
     return this.items.find((i) => i.equippedSlot === slot);
   }
 
+  /** Snapshot of another player's equipped instances, captured when their
+   *  paperdoll is opened (family 54 / Tell). Only one is held at a time —
+   *  replaced on each open. `EquipSlot` reads it for non-own characters. */
+  private viewedPaperdoll: { playerId: number; items: InstanceItem[] } | null =
+    null;
+  private viewedPaperdollSubscribers: (() => void)[] = [];
+
+  setViewedPaperdoll(playerId: number, items: InstanceItem[]): void {
+    this.viewedPaperdoll = { playerId, items };
+    for (const cb of this.viewedPaperdollSubscribers) cb();
+  }
+
+  /** The equipped instance the inspected player has in `slot`, or undefined.
+   *  Guarded by `playerId` so stale data from a previously-inspected player
+   *  is never shown on the current one. */
+  viewedEquippedAtSlot(
+    playerId: number,
+    slot: number,
+  ): InstanceItem | undefined {
+    if (!this.viewedPaperdoll || this.viewedPaperdoll.playerId !== playerId) {
+      return undefined;
+    }
+    return this.viewedPaperdoll.items.find((i) => i.equippedSlot === slot);
+  }
+
+  subscribeViewedPaperdoll(cb: () => void): void {
+    this.viewedPaperdollSubscribers.push(cb);
+  }
+
+  unsubscribeViewedPaperdoll(cb: () => void): void {
+    this.viewedPaperdollSubscribers = this.viewedPaperdollSubscribers.filter(
+      (s) => s !== cb,
+    );
+  }
+
   sendEquip(instanceId: string, subLoc: number): void {
     const writer = new EoWriter();
     writer.addBytes(this.encodeInstanceId(instanceId));
