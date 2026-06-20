@@ -208,6 +208,55 @@ function handlePlayerPaperdoll(client: Client, reader: EoReader) {
   client.instanceController.setWeaponElement(playerId, element);
 }
 
+/** family 54 / action Tell — another player's equipped rolled instances,
+ *  pushed right after a Paperdoll Reply so the viewer's paperdoll can show
+ *  that player's rarity / element / level / mods. Same per-entry shape as
+ *  INSTANCE_LIST, prefixed with the inspected player's id. */
+function parsePlayerPaperdollInstanceList(reader: EoReader): {
+  playerId: number;
+  items: InstanceItem[];
+} {
+  const playerId = reader.getShort();
+  const count = reader.getShort();
+  const items: InstanceItem[] = [];
+  for (let i = 0; i < count; i++) {
+    const instanceId = reader.getFixedString(INSTANCE_ID_LEN).trim();
+    const baseItemId = reader.getShort();
+    const rarity = reader.getChar() as InstanceRarity;
+    const level = reader.getChar();
+    const locationRaw = reader.getChar();
+    let equippedSlot = -1;
+    let inLocker = false;
+    if (locationRaw === LOCATION_SENTINEL_LOCKER) {
+      inLocker = true;
+    } else if (locationRaw !== LOCATION_SENTINEL_INVENTORY) {
+      equippedSlot = locationRaw;
+    }
+    const modCount = reader.getChar();
+    const mods: InstanceMod[] = [];
+    for (let j = 0; j < modCount; j++) {
+      mods.push(readMod(reader));
+    }
+    const element = reader.getChar() as CombatElement;
+    items.push({
+      instanceId,
+      baseItemId,
+      rarity,
+      level,
+      element,
+      equippedSlot,
+      inLocker,
+      mods,
+    });
+  }
+  return { playerId, items };
+}
+
+function handlePlayerPaperdollInstanceList(client: Client, reader: EoReader) {
+  const { playerId, items } = parsePlayerPaperdollInstanceList(reader);
+  client.instanceController.setViewedPaperdoll(playerId, items);
+}
+
 export function registerInstanceHandlers(client: Client) {
   client.bus!.registerPacketHandler(
     FAMILY_INSTANCE as PacketFamily,
@@ -233,5 +282,10 @@ export function registerInstanceHandlers(client: Client) {
     FAMILY_INSTANCE as PacketFamily,
     PacketAction.Player,
     (reader) => handlePlayerPaperdoll(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_INSTANCE as PacketFamily,
+    PacketAction.Tell,
+    (reader) => handlePlayerPaperdollInstanceList(client, reader),
   );
 }
