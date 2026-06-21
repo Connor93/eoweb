@@ -490,12 +490,31 @@ export function TradeDialog() {
     }
   }, [tc, state.playerAgreed]);
 
+  // The title-bar "X" tears down the whole trade, so it must tell the
+  // server (TradeClose) instead of only hiding the dialog locally. If it
+  // just closed the window, the server would keep the trade open: the
+  // partner's window would never close, offered gear would stay hidden
+  // from our own inventory, and later per-item removes / cancels would
+  // silently no-op against the stale `trading` state. Unlike the bottom
+  // button this always cancels (never a bare un-agree) — closing the
+  // window means leaving the trade. The dialog then unmounts when the
+  // server's TradeClose round-trips, matching the bottom Cancel button.
+  const handleClose = useCallback(() => {
+    tc.cancel();
+  }, [tc]);
+
   const title = state.partnerName
     ? `${locale.trade.title} - ${capitalize(state.partnerName)}`
     : locale.trade.title;
 
   return (
-    <DialogBase id='trade' title={title} size='md' avoidBottom>
+    <DialogBase
+      id='trade'
+      title={title}
+      size='md'
+      avoidBottom
+      onClose={handleClose}
+    >
       <div class='flex flex-col gap-3 p-2'>
         {state.scam && (
           <div class='alert alert-error py-2 text-sm' role='alert'>
