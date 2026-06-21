@@ -1,4 +1,7 @@
-import { CombatElement } from '@/combat-overlay/element-colors';
+import {
+  CombatElement,
+  type ElementEffectiveness,
+} from '@/combat-overlay/element-colors';
 
 export type PopupKind = 'damage' | 'heal' | 'miss';
 
@@ -7,6 +10,9 @@ export interface CombatPopup {
   kind: PopupKind;
   amount: number; // ignored for miss
   element: CombatElement; // defaults to Plain
+  /** Element matchup vs the NPC target — drives the WEAK/RESIST damage-number
+   *  treatment. Always 'neutral' for non-NPC targets / heals / misses. */
+  effectiveness: ElementEffectiveness;
   /** Stable id of the target if known — `"npc:42"` / `"char:1024"`.
    *  The renderer looks the target up in `client.nearby` each frame
    *  so the popup follows the target if it walks during its lifetime.
@@ -47,6 +53,7 @@ export class CombatOverlayController {
   pushDamage(opts: {
     amount: number;
     element?: CombatElement;
+    effectiveness?: ElementEffectiveness;
     targetKey?: string;
     worldX: number;
     worldY: number;
@@ -56,6 +63,7 @@ export class CombatOverlayController {
       kind: 'damage',
       amount: opts.amount,
       element: opts.element ?? CombatElement.Plain,
+      effectiveness: opts.effectiveness ?? 'neutral',
       targetKey: opts.targetKey,
       worldX: opts.worldX,
       worldY: opts.worldY,
@@ -75,6 +83,7 @@ export class CombatOverlayController {
       kind: 'heal',
       amount: opts.amount,
       element: CombatElement.Plain,
+      effectiveness: 'neutral',
       targetKey: opts.targetKey,
       worldX: opts.worldX,
       worldY: opts.worldY,
@@ -89,6 +98,7 @@ export class CombatOverlayController {
       kind: 'miss',
       amount: 0,
       element: CombatElement.Plain,
+      effectiveness: 'neutral',
       targetKey: opts.targetKey,
       worldX: opts.worldX,
       worldY: opts.worldY,

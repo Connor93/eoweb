@@ -137,11 +137,16 @@ function renderPopup(
     y = s.y;
   }
   const color = p.kind === 'heal' ? '#4ade80' : combatElementColor(p.element);
+  // Element-matchup treatment (NPC damage only): WEAK pops big + glows + adds
+  // an up-chevron; RESIST shrinks + greys + adds a down-chevron.
+  const eff = p.kind === 'damage' ? p.effectiveness : 'neutral';
+  const effClass = eff === 'neutral' ? '' : ` combat-popup--${eff}`;
+  const arrow = eff === 'weak' ? '↑' : eff === 'resist' ? '↓' : '';
   const label = p.kind === 'miss' ? 'miss' : String(p.amount);
   return (
     <div
       key={p.id}
-      class={`combat-popup combat-popup--${p.kind}`}
+      class={`combat-popup combat-popup--${p.kind}${effClass}`}
       style={{
         left: `${x}px`,
         top: `${y - POPUP_HEAD_OFFSET_Y}px`,
@@ -149,6 +154,7 @@ function renderPopup(
       }}
     >
       {label}
+      {arrow && <span class='combat-popup__arrow'>{arrow}</span>}
     </div>
   );
 }

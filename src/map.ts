@@ -27,6 +27,7 @@ import {
   setNpcRectangle,
   setSignRectangle,
 } from '@/collision';
+import { CombatElement } from '@/combat-overlay/element-colors';
 import {
   ANIMATION_TICKS,
   DEATH_TICKS,
@@ -61,6 +62,7 @@ import {
   NpcAttackAnimation,
   NpcDeathAnimation,
   NpcWalkAnimation,
+  weaponAnchorScreen,
 } from '@/render';
 import { getItemGraphicId, isoToScreen, screenToIso } from '@/utils';
 import type { Vector2 } from '@/vector';
@@ -527,6 +529,8 @@ export class MapRenderer {
 
     this.buildingCache = false;
     this.clearSceneNodes();
+    this.client.weaponElementController.clear();
+    this.client.npcElementController.clear();
   }
 
   getTileSpecAt(position: Vector2): MapTileSpec | undefined {
@@ -755,6 +759,8 @@ export class MapRenderer {
     }
 
     this.beginFrame();
+    this.client.weaponElementController.beginFrame();
+    this.client.npcElementController.beginFrame();
 
     // Merge-sort static + dynamic entities
     dynamics.sort((a, b) => a.depth - b.depth);
@@ -804,6 +810,8 @@ export class MapRenderer {
     }
 
     if (!inGame) {
+      this.client.weaponElementController.endFrame();
+      this.client.npcElementController.endFrame();
       this.endFrame();
       return;
     }
@@ -846,6 +854,8 @@ export class MapRenderer {
     }
 
     this.addPlayerMenuSprites();
+    this.client.weaponElementController.endFrame();
+    this.client.npcElementController.endFrame();
     this.endFrame();
   }
 
@@ -1169,6 +1179,10 @@ export class MapRenderer {
       !character.invisible ||
       this.client.admin !== AdminLevel.Player;
 
+    // Captured from the main-pass body sprite so the weapon glow can sit just
+    // below it (weapon held behind the body) or just above (down-right swing).
+    let bodyZIndex = this._worldOrder;
+
     if (visible) {
       if (justCharacter) {
         if (!this._ghostContainer) {
@@ -1234,6 +1248,7 @@ export class MapRenderer {
           `character:${character.playerId}:main`,
           `map:character id=${character.playerId}`,
         );
+        bodyZIndex = sprite.zIndex;
         sprite.texture = texture;
         if (mirrored) {
           sprite.scale.x = -1;
@@ -1262,6 +1277,50 @@ export class MapRenderer {
               character.gender,
             );
           }
+        }
+      }
+    }
+
+    // Weapon-element glow. Players only, melee, non-Plain. Skipped on the ghost
+    // pass to avoid a doubled glow, and on invisible characters.
+    if (!justCharacter && visible) {
+      const wec = this.client.weaponElementController;
+      const element = wec.resolveWeaponElement(character.playerId);
+      const weapon = character.equipment.weapon;
+      if (element !== CombatElement.Plain && weapon) {
+        const meta = this.client.getWeaponMetadata(weapon);
+        if (!meta.ranged) {
+          const anchor = weaponAnchorScreen(
+            character.gender,
+            characterFrame,
+            tileCenterX,
+            tileCenterY,
+            frameOffset.x,
+            frameOffset.y,
+            mirrored,
+          );
+          const attackProgress =
+            animation instanceof CharacterAttackAnimation
+              ? animation.progress
+              : null;
+          // The weapon is composited behind the body on every frame except the
+          // down-right swing (drawWeaponFront). Match that occlusion: glow just
+          // below the body normally, just above it for the front swing pose.
+          const weaponInFront =
+            characterFrame === CharacterFrame.MeleeAttackDownRight2;
+          const glowZ = weaponInFront ? bodyZIndex + 0.5 : bodyZIndex - 0.5;
+          wec.renderFor(
+            character.playerId,
+            character.gender,
+            weapon,
+            characterFrame,
+            anchor.x,
+            anchor.y,
+            mirrored,
+            element,
+            attackProgress,
+            glowZ,
+          );
         }
       }
     }
@@ -1473,6 +1532,25 @@ export class MapRenderer {
     }
     sprite.y = screenY;
     sprite.alpha = alpha;
+
+    // NPC element aura. Non-Plain element, not dying. Halo sits just behind the
+    // sprite (occluded by the body → aura ring), light tint just in front.
+    if (!dying) {
+      const npcElement = this.client.npcElementController.resolveNpcElement(
+        npc.id,
+      );
+      if (npcElement !== CombatElement.Plain) {
+        this.client.npcElementController.renderFor(
+          npc.index,
+          texture,
+          sprite.x,
+          sprite.y,
+          sprite.scale.x,
+          npcElement,
+          sprite.zIndex,
+        );
+      }
+    }
 
     if (effects) {
       for (const effect of effects) {

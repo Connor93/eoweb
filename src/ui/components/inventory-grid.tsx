@@ -458,8 +458,12 @@ export function InventoryGrid({ itemIds }: Props) {
           pointerId: e.pointerId,
           ghostX: e.clientX,
           ghostY: e.clientY,
-          offsetX: e.clientX - rect.left,
-          offsetY: e.clientY - rect.top,
+          // Center the fixed-size ghost on the cursor. The source card is
+          // much larger than CARD_SIZE_PX (icon + name + quantity + padding),
+          // so measuring the grab offset against it would shove the ghost left
+          // of the pointer.
+          offsetX: CARD_SIZE_PX / 2,
+          offsetY: CARD_SIZE_PX / 2,
           graphicId: record.graphicId,
           ghostWidth: CARD_SIZE_PX,
           ghostHeight: CARD_SIZE_PX,
@@ -557,7 +561,6 @@ export function InventoryGrid({ itemIds }: Props) {
 
   const handleInstancePointerDown = useCallback(
     (e: PointerEvent, inst: InstanceItem, target: HTMLElement) => {
-      const rect = target.getBoundingClientRect();
       const record = client.getEifRecordById(inst.baseItemId);
       const graphicId = record?.graphicId ?? 0;
       playSfxById(SfxId.InventoryPickup);
@@ -571,8 +574,10 @@ export function InventoryGrid({ itemIds }: Props) {
           pointerId: e.pointerId,
           ghostX: e.clientX,
           ghostY: e.clientY,
-          offsetX: e.clientX - rect.left,
-          offsetY: e.clientY - rect.top,
+          // Center the fixed-size ghost on the cursor (see the base-item
+          // handler above — the source card dwarfs CARD_SIZE_PX).
+          offsetX: CARD_SIZE_PX / 2,
+          offsetY: CARD_SIZE_PX / 2,
           graphicId,
           ghostWidth: CARD_SIZE_PX,
           ghostHeight: CARD_SIZE_PX,

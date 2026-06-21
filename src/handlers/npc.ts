@@ -19,6 +19,7 @@ import type { Client } from '@/client';
 import {
   CombatElement,
   eolibToCombatElement,
+  npcElementEffectiveness,
 } from '@/combat-overlay/element-colors';
 import { ITEM_PROTECT_TICKS_NPC } from '@/consts';
 import { EOResourceID } from '@/edf';
@@ -194,9 +195,17 @@ function handleNpcSpec(client: Client, reader: EoReader) {
         ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
             ?.element ?? CombatElement.Plain)
         : client.instanceController.weaponElement(killerId);
+    const specRecord = client.getEnfRecordById(specNpc.id);
     client.combatOverlayController.pushDamage({
       amount: packet.npcKilledData.damage,
       element,
+      effectiveness: specRecord
+        ? npcElementEffectiveness(
+            element,
+            specRecord.element,
+            specRecord.elementWeakness,
+          )
+        : 'neutral',
       targetKey: `npc:${packet.npcKilledData.npcIndex}`,
       worldX: specNpc.coords.x,
       worldY: specNpc.coords.y,
@@ -254,9 +263,17 @@ function handleNpcAccept(client: Client, reader: EoReader) {
         ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
             ?.element ?? CombatElement.Plain)
         : client.instanceController.weaponElement(killerId);
+    const acceptRecord = client.getEnfRecordById(acceptNpc.id);
     client.combatOverlayController.pushDamage({
       amount: packet.npcKilledData.damage,
       element,
+      effectiveness: acceptRecord
+        ? npcElementEffectiveness(
+            element,
+            acceptRecord.element,
+            acceptRecord.elementWeakness,
+          )
+        : 'neutral',
       targetKey: `npc:${packet.npcKilledData.npcIndex}`,
       worldX: acceptNpc.coords.x,
       worldY: acceptNpc.coords.y,
@@ -397,6 +414,11 @@ function handleNpcReply(client: Client, reader: EoReader) {
     client.combatOverlayController.pushDamage({
       amount: packet.damage,
       element,
+      effectiveness: npcElementEffectiveness(
+        element,
+        record.element,
+        record.elementWeakness,
+      ),
       targetKey: `npc:${npc.index}`,
       worldX: npc.coords.x,
       worldY: npc.coords.y,

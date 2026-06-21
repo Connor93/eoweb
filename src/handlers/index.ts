@@ -14,6 +14,7 @@ import { registerCharacterHandlers } from './character';
 import { registerChestHandlers } from './chest';
 import { registerCitizenHandlers } from './citizen';
 import { registerConnectionHandlers } from './connection';
+import { registerCreationHandlers } from './creation';
 import { registerDoorHandlers } from './door';
 import { registerEffectHandlers } from './effect';
 import { registerEmoteHandlers } from './emote';
@@ -101,4 +102,5 @@ export function registerAllHandlers(client: Client): void {
   registerInstanceHandlers(client);
   registerRatesHandlers(client);
   registerLookupHandlers(client);
+  registerCreationHandlers(client);
 }

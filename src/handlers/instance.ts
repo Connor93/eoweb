@@ -1,4 +1,9 @@
-import { type EoReader, PacketAction, type PacketFamily } from 'eolib';
+import {
+  CharacterStatsEquipmentChange,
+  type EoReader,
+  PacketAction,
+  type PacketFamily,
+} from 'eolib';
 import type { Client } from '@/client';
 import type { CombatElement } from '@/combat-overlay/element-colors';
 import type {
@@ -257,6 +262,32 @@ function handlePlayerPaperdollInstanceList(client: Client, reader: EoReader) {
   client.instanceController.setViewedPaperdoll(playerId, items);
 }
 
+/** family 54 / action Agree — recomputed stats after an instance equip or
+ *  unequip. The classic Paperdoll path carries stats on Agree/Remove, but the
+ *  instance path only sends the instance list, so without this the stats panel
+ *  shows stale totals (base + client-computed gear bonus desynced) until relog.
+ *  Stats only — equipment/inventory are driven by the instance list, so unlike
+ *  the Paperdoll handlers this performs no slot/inventory mutation. */
+function handleInstanceStats(client: Client, reader: EoReader) {
+  const stats = CharacterStatsEquipmentChange.deserialize(reader);
+  client.baseStats.str = stats.baseStats.str;
+  client.baseStats.intl = stats.baseStats.intl;
+  client.baseStats.wis = stats.baseStats.wis;
+  client.baseStats.agi = stats.baseStats.agi;
+  client.baseStats.cha = stats.baseStats.cha;
+  client.baseStats.con = stats.baseStats.con;
+  client.secondaryStats.accuracy = stats.secondaryStats.accuracy;
+  client.secondaryStats.armor = stats.secondaryStats.armor;
+  client.secondaryStats.evade = stats.secondaryStats.evade;
+  client.secondaryStats.minDamage = stats.secondaryStats.minDamage;
+  client.secondaryStats.maxDamage = stats.secondaryStats.maxDamage;
+  client.maxHp = stats.maxHp;
+  client.maxTp = stats.maxTp;
+  client.hp = Math.min(client.hp, client.maxHp);
+  client.tp = Math.min(client.tp, client.maxTp);
+  client.statsController.notifyStatsUpdated();
+}
+
 export function registerInstanceHandlers(client: Client) {
   client.bus!.registerPacketHandler(
     FAMILY_INSTANCE as PacketFamily,
@@ -287,5 +318,10 @@ export function registerInstanceHandlers(client: Client) {
     FAMILY_INSTANCE as PacketFamily,
     PacketAction.Tell,
     (reader) => handlePlayerPaperdollInstanceList(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_INSTANCE as PacketFamily,
+    PacketAction.Agree,
+    (reader) => handleInstanceStats(client, reader),
   );
 }

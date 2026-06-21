@@ -10,7 +10,10 @@ import {
   PacketFamily,
 } from 'eolib';
 import type { Client } from '@/client';
-import { eolibToCombatElement } from '@/combat-overlay/element-colors';
+import {
+  eolibToCombatElement,
+  npcElementEffectiveness,
+} from '@/combat-overlay/element-colors';
 import { ITEM_PROTECT_TICKS_NPC } from '@/consts';
 import { EffectTargetNpc, Emote } from '@/render';
 import { SfxId } from '@/sfx';
@@ -39,9 +42,17 @@ function handleCastReply(client: Client, reader: EoReader) {
     const element = eolibToCombatElement(
       client.getEsfRecordById(packet.spellId)?.element ?? EolibElement.None,
     );
+    const record = client.getEnfRecordById(npc.id);
     client.combatOverlayController.pushDamage({
       amount: packet.damage,
       element,
+      effectiveness: record
+        ? npcElementEffectiveness(
+            element,
+            record.element,
+            record.elementWeakness,
+          )
+        : 'neutral',
       targetKey: `npc:${packet.npcIndex}`,
       worldX: npc.coords.x,
       worldY: npc.coords.y,
@@ -83,9 +94,17 @@ function handleCastSpec(client: Client, reader: EoReader) {
     const element = eolibToCombatElement(
       client.getEsfRecordById(packet.spellId)?.element ?? EolibElement.None,
     );
+    const record = client.getEnfRecordById(npc.id);
     client.combatOverlayController.pushDamage({
       amount: packet.npcKilledData.damage,
       element,
+      effectiveness: record
+        ? npcElementEffectiveness(
+            element,
+            record.element,
+            record.elementWeakness,
+          )
+        : 'neutral',
       targetKey: `npc:${packet.npcKilledData.npcIndex}`,
       worldX: npc.coords.x,
       worldY: npc.coords.y,
@@ -154,9 +173,17 @@ function handleCastAccept(client: Client, reader: EoReader) {
     const element = eolibToCombatElement(
       client.getEsfRecordById(packet.spellId)?.element ?? EolibElement.None,
     );
+    const record = client.getEnfRecordById(npc.id);
     client.combatOverlayController.pushDamage({
       amount: packet.npcKilledData.damage,
       element,
+      effectiveness: record
+        ? npcElementEffectiveness(
+            element,
+            record.element,
+            record.elementWeakness,
+          )
+        : 'neutral',
       targetKey: `npc:${packet.npcKilledData.npcIndex}`,
       worldX: npc.coords.x,
       worldY: npc.coords.y,

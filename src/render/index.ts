@@ -17,4 +17,10 @@ export {
 export { Emote } from './emote';
 export { NpcAttackAnimation } from './npc-attack';
 export { NpcDeathAnimation } from './npc-death';
+export { NpcElementGlow } from './npc-element-vfx';
 export { NpcWalkAnimation } from './npc-walk';
+export {
+  WeaponElementGlow,
+  weaponAnchorScreen,
+  weaponGraphicIndex,
+} from './weapon-element-vfx';

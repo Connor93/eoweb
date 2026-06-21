@@ -58,12 +58,25 @@ export function CreateCharacter() {
   const [hairStyle, setHairStyle] = useState(MIN_HAIR_STYLE);
   const [hairColor, setHairColor] = useState(MIN_HAIR_COLOR);
   const [skin, setSkin] = useState(MIN_SKIN);
-  const [classId, setClassId] = useState(1);
+  // Index into `playableIds` (below), not a class id — the picker cycles over
+  // an arbitrary playable set, which may be non-contiguous (e.g. [1, 3]).
+  const [classIndex, setClassIndex] = useState(0);
 
   // client.ecf.classes ends with an "eof" sentinel record (server appends it),
-  // so the number of selectable classes is length - 1. Falls back to 1 until
-  // the ECF arrives (pushed right after login, before this screen).
-  const classCount = Math.max(1, (client.ecf?.classes.length ?? 2) - 1);
+  // so the number of classes is length - 1. The server pushes the selectable
+  // set (CreationConfig, family 57) right after login; until it arrives we
+  // fall back to all classes so the picker is never empty.
+  const allClassIds = Array.from(
+    { length: Math.max(1, (client.ecf?.classes.length ?? 2) - 1) },
+    (_, i) => i + 1,
+  );
+  const filtered = client.playableClasses?.length
+    ? allClassIds.filter((id) => client.playableClasses?.includes(id))
+    : allClassIds;
+  const playableIds = filtered.length > 0 ? filtered : allClassIds;
+
+  const safeIndex = Math.min(classIndex, playableIds.length - 1);
+  const classId = playableIds[safeIndex] ?? 1;
   const classRecord = client.getEcfRecordById(classId);
   const [direction, setDirection] = useState<Direction>(Direction.Down);
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(() =>
@@ -209,11 +222,11 @@ export function CreateCharacter() {
             />
             <CycleInput
               label={locale.createCharacter.class}
-              value={classId}
-              min={1}
-              max={classCount}
-              format={formatClassName}
-              onChange={setClassId}
+              value={safeIndex}
+              min={0}
+              max={playableIds.length - 1}
+              format={(i) => formatClassName(playableIds[i])}
+              onChange={setClassIndex}
             />
             <div class='text-xs opacity-70'>{classBonuses() || ' '}</div>
             <div class='text-warning text-xs'>

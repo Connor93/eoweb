@@ -66,6 +66,7 @@ import {
   MouseController,
   MovementController,
   NpcController,
+  NpcElementController,
   PartyController,
   PingController,
   QuakeController,
@@ -82,6 +83,7 @@ import {
   TradeController,
   UsageController,
   ViewportController,
+  WeaponElementController,
 } from '@/controllers';
 import { getEcf, getEdf, getEif, getEmf, getEnf, getEsf } from '@/db';
 import { DialogResourceID, type Edf, EOResourceID } from '@/edf';
@@ -184,6 +186,10 @@ export class Client {
   // Authored weapon swing speeds (item_id -> ms), from the family-55 Reply
   // packet. Sparse: only items that author attack_rate_ms appear.
   itemAttackRates: Map<number, number> = new Map();
+  // Class ids selectable at character creation (CreationConfig deep packet,
+  // family 57). null = not yet received → the create screen falls back to all
+  // ECF classes. Pushed after login and on pub reload.
+  playableClasses: number[] | null = null;
   // uid of the ground item under the mouse cursor, or null. Drives the
   // ground-item hover tooltip; resolved on mousemove (tile-based, same
   // filter clickItem uses).
@@ -234,12 +240,14 @@ export class Client {
   jukeboxController: JukeboxController;
   commandController: CommandController;
   instanceController: InstanceController;
+  weaponElementController: WeaponElementController;
   inventoryController: InventoryController;
   lockerController: LockerController;
   lookupController: LookupController;
   mapController: MapController;
   mouseController: MouseController;
   npcController: NpcController;
+  npcElementController: NpcElementController;
   questController: QuestController;
   reputationController: ReputationController;
   sessionController: SessionController;
@@ -379,6 +387,7 @@ export class Client {
     this.commandController = new CommandController(this);
     this.drunkController = new DrunkController(this);
     this.instanceController = new InstanceController(this);
+    this.weaponElementController = new WeaponElementController(this);
     this.inventoryController = new InventoryController(this);
     this.itemProtectionController = new ItemProtectionController();
     this.alertController = new AlertController();
@@ -387,6 +396,7 @@ export class Client {
     this.mapController = new MapController(this);
     this.mouseController = new MouseController(this);
     this.npcController = new NpcController(this);
+    this.npcElementController = new NpcElementController(this);
     this.questController = new QuestController(this);
     this.quakeController = new QuakeController();
     this.reputationController = new ReputationController(this);
