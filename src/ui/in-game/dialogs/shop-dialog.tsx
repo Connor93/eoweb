@@ -303,10 +303,7 @@ export function ShopDialog() {
                       stock={stock}
                       canBuy={canBuy}
                       onBuy={() =>
-                        client.shopController.buyItem(
-                          tradeItem.itemId,
-                          maxAmount,
-                        )
+                        client.shopController.buyItem(tradeItem.itemId, 1)
                       }
                     />
                   );
