@@ -111,15 +111,17 @@ export class ShopController {
     this.client.audioController.playById(SfxId.BuySell);
     for (const cb of this.changedSubscribers) cb();
 
-    const name = this.client.getEifRecordById(boughtItem.id)?.name ?? '';
-    const msg = this.client.locale.shop.boughtMsg
-      .replace('{amount}', String(boughtItem.amount))
-      .replace('{name}', name);
-    this.client.toastController.show(msg);
-    this.client.chatController.notifyServerChat({
-      message: msg,
-      icon: ChatIcon.Star,
-    });
+    if (boughtItem.amount > 0) {
+      const name = this.client.getEifRecordById(boughtItem.id)?.name ?? '';
+      const msg = this.client.locale.shop.boughtMsg
+        .replace('{amount}', String(boughtItem.amount))
+        .replace('{name}', name);
+      this.client.toastController.show(msg);
+      this.client.chatController.notifyServerChat({
+        message: msg,
+        icon: ChatIcon.Star,
+      });
+    }
   }
 
   notifySold(
