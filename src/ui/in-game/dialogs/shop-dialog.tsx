@@ -1,5 +1,6 @@
 import type { ShopCraftItem, ShopTradeItem } from 'eolib';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { createPortal } from 'preact/compat';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   FaDollarSign,
   FaHammer,
@@ -7,10 +8,18 @@ import {
   FaShoppingCart,
 } from 'react-icons/fa';
 import type { Client } from '@/client';
-import { Button, ItemIcon, Tabs } from '@/ui/components';
+import { instanceRarityLabel, type ShopStockItem } from '@/controllers';
+import {
+  Button,
+  ItemIcon,
+  rarityBorderClass,
+  rarityTextClass,
+  Tabs,
+} from '@/ui/components';
 import { UI_PANEL_BORDER, UI_STICKY_BG } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { useBackdropBlur } from '@/ui/in-game';
+import { formatInstanceBaseStats, formatInstanceMod } from '@/utils';
 import { DialogBase } from './dialog-base';
 
 type ShopTabId = 'buy' | 'sell' | 'craft';
@@ -24,6 +33,101 @@ function getDisplayName(client: Client, itemId: number): string {
 
 function getGraphicId(client: Client, itemId: number): number | null {
   return client.getEifRecordById(itemId)?.graphicId ?? null;
+}
+
+function ShopStockCard({
+  stock,
+  canBuy,
+  onBuy,
+}: {
+  stock: ShopStockItem;
+  canBuy: boolean;
+  onBuy: () => void;
+}) {
+  const client = useClient();
+  const { locale } = useLocale();
+  const record = client.getEifRecordById(stock.itemId);
+  const graphicId = record?.graphicId ?? null;
+  const name =
+    record?.name ??
+    locale.shared.itemFallbackName.replace('{id}', String(stock.itemId));
+  const [tooltip, setTooltip] = useState<{ x: number; y: number } | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const tooltipLines = (() => {
+    const lines = [
+      `${name} (${instanceRarityLabel(stock.rarity)})`,
+      `Level ${stock.level}`,
+    ];
+    if (record) lines.push(...formatInstanceBaseStats(record, stock.level));
+    for (const m of stock.mods) lines.push(formatInstanceMod(m));
+    return lines;
+  })();
+
+  const showTooltip = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (r) setTooltip({ x: r.right + 8, y: r.top });
+  };
+
+  return (
+    <div
+      ref={ref}
+      class={`flex flex-col items-center gap-2 rounded border-2 ${rarityBorderClass(stock.rarity)} bg-base-200 p-2`}
+      onMouseEnter={showTooltip}
+      onMouseLeave={() => setTooltip(null)}
+    >
+      <div class='flex h-16 w-16 items-center justify-center overflow-hidden rounded border border-base-content/10 bg-base-300 p-2 lg:h-20 lg:w-20'>
+        {graphicId === null ? (
+          <div class='h-14 w-14 rounded bg-base-content/10' />
+        ) : (
+          <ItemIcon
+            graphicId={graphicId}
+            class='h-12 w-12 object-contain lg:h-16 lg:w-16'
+          />
+        )}
+      </div>
+      <p
+        class={`wrap-break-word line-clamp-2 w-full text-center font-semibold text-sm ${rarityTextClass(stock.rarity)}`}
+      >
+        {name}
+      </p>
+      <p class='text-[10px] tabular-nums opacity-60'>
+        Lv{stock.level} · {stock.mods.length} mod
+        {stock.mods.length === 1 ? '' : 's'}
+      </p>
+      <p class='w-full text-center text-base-content/60 text-xs'>
+        {locale.shop.buyPrice}: {stock.price.toLocaleString()}
+      </p>
+      <Button
+        variant={['xs', canBuy ? 'primary' : 'disabled']}
+        class='w-full'
+        onClick={onBuy}
+        disabled={!canBuy}
+      >
+        <FaShoppingCart size={11} />
+        {locale.shop.buyAction}
+      </Button>
+      {tooltip &&
+        createPortal(
+          <div
+            class='pointer-events-none w-max max-w-56 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
+            style={{
+              position: 'fixed',
+              left: tooltip.x,
+              top: tooltip.y,
+              zIndex: 9999,
+            }}
+          >
+            {tooltipLines.map((line, i) => (
+              <div key={i} class={i === 0 ? 'font-semibold' : 'opacity-70'}>
+                {line}
+              </div>
+            ))}
+          </div>,
+          document.getElementById('ui') ?? document.body,
+        )}
+    </div>
+  );
 }
 
 export function ShopDialog() {
@@ -42,6 +146,7 @@ export function ShopDialog() {
     () => client.shopController.craftItems,
   );
   const [inventoryTick, setInventoryTick] = useState(0);
+  const [stockTick, setStockTick] = useState(0);
 
   useEffect(() => {
     const handleOpened = (
@@ -71,8 +176,11 @@ export function ShopDialog() {
       setInventoryTick((v) => v + 1);
     };
 
+    const handleStock = () => setStockTick((t) => t + 1);
+
     client.shopController.subscribeOpened(handleOpened);
     client.shopController.subscribeChanged(handleChanged);
+    client.shopController.subscribeStockChanged(handleStock);
     client.inventoryController.subscribeInventoryChanged(
       handleInventoryChanged,
     );
@@ -80,6 +188,7 @@ export function ShopDialog() {
     return () => {
       client.shopController.unsubscribeOpened(handleOpened);
       client.shopController.unsubscribeChanged(handleChanged);
+      client.shopController.unsubscribeStockChanged(handleStock);
       client.inventoryController.unsubscribeInventoryChanged(
         handleInventoryChanged,
       );
@@ -93,9 +202,13 @@ export function ShopDialog() {
     [tradeItems],
   );
 
+  // `stockTick` isn't read directly — it's a dependency so a
+  // `subscribeStockChanged` push (new rolled stock arriving after the
+  // initial ShopOpen) forces this to recompute and the buy tab to
+  // re-render with `stockFor(...)` picking up the fresh instances.
   const buyItems = useMemo(
     () => tradeItems.filter((item) => item.buyPrice > 0),
-    [tradeItems],
+    [tradeItems, stockTick],
   );
 
   const sellItems = useMemo(
@@ -181,6 +294,24 @@ export function ShopDialog() {
                     : 0;
                 const maxAmount = Math.min(tradeItem.maxBuyAmount, maxByGold);
                 const canBuy = maxAmount > 0;
+                const stock = client.shopController.stockFor(tradeItem.itemId);
+
+                if (stock) {
+                  return (
+                    <ShopStockCard
+                      key={`buy-${tradeItem.itemId}`}
+                      stock={stock}
+                      canBuy={canBuy}
+                      onBuy={() =>
+                        client.shopController.buyItem(
+                          tradeItem.itemId,
+                          maxAmount,
+                        )
+                      }
+                    />
+                  );
+                }
+
                 const graphicId = getGraphicId(client, tradeItem.itemId);
 
                 return (
