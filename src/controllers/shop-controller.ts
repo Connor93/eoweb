@@ -7,12 +7,13 @@ import {
   type ShopSoldItem,
   type ShopTradeItem,
 } from 'eolib';
-
 import type { Client } from '@/client';
+import type { CombatElement } from '@/combat-overlay/element-colors';
 import { GOLD_ITEM_ID } from '@/consts';
 import { EOResourceID } from '@/edf';
 import { SfxId } from '@/sfx';
 import { ChatIcon } from '@/ui/enums';
+import type { InstanceMod, InstanceRarity } from './instance-controller';
 
 type OpenedSubscriber = (
   name: string,
@@ -21,14 +22,28 @@ type OpenedSubscriber = (
 ) => void;
 type ChangedSubscriber = () => void;
 
+export interface ShopStockItem {
+  itemId: number;
+  price: number;
+  rarity: InstanceRarity;
+  level: number;
+  element: CombatElement;
+  mods: InstanceMod[];
+}
+
 export class ShopController {
   private client: Client;
   shopName = '';
   tradeItems: ShopTradeItem[] = [];
   craftItems: ShopCraftItem[] = [];
+  /** Pre-rolled modded instances backing this shop's trade slots.
+   *  Populated by the family-58 shop-stock packet, which arrives right
+   *  after `ShopOpen` and repopulates on every restock. */
+  tradeInstances: ShopStockItem[] = [];
 
   private openedSubscribers: OpenedSubscriber[] = [];
   private changedSubscribers: ChangedSubscriber[] = [];
+  private stockSubscribers: (() => void)[] = [];
 
   constructor(client: Client) {
     this.client = client;
@@ -50,6 +65,23 @@ export class ShopController {
     this.changedSubscribers = this.changedSubscribers.filter((s) => s !== cb);
   }
 
+  subscribeStockChanged(cb: () => void): void {
+    this.stockSubscribers.push(cb);
+  }
+
+  unsubscribeStockChanged(cb: () => void): void {
+    this.stockSubscribers = this.stockSubscribers.filter((s) => s !== cb);
+  }
+
+  handleStockUpdated(items: ShopStockItem[]): void {
+    this.tradeInstances = items;
+    for (const cb of this.stockSubscribers) cb();
+  }
+
+  stockFor(itemId: number): ShopStockItem | undefined {
+    return this.tradeInstances.find((s) => s.itemId === itemId);
+  }
+
   handleOpened(
     sessionId: number,
     shopName: string,
@@ -60,6 +92,7 @@ export class ShopController {
     this.shopName = shopName;
     this.tradeItems = tradeItems;
     this.craftItems = craftItems;
+    this.tradeInstances = [];
 
     for (const cb of this.openedSubscribers)
       cb(shopName, tradeItems, craftItems);
@@ -71,7 +104,9 @@ export class ShopController {
     weightCurrent: number,
   ): void {
     this.client.inventoryController.setItem(GOLD_ITEM_ID, goldAmount);
-    this.client.inventoryController.addItem(boughtItem.id, boughtItem.amount);
+    if (boughtItem.amount > 0) {
+      this.client.inventoryController.addItem(boughtItem.id, boughtItem.amount);
+    }
     this.client.weight.current = weightCurrent;
     this.client.audioController.playById(SfxId.BuySell);
     for (const cb of this.changedSubscribers) cb();

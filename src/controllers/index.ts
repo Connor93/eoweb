@@ -77,7 +77,7 @@ export {
   reputationTierLabel,
 } from './reputation-controller';
 export { SessionController } from './session-controller';
-export { ShopController } from './shop-controller';
+export { ShopController, type ShopStockItem } from './shop-controller';
 export { type CharacterTab, SocialController } from './social-controller';
 export { SpellController } from './spell-controller';
 export { StatSkillController } from './stat-skill-controller';
