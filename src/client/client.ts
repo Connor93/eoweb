@@ -190,6 +190,12 @@ export class Client {
   // family 57). null = not yet received → the create screen falls back to all
   // ECF classes. Pushed after login and on pub reload.
   playableClasses: number[] | null = null;
+  // Whether the server is accepting new-account creation (AccountConfig deep
+  // packet, Account + ACTION_CONFIG). Default true = fail-open: if the packet
+  // never arrives we leave the "Create Account" button enabled. Pushed at
+  // connection-accept, pre-login.
+  registrationEnabled = true;
+  private registrationSubscribers: (() => void)[] = [];
   // uid of the ground item under the mouse cursor, or null. Drives the
   // ground-item hover tooltip; resolved on mousemove (tile-based, same
   // filter clickItem uses).
@@ -789,6 +795,41 @@ export class Client {
     this.stateChangedSubscribers = this.stateChangedSubscribers.filter(
       (s) => s !== cb,
     );
+  }
+
+  subscribeRegistrationChanged(cb: () => void): void {
+    this.registrationSubscribers.push(cb);
+  }
+
+  unsubscribeRegistrationChanged(cb: () => void): void {
+    this.registrationSubscribers = this.registrationSubscribers.filter(
+      (s) => s !== cb,
+    );
+  }
+
+  setRegistrationEnabled(enabled: boolean): void {
+    if (this.registrationEnabled === enabled) return;
+    this.registrationEnabled = enabled;
+    for (const cb of this.registrationSubscribers) cb();
+  }
+
+  // Open the socket while sitting on the main menu so the server can push
+  // pre-login config (e.g. whether account creation is open). Lands at
+  // GameState.Connected, which still renders MainMenu, so the menu stays put.
+  // Fail-open and silent: a failed connect leaves us at Initial with the
+  // button enabled — no error popup, that surfaces when the user actually
+  // tries to log in.
+  ensureConnected(): void {
+    if (this.state !== GameState.Initial || this.bus.hasSocket()) return;
+    this.postConnectState = undefined;
+    this.bus
+      .connect(this.config.host, () => this.handleConnectionClose())
+      .then(() => {
+        this.beginHandshake();
+      })
+      .catch(() => {
+        this.postConnectState = undefined;
+      });
   }
 
   setState(state: GameState) {

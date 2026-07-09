@@ -19,6 +19,7 @@ export const locales = {
       btnCreateAccount: 'Create Account',
       btnLogin: 'Login',
       btnViewCredits: 'View Credits',
+      registrationClosed: 'Registrations are temporarily closed',
       logoAlt: 'Endless Online',
     },
     login: {
@@ -642,6 +643,7 @@ export const locales = {
       btnCreateAccount: 'Account aanmaken',
       btnLogin: 'Inloggen',
       btnViewCredits: 'Credits bekijken',
+      registrationClosed: 'Registraties zijn tijdelijk gesloten',
       logoAlt: 'Endless Online',
     },
     login: {
@@ -1269,6 +1271,7 @@ export const locales = {
       btnCreateAccount: 'Skapa konto',
       btnLogin: 'Logga in',
       btnViewCredits: 'Visa credits',
+      registrationClosed: 'Registreringar är tillfälligt stängda',
       logoAlt: 'Endless Online',
     },
     login: {
@@ -1896,6 +1899,7 @@ export const locales = {
       btnCreateAccount: 'Criar Conta',
       btnLogin: 'Entrar',
       btnViewCredits: 'Ver Créditos',
+      registrationClosed: 'Os registos estão temporariamente fechados',
       logoAlt: 'Endless Online',
     },
     login: {

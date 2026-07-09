@@ -15,6 +15,13 @@ import {
 } from 'eolib';
 export class PacketBus {
   private socket?: WebSocket;
+
+  // True once a socket exists (CONNECTING or OPEN); cleared on close/error.
+  // Lets callers avoid opening a duplicate socket.
+  hasSocket(): boolean {
+    return this.socket !== undefined;
+  }
+
   private sequencer?: PacketSequencer;
   private encodeMultiple = 0;
   private decodeMultiple = 0;

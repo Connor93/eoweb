@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'preact/hooks';
+import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import { GameState } from '@/game-state';
 import { Button, Confirm, Input } from '@/ui/components';
 import { useClient, useLocale } from '@/ui/context';
@@ -10,11 +10,24 @@ export function MainMenu() {
   const { locale } = useLocale();
   const sessions = client.authenticationController.getSessions();
   const [deletingUsername, setDeletingUsername] = useState<string | null>(null);
+  const [registrationEnabled, setRegistrationEnabled] = useState(
+    client.registrationEnabled,
+  );
 
   useMemo(() => {
     client.authenticationController.subscribeLoginFailed(() => {
       // Re-render will pick up updated sessions list
     });
+  }, [client]);
+
+  // Eager-connect on the menu so the server can push pre-login config (whether
+  // registration is open); grey the Create Account button when it isn't.
+  useEffect(() => {
+    client.ensureConnected();
+    const onChange = () => setRegistrationEnabled(client.registrationEnabled);
+    client.subscribeRegistrationChanged(onChange);
+    onChange();
+    return () => client.unsubscribeRegistrationChanged(onChange);
   }, [client]);
 
   const sorted = useMemo(
@@ -159,9 +172,25 @@ export function MainMenu() {
             </div>
           </div>
         )}
-        <Button onClick={createAccount}>
-          {locale.mainMenu.btnCreateAccount}
-        </Button>
+        {registrationEnabled ? (
+          <Button onClick={createAccount}>
+            {locale.mainMenu.btnCreateAccount}
+          </Button>
+        ) : (
+          <div
+            class='tooltip tooltip-bottom w-full cursor-not-allowed'
+            data-tip={locale.mainMenu.registrationClosed}
+          >
+            {/* daisyUI's default disabled fill is nearly transparent; force a
+                solid, flat, muted look so it reads as a standard disabled button */}
+            <Button
+              disabled
+              class='!bg-base-300 !text-base-content/50 !border-base-300 w-full shadow-none'
+            >
+              {locale.mainMenu.btnCreateAccount}
+            </Button>
+          </div>
+        )}
         <Button onClick={playGame}>{locale.mainMenu.btnLogin}</Button>
         <Button onClick={viewCredits}>{locale.mainMenu.btnViewCredits}</Button>
       </div>
