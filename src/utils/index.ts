@@ -5,7 +5,7 @@ export { capitalize } from './capitalize';
 export { formatBigNumber } from './format-big-number';
 export {
   formatInstanceBaseStats,
-  levelCurve,
+  modCurve,
 } from './format-instance-base-stats';
 export {
   type FormattableInstanceMod,

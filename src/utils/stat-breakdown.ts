@@ -5,7 +5,11 @@ import {
   type InstanceRarity,
 } from '@/controllers';
 import { EquipmentSlot } from '@/equipment';
-import { levelCurve } from './format-instance-base-stats';
+import {
+  MAX_LEVEL,
+  offenseScale,
+  survivabilityScale,
+} from './format-instance-base-stats';
 import { prettyTarget } from './format-instance-mod';
 
 /** Stat rows that can show a breakdown tooltip. `damage` covers the
@@ -87,17 +91,23 @@ function scale(value: number, factor: number): number {
  *  round per item per stat. */
 function eifContributions(
   record: EifRecord,
-  factor: number,
+  level: number,
 ): Partial<Record<StatRowKey, { amount: number; amountMax?: number }>> {
   const out: Partial<
     Record<StatRowKey, { amount: number; amountMax?: number }>
   > = {};
-  const minDamage = scale(record.minDamage, factor);
-  const maxDamage = scale(record.maxDamage, factor);
+  // Author-at-max: damage + accuracy scale on offense, everything else on
+  // survivability — matching src/character/calculate_stats.rs.
+  const off = offenseScale(level);
+  const surv = survivabilityScale(level);
+  const minDamage = scale(record.minDamage, off);
+  const maxDamage = scale(record.maxDamage, off);
   if (minDamage || maxDamage) {
     out.damage = { amount: minDamage, amountMax: maxDamage };
   }
-  const simple: [StatRowKey, number][] = [
+  const accuracy = scale(record.accuracy, off);
+  if (accuracy) out.accuracy = { amount: accuracy };
+  const survStats: [StatRowKey, number][] = [
     ['str', record.str],
     ['int', record.intl],
     ['wis', record.wis],
@@ -106,12 +116,11 @@ function eifContributions(
     ['cha', record.cha],
     ['maxHp', record.hp],
     ['maxTp', record.tp],
-    ['accuracy', record.accuracy],
     ['evade', record.evade],
     ['armor', record.armor],
   ];
-  for (const [row, raw] of simple) {
-    const v = scale(raw, factor);
+  for (const [row, raw] of survStats) {
+    const v = scale(raw, surv);
     if (v) out[row] = { amount: v };
   }
   return out;
@@ -162,10 +171,9 @@ export function computeGearBreakdown(
   for (const inst of equippedInstances) {
     const record = getEif(inst.baseItemId);
     const name = record?.name ?? `Item ${inst.baseItemId}`;
-    const factor = levelCurve(inst.level);
     // Per-row display amount for this item's source line: rounded EIF
     // part + raw baked-mod part (fractional values allowed on the line).
-    const perRow = record ? eifContributions(record, factor) : {};
+    const perRow = record ? eifContributions(record, inst.level) : {};
     // Capture EIF-only totals before mods are folded in.
     addEif(perRow);
     for (const mod of inst.mods) {
@@ -200,7 +208,8 @@ export function computeGearBreakdown(
     if (!eq.itemId || occupiedSlots.has(eq.slot)) continue;
     const record = getEif(eq.itemId);
     if (!record) continue;
-    const perRow = eifContributions(record, 1.0);
+    // Non-instanced/stackable equipment keeps its full (max-level) base.
+    const perRow = eifContributions(record, MAX_LEVEL);
     addEif(perRow);
     for (const key of STAT_ROW_KEYS) {
       const c = perRow[key];

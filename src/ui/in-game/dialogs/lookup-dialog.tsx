@@ -19,7 +19,7 @@ import { useClient, useLocale } from '@/ui/context';
 import {
   formatInstanceBaseStats,
   getItemMeta,
-  levelCurve,
+  modCurve,
   prettyTarget,
 } from '@/utils';
 import { DialogBase } from './dialog-base';
@@ -33,10 +33,10 @@ function fmtNum(n: number): string {
 }
 
 /** "+10–25%" / "+2" — the rolled range for a possible mod at `level`,
- *  scaled the same way the roll path scales it:
- *  `factor = 1 + (level_curve(level) - 1) * level_scaling`. */
+ *  scaled the same way the roll path scales it (src/items/roll.rs):
+ *  `factor = 1 + (mod_curve(level) - 1) * level_scaling`, mod_curve = level. */
 function formatModRange(mod: LookupModInfo, level: number): string {
-  const factor = 1 + (levelCurve(level) - 1) * mod.levelScaling;
+  const factor = 1 + (modCurve(level) - 1) * mod.levelScaling;
   const percent = mod.kind === 1 || mod.kind === 2;
   const scale = (n: number) => (percent ? n * factor * 100 : n * factor);
   const lo = scale(mod.low);
