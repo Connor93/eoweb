@@ -14,7 +14,12 @@ import { playSfxById, SfxId } from '@/sfx';
 import { Button } from '@/ui/components';
 import { HUD_Z, SIDEMENU_Z, UI_PANEL_BORDER, UI_STICKY_BG } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
-import { type DialogId, useBackdropBlur, useWindowManager } from '@/ui/in-game';
+import {
+  type DialogId,
+  useBackdropBlur,
+  usePlayerStats,
+  useWindowManager,
+} from '@/ui/in-game';
 
 function useExitGame() {
   const client = useClient();
@@ -50,6 +55,7 @@ export function NavSidebar() {
   const { locale } = useLocale();
   const { openDialog: wmOpenDialog, closeDialog, isOpen } = useWindowManager();
   const exitGame = useExitGame();
+  const { statPoints } = usePlayerStats();
 
   const openDialog = useCallback(
     (id: DialogId) => {
@@ -104,18 +110,24 @@ export function NavSidebar() {
         onContextMenu={(e) => e.stopPropagation()}
       >
         {NAV_BUTTONS.map(({ id, Icon }) => (
-          <Button
-            key={id}
-            variant={['xs']}
-            class='flex h-auto w-14 flex-col items-center gap-0.5 py-1.5'
-            onClick={() => handleNavClick(id)}
-            label={locale.nav[id as keyof typeof locale.nav]}
-          >
-            <Icon size={16} />
-            <span class='text-[9px] leading-none'>
-              {locale.nav[id as keyof typeof locale.nav]}
-            </span>
-          </Button>
+          <div key={id} class='relative'>
+            <Button
+              variant={['xs']}
+              class='flex h-auto w-14 flex-col items-center gap-0.5 py-1.5'
+              onClick={() => handleNavClick(id)}
+              label={locale.nav[id as keyof typeof locale.nav]}
+            >
+              <Icon size={16} />
+              <span class='text-[9px] leading-none'>
+                {locale.nav[id as keyof typeof locale.nav]}
+              </span>
+            </Button>
+            {id === 'character' && statPoints > 0 && (
+              <span class='badge badge-error badge-xs pointer-events-none absolute -top-1 -right-1'>
+                {statPoints}
+              </span>
+            )}
+          </div>
         ))}
       </div>
     </div>
@@ -130,6 +142,7 @@ export function MobileNav() {
   const exitGame = useExitGame();
   const [open, setOpen] = useState(false);
   const blur = useBackdropBlur();
+  const { statPoints } = usePlayerStats();
 
   const openDialog = useCallback(
     (id: DialogId) => {
@@ -191,6 +204,11 @@ export function MobileNav() {
         >
           <LuMenu size={14} />
         </Button>
+        {!open && statPoints > 0 && (
+          <span class='badge badge-error badge-xs pointer-events-none absolute -top-1 -right-1'>
+            {statPoints}
+          </span>
+        )}
 
         {open && (
           <ul

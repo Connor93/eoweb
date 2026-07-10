@@ -131,6 +131,8 @@ export const locales = {
       speedCapped: 'capped',
       speedCappedHint: 'Capped — gear/mods exceed the server speed floor',
       statPoints: 'Stat Points: {count}',
+      unspentPointsNudge:
+        'You have {count} stat points to assign — open Character.',
       trainBtn: '+',
     },
     equipment: {
@@ -756,6 +758,8 @@ export const locales = {
       speedCappedHint:
         'Begrensd — uitrusting/mods overschrijden de serversnelheidslimiet',
       statPoints: 'Statistiekpunten: {count}',
+      unspentPointsNudge:
+        'Je hebt {count} statistiekpunten om toe te wijzen — open Personage.',
       trainBtn: '+',
     },
     equipment: {
@@ -1384,6 +1388,8 @@ export const locales = {
       speedCappedHint:
         'Begränsad — utrustning/mods överstiger serverns hastighetsgräns',
       statPoints: 'Statistikpoäng: {count}',
+      unspentPointsNudge:
+        'Du har {count} statistikpoäng att fördela — öppna Karaktär.',
       trainBtn: '+',
     },
     equipment: {
@@ -2012,6 +2018,8 @@ export const locales = {
       speedCappedHint:
         'Limitado — equipamento/mods excedem o limite de velocidade do servidor',
       statPoints: 'Pontos de Atributo: {count}',
+      unspentPointsNudge:
+        'Você tem {count} pontos de atributo para atribuir — abra Personagem.',
       trainBtn: '+',
     },
     equipment: {

@@ -52,6 +52,7 @@ import {
   SkillMasterDialog,
   SocialDialog,
   SpellsDialog,
+  StatPointsNudge,
   StatusMessages,
   TouchActionButtons,
   TouchJoystick,
@@ -321,6 +322,7 @@ function InGameContent() {
       <MobileNav />
       <NavSidebar />
       <StatusMessages />
+      <StatPointsNudge />
       {/* Upper-left overlay region */}
       <div
         class='pointer-events-none absolute top-9 left-1 flex flex-col items-start lg:top-9'

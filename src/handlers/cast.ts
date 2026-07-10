@@ -223,6 +223,9 @@ function handleCastAccept(client: Client, reader: EoReader) {
     client.maxSp = packet.levelUp.maxSp;
     client.statPoints = packet.levelUp.statPoints;
     client.skillPoints = packet.levelUp.skillPoints;
+    // Refresh stat-dependent UI (incl. the unspent-points nav badge) even if
+    // no experience field follows below.
+    client.statsController.notifyStatsUpdated();
   }
 
   const gain = packet.experience ? packet.experience - client.experience : 0;
