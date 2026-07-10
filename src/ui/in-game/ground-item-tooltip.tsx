@@ -6,7 +6,13 @@ import {
 } from '@/combat-overlay';
 import { type InstanceRarity, instanceRarityLabel } from '@/controllers';
 import { useClient } from '@/ui/context';
-import { attackSpeedLine, formatInstanceMod, isoToScreen } from '@/utils';
+import {
+  attackSpeedLine,
+  formatInstanceBaseStats,
+  formatInstanceMod,
+  getItemMeta,
+  isoToScreen,
+} from '@/utils';
 
 // Local copy of rarityTextClass — not exported from inventory-grid.
 // Keep in sync with inventory-grid.tsx if rarity colors change.
@@ -92,6 +98,12 @@ export function GroundItemTooltip() {
           </div>
         )}
         {speedLine && <div class='opacity-70'>{speedLine}</div>}
+        {record &&
+          formatInstanceBaseStats(record, inst.level).map((line, i) => (
+            <div key={`base-${i}`} class='opacity-70'>
+              {line}
+            </div>
+          ))}
         {inst.mods.map((m, i) => (
           <div key={i} class='opacity-70'>
             {formatInstanceMod(m)}
@@ -100,15 +112,27 @@ export function GroundItemTooltip() {
       </>
     );
   } else {
-    // Plain stack: "Name xN" (hide x1)
+    // Plain stack: "Name xN" (hide x1) + base meta stats, matching the
+    // inventory tooltip. Non-instanced items keep their full (max-level)
+    // base, so getItemMeta's raw pub values are correct here.
     const record = client.getEifRecordById(item.id);
     const name = record?.name ?? `Item ${item.id}`;
     const qty = item.amount > 1 ? ` x${item.amount.toLocaleString()}` : '';
+    const meta = record ? getItemMeta(record) : [];
+    const speedLine = attackSpeedLine(client, item.id);
     content = (
-      <div class='font-semibold'>
-        {name}
-        {qty}
-      </div>
+      <>
+        <div class='font-semibold'>
+          {name}
+          {qty}
+        </div>
+        {meta.map((line, i) => (
+          <div key={`meta-${i}`} class='opacity-70'>
+            {line}
+          </div>
+        ))}
+        {speedLine && <div class='opacity-70'>{speedLine}</div>}
+      </>
     );
   }
 
