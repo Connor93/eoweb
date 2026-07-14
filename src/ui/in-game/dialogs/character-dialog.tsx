@@ -25,10 +25,12 @@ import { playSfxById, SfxId } from '@/sfx';
 import {
   BreakdownTooltip,
   Button,
+  type ContextMenuItem,
   ItemIcon,
   PortalTooltip,
   QuestBookList,
   Tabs,
+  useContextMenu,
 } from '@/ui/components';
 import { UI_PANEL_BORDER, UI_STICKY_BG } from '@/ui/consts';
 import { useCharacterInfo, useClient, useLocale } from '@/ui/context';
@@ -107,6 +109,7 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
   const client = useClient();
   const info = useCharacterInfo();
   const { startDrag, cancelDrag } = useItemDrag();
+  const { open: openContextMenu } = useContextMenu();
   const [, setRefresh] = useState(0);
   const isOwnCharacter = info?.details.playerId === client.playerId;
 
@@ -197,6 +200,19 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
     }
   };
 
+  const openSlotMenu = (x: number, y: number) => {
+    if (!record || !itemId) return;
+    const items: ContextMenuItem[] = [];
+    if (isOwnCharacter) {
+      items.push({ label: 'Unequip', onClick: doUnequip });
+    }
+    items.push({
+      label: 'Item info',
+      onClick: () => client.lookupController.requestItem(itemId),
+    });
+    openContextMenu(x, y, items);
+  };
+
   const onPointerDown = (e: PointerEvent) => {
     if (!record || !itemId) return;
     if (e.button !== 0 && e.pointerType !== 'touch') return;
@@ -207,21 +223,24 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
       openTooltip();
     }
 
-    if (!isOwnCharacter) return;
-
-    const target = e.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-
-    // Long-press on touch: cancel drag and unequip
+    // Long-press on touch opens the item-info/unequip menu for any
+    // character's paperdoll (own or another player's).
+    const menuX = e.clientX;
+    const menuY = e.clientY;
     let longPressTimer: ReturnType<typeof setTimeout> | null = null;
     if (e.pointerType === 'touch') {
       longPressTimer = setTimeout(() => {
         longPressTimer = null;
         cancelDrag();
         setTouchTooltip(false);
-        doUnequip();
+        openSlotMenu(menuX, menuY);
       }, 700);
     }
+
+    if (!isOwnCharacter) return;
+
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
 
     playSfxById(SfxId.InventoryPickup);
     setHoverTooltip(false);
@@ -255,8 +274,7 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
 
   const onContextMenu = (e: MouseEvent) => {
     e.preventDefault();
-    if (!record || !itemId || !isOwnCharacter) return;
-    doUnequip();
+    openSlotMenu(e.clientX, e.clientY);
   };
 
   // Rarity border wins over the default primary tint when an instance
