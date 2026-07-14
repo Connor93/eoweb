@@ -25,6 +25,7 @@ import { GOLD_ITEM_ID } from '@/consts';
 import { type InstanceItem, instanceRarityLabel } from '@/controllers';
 import { getEquipmentSlotForItemType } from '@/equipment';
 import { playSfxById, SfxId } from '@/sfx';
+import { type ContextMenuItem, useContextMenu } from '@/ui/components';
 import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { SlotType } from '@/ui/enums';
@@ -659,6 +660,8 @@ export function InventoryGrid({ itemIds }: Props) {
     [client, startDrag],
   );
 
+  const { open: openContextMenu } = useContextMenu();
+
   /**
    * Resolve the sub-slot for a dual-slot item type (Ring/Armlet/Bracer).
    * Mirrors InventoryController.useItem exactly: first sub-slot when it's
@@ -674,34 +677,62 @@ export function InventoryGrid({ itemIds }: Props) {
   );
 
   const handleStackableRightClick = useCallback(
-    (_e: MouseEvent, item: Item) => {
+    (e: MouseEvent, item: Item) => {
       const record = client.getEifRecordById(item.id);
       if (!record) return;
+      const items: ContextMenuItem[] = [];
       const slot = getEquipmentSlotForItemType(record.type);
-      if (slot === undefined) return; // not equippable
-      // For dual-slot primary slots, pick the open sub-slot when possible.
-      let resolvedSlot = slot;
-      if (DUAL_PRIMARY_SLOTS.has(slot)) {
-        resolvedSlot = dualSubLocForType(slot) === 1 ? slot + 1 : slot;
+      if (slot !== undefined) {
+        items.push({
+          label: 'Equip',
+          onClick: () => {
+            // For dual-slot primary slots, pick the open sub-slot when possible.
+            let resolvedSlot = slot;
+            if (DUAL_PRIMARY_SLOTS.has(slot)) {
+              resolvedSlot = dualSubLocForType(slot) === 1 ? slot + 1 : slot;
+            }
+            client.inventoryController.equipItem(resolvedSlot, item.id);
+          },
+        });
       }
-      client.inventoryController.equipItem(resolvedSlot, item.id);
+      items.push({
+        label: 'Item info',
+        onClick: () => client.lookupController.requestItem(item.id),
+      });
+      openContextMenu(e.clientX, e.clientY, items);
     },
-    [client, dualSubLocForType],
+    [client, dualSubLocForType, openContextMenu],
   );
 
   const handleInstanceRightClick = useCallback(
-    (_e: MouseEvent, inst: InstanceItem) => {
+    (e: MouseEvent, inst: InstanceItem) => {
       const record = client.getEifRecordById(inst.baseItemId);
       if (!record) return;
+      const items: ContextMenuItem[] = [];
       const slot = getEquipmentSlotForItemType(record.type);
-      if (slot === undefined) return; // not equippable
-      // Requirement pre-check mirrors the drag path (instance equip has no server reject reply).
-      if (!client.inventoryController.checkEquipRequirements(record)) return;
-      // Dual-slot handling: pick the open sub-slot.
-      const subLoc = DUAL_PRIMARY_SLOTS.has(slot) ? dualSubLocForType(slot) : 0;
-      client.instanceController.sendEquip(inst.instanceId, subLoc);
+      if (slot !== undefined) {
+        items.push({
+          label: 'Equip',
+          onClick: () => {
+            // Requirement pre-check mirrors the drag path (instance equip has no server reject reply).
+            if (!client.inventoryController.checkEquipRequirements(record)) {
+              return;
+            }
+            // Dual-slot handling: pick the open sub-slot.
+            const subLoc = DUAL_PRIMARY_SLOTS.has(slot)
+              ? dualSubLocForType(slot)
+              : 0;
+            client.instanceController.sendEquip(inst.instanceId, subLoc);
+          },
+        });
+      }
+      items.push({
+        label: 'Item info',
+        onClick: () => client.lookupController.requestItem(inst.baseItemId),
+      });
+      openContextMenu(e.clientX, e.clientY, items);
     },
-    [client, dualSubLocForType],
+    [client, dualSubLocForType, openContextMenu],
   );
 
   const onTooltipShow = useCallback((key: string, x: number, y: number) => {
