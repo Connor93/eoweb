@@ -235,6 +235,22 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
         setTouchTooltip(false);
         openSlotMenu(menuX, menuY);
       }, 700);
+
+      // A quick tap must not leave the timer pending — clear it on release
+      // for BOTH own and other characters' slots. The own-character path
+      // below also clears it via startDrag's onResolve, but that machinery
+      // never runs for another player's slot (early return just below), so
+      // without this a quick tap there would still pop the menu 700ms later.
+      const clearLongPressTimer = () => {
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+        window.removeEventListener('pointerup', clearLongPressTimer);
+        window.removeEventListener('pointercancel', clearLongPressTimer);
+      };
+      window.addEventListener('pointerup', clearLongPressTimer);
+      window.addEventListener('pointercancel', clearLongPressTimer);
     }
 
     if (!isOwnCharacter) return;
