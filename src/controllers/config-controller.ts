@@ -4,14 +4,7 @@ const CONFIG_CHANGED_EVENT = 'eoweb:config-changed';
 
 export type FpsLimit = 20 | 30 | 60 | 0; // 0 = unlimited
 export type SocialFilter = 'all' | 'friends' | 'none';
-export type HudWidgetId =
-  | 'character'
-  | 'hp'
-  | 'tp'
-  | 'tnl'
-  | 'weight'
-  | 'gold'
-  | 'ping';
+export type HudWidgetId = 'character' | 'hp' | 'tp' | 'tnl' | 'gold' | 'ping';
 export type HudPosition = 'left' | 'center' | 'right';
 export type Language = 'en' | 'nl' | 'sv' | 'pt';
 
@@ -52,9 +45,8 @@ const DEFAULT_HUD_WIDGETS: HudWidget[] = [
   { id: 'hp', visible: true, position: 'center', order: 0 },
   { id: 'tp', visible: true, position: 'center', order: 1 },
   { id: 'tnl', visible: true, position: 'center', order: 2 },
-  { id: 'weight', visible: true, position: 'right', order: 0 },
-  { id: 'gold', visible: true, position: 'right', order: 1 },
-  { id: 'ping', visible: true, position: 'right', order: 2 },
+  { id: 'gold', visible: true, position: 'right', order: 0 },
+  { id: 'ping', visible: true, position: 'right', order: 1 },
 ];
 
 const DEFAULT_LAYER_VISIBILITY: Record<number, boolean> = {
@@ -355,10 +347,14 @@ export class ConfigController {
       const raw = localStorage.getItem(`${HUD_KEY_PREFIX}${characterId}`);
       if (raw) {
         const parsed = JSON.parse(raw) as HudWidget[];
+        // Drop widgets whose id is no longer valid (e.g. a removed widget left
+        // over in a player's saved config, like the retired 'weight' widget).
+        const validIds = new Set(DEFAULT_HUD_WIDGETS.map((w) => w.id));
+        const known = parsed.filter((w) => validIds.has(w.id));
         // Ensure all default widgets are present (in case new ones were added)
-        const ids = new Set(parsed.map((w) => w.id));
+        const ids = new Set(known.map((w) => w.id));
         const missing = DEFAULT_HUD_WIDGETS.filter((w) => !ids.has(w.id));
-        return [...parsed, ...missing];
+        return [...known, ...missing];
       }
     } catch {
       // ignore

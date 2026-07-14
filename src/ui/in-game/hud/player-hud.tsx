@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
+import { useCallback, useEffect, useState } from 'preact/hooks';
 import { BiSolidStar } from 'react-icons/bi';
 import { FaCoins, FaHeart, FaSignal } from 'react-icons/fa';
-import { GiWeightLiftingUp } from 'react-icons/gi';
 import { GrMagic } from 'react-icons/gr';
 import type { HudWidget, HudWidgetId } from '@/controllers';
 import { playSfxById, SfxId } from '@/sfx';
@@ -119,28 +118,6 @@ function TnlWidget({ stats }: WidgetProps) {
   );
 }
 
-function WeightWidget({ stats }: WidgetProps) {
-  const percent = useMemo(() => {
-    return stats.maxWeight > 0
-      ? Math.round((stats.weight / stats.maxWeight) * 100)
-      : 0;
-  }, [stats.weight, stats.maxWeight]);
-
-  return (
-    <span
-      class={`flex items-center gap-0.5 text-[10px] leading-tight ${HUD_TEXT}`}
-    >
-      <span class={`text-sky-300 ${HUD_ICON_BG}`}>
-        <GiWeightLiftingUp size={12} />
-      </span>
-      <span class='hidden md:inline'>
-        {stats.weight} / {stats.maxWeight}
-      </span>
-      <span class='inline md:hidden'>{percent}%</span>
-    </span>
-  );
-}
-
 function GoldWidget({ stats }: WidgetProps) {
   const { locale } = useLocale();
   return (
@@ -221,8 +198,6 @@ function renderWidget(
       return <TpWidget stats={stats} />;
     case 'tnl':
       return <TnlWidget stats={stats} />;
-    case 'weight':
-      return <WeightWidget stats={stats} />;
     case 'gold':
       return <GoldWidget stats={stats} />;
     case 'ping':

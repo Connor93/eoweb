@@ -74,7 +74,6 @@ export function HudTab() {
       hp: locale.settings.hudWidgetHp,
       tp: locale.settings.hudWidgetTp,
       tnl: locale.settings.hudWidgetTnl,
-      weight: locale.settings.hudWidgetWeight,
       gold: locale.shared.wordGold,
       ping: locale.settings.hudWidgetPing,
     };
