@@ -25,7 +25,6 @@ import { GOLD_ITEM_ID } from '@/consts';
 import { type InstanceItem, instanceRarityLabel } from '@/controllers';
 import { getEquipmentSlotForItemType } from '@/equipment';
 import { playSfxById, SfxId } from '@/sfx';
-import { type ContextMenuItem, useContextMenu } from '@/ui/components';
 import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { SlotType } from '@/ui/enums';
@@ -43,6 +42,7 @@ import {
   isItemFilterActive,
   stackableMatches,
 } from '@/utils';
+import { type ContextMenuItem, useContextMenu } from './context-menu';
 import { InventoryFilterBar } from './inventory-filter-bar';
 import { ItemIcon } from './item-icon';
 import { rarityBorderClass, rarityTextClass } from './rarity-style';
