@@ -9,6 +9,8 @@ export {
 } from './character-preview';
 export { Checkbox } from './checkbox';
 export { Confirm } from './confirm';
+export type { ContextMenuItem } from './context-menu';
+export { ContextMenuProvider, useContextMenu } from './context-menu';
 export { CycleInput } from './cycle-input';
 export { Input } from './input';
 export { InputDialog } from './input-dialog';

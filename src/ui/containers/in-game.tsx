@@ -2,6 +2,7 @@ import type { SkillLearn } from 'eolib';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { CombatOverlay } from '@/combat-overlay';
 import { TradeState } from '@/game-state';
+import { ContextMenuProvider } from '@/ui/components';
 import {
   CHAT_Z,
   DIALOG_Z,
@@ -406,12 +407,14 @@ function InGameContent() {
 export function InGame() {
   const client = useClient();
   return (
-    <ItemDragProvider>
-      <WindowManagerProvider>
-        <ChatManagerProvider characterId={client.characterId}>
-          <InGameContent />
-        </ChatManagerProvider>
-      </WindowManagerProvider>
-    </ItemDragProvider>
+    <ContextMenuProvider>
+      <ItemDragProvider>
+        <WindowManagerProvider>
+          <ChatManagerProvider characterId={client.characterId}>
+            <InGameContent />
+          </ChatManagerProvider>
+        </WindowManagerProvider>
+      </ItemDragProvider>
+    </ContextMenuProvider>
   );
 }
