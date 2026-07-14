@@ -1,3 +1,4 @@
+import { EoWriter, PacketAction, type PacketFamily } from 'eolib';
 import type { Client } from '@/client';
 
 /**
@@ -92,13 +93,17 @@ export type LookupResult = ItemLookup | NpcLookup | LookupNotFound;
 
 type LookupSubscriber = (result: LookupResult | null) => void;
 
+// Custom deep family for the `#item` / `#npc` lookup (mirrors REOSERV's FAMILY_LOOKUP).
+const FAMILY_LOOKUP = 56;
+
 export class LookupController {
   private result: LookupResult | null = null;
   private subscribers: LookupSubscriber[] = [];
+  private client: Client;
 
-  // Mirrors the other controllers' `new XController(this)` construction;
-  // this one needs nothing off the client.
-  constructor(_client: Client) {}
+  constructor(client: Client) {
+    this.client = client;
+  }
 
   setResult(result: LookupResult): void {
     this.result = result;
@@ -107,6 +112,18 @@ export class LookupController {
 
   current(): LookupResult | null {
     return this.result;
+  }
+
+  /** Ask the server for an item's catalog entry by id; the reply opens the
+   *  lookup dialog via the existing family-56 Reply handler. */
+  requestItem(itemId: number): void {
+    const writer = new EoWriter();
+    writer.addShort(itemId);
+    this.client.bus?.sendBuf(
+      FAMILY_LOOKUP as PacketFamily,
+      PacketAction.Request,
+      writer.toByteArray(),
+    );
   }
 
   subscribe(cb: LookupSubscriber): void {
