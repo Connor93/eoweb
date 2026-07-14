@@ -167,53 +167,71 @@ export function getItemMeta(item: EifRecord): string[] {
     }
   }
 
-  if (
-    item.levelRequirement ||
-    item.classRequirement ||
-    item.strRequirement ||
-    item.intRequirement ||
-    item.wisRequirement ||
-    item.agiRequirement ||
-    item.chaRequirement ||
-    item.conRequirement
-  ) {
-    let req = 'req:';
-
-    if (item.levelRequirement) {
-      req += ` ${item.levelRequirement}LVL`;
-    }
-
-    if (item.classRequirement) {
-      // TODO: Load class name
-      req += ` Class ${item.classRequirement}`;
-    }
-
-    if (item.strRequirement) {
-      req += ` ${item.strRequirement}str`;
-    }
-
-    if (item.intRequirement) {
-      req += ` ${item.intRequirement}int`;
-    }
-
-    if (item.wisRequirement) {
-      req += ` ${item.wisRequirement}wis`;
-    }
-
-    if (item.agiRequirement) {
-      req += ` ${item.agiRequirement}agi`;
-    }
-
-    if (item.chaRequirement) {
-      req += ` ${item.chaRequirement}cha`;
-    }
-
-    if (item.conRequirement) {
-      req += ` ${item.conRequirement}con`;
-    }
-
+  const req = formatItemRequirements(item);
+  if (req) {
     meta.push(req);
   }
 
   return meta;
+}
+
+/**
+ * Build the single `req:` line listing an item's equip requirements
+ * (level / class / core stats), or `null` when the item has none.
+ *
+ * Requirements live on the base pub record and are NOT affected by an
+ * instance's rolled level, so this is shared by the plain-item
+ * (`getItemMeta`) and instanced (`formatInstanceBaseStats`) tooltip paths
+ * — both surfaces need to show the same gates.
+ */
+export function formatItemRequirements(item: EifRecord): string | null {
+  if (
+    !item.levelRequirement &&
+    !item.classRequirement &&
+    !item.strRequirement &&
+    !item.intRequirement &&
+    !item.wisRequirement &&
+    !item.agiRequirement &&
+    !item.chaRequirement &&
+    !item.conRequirement
+  ) {
+    return null;
+  }
+
+  let req = 'req:';
+
+  if (item.levelRequirement) {
+    req += ` ${item.levelRequirement}LVL`;
+  }
+
+  if (item.classRequirement) {
+    // TODO: Load class name
+    req += ` Class ${item.classRequirement}`;
+  }
+
+  if (item.strRequirement) {
+    req += ` ${item.strRequirement}str`;
+  }
+
+  if (item.intRequirement) {
+    req += ` ${item.intRequirement}int`;
+  }
+
+  if (item.wisRequirement) {
+    req += ` ${item.wisRequirement}wis`;
+  }
+
+  if (item.agiRequirement) {
+    req += ` ${item.agiRequirement}agi`;
+  }
+
+  if (item.chaRequirement) {
+    req += ` ${item.chaRequirement}cha`;
+  }
+
+  if (item.conRequirement) {
+    req += ` ${item.conRequirement}con`;
+  }
+
+  return req;
 }

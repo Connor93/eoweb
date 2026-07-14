@@ -19,7 +19,12 @@ import {
 import { UI_PANEL_BORDER, UI_STICKY_BG } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { useBackdropBlur } from '@/ui/in-game';
-import { formatInstanceBaseStats, formatInstanceMod } from '@/utils';
+import {
+  attackSpeedLine,
+  formatInstanceBaseStats,
+  formatInstanceMod,
+  getItemMeta,
+} from '@/utils';
 import { DialogBase } from './dialog-base';
 
 type ShopTabId = 'buy' | 'sell' | 'craft';
@@ -107,6 +112,74 @@ function ShopStockCard({
         <FaShoppingCart size={11} />
         {locale.shop.buyAction}
       </Button>
+      {tooltip &&
+        createPortal(
+          <div
+            class='pointer-events-none w-max max-w-56 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
+            style={{
+              position: 'fixed',
+              left: tooltip.x,
+              top: tooltip.y,
+              zIndex: 9999,
+            }}
+          >
+            {tooltipLines.map((line, i) => (
+              <div key={i} class={i === 0 ? 'font-semibold' : 'opacity-70'}>
+                {line}
+              </div>
+            ))}
+          </div>,
+          document.getElementById('ui') ?? document.body,
+        )}
+    </div>
+  );
+}
+
+/** Crafted-item preview: icon + name with a hover tooltip of the item's base
+ *  stats — the same content the inventory shows for a plain (un-rolled) item.
+ *  Craft outputs are base items, so this uses `getItemMeta`, not the instance
+ *  stat path used by `ShopStockCard`. */
+function CraftItemPreview({ itemId }: { itemId: number }) {
+  const client = useClient();
+  const { locale } = useLocale();
+  const record = client.getEifRecordById(itemId);
+  const graphicId = record?.graphicId ?? null;
+  const name =
+    record?.name ??
+    locale.shared.itemFallbackName.replace('{id}', String(itemId));
+  const [tooltip, setTooltip] = useState<{ x: number; y: number } | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const tooltipLines = (() => {
+    if (!record) return [name];
+    const lines = [name, ...getItemMeta(record)];
+    const speed = attackSpeedLine(client, itemId);
+    if (speed) lines.push(speed);
+    return lines;
+  })();
+
+  const showTooltip = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (r) setTooltip({ x: r.right + 8, y: r.top });
+  };
+
+  return (
+    <div
+      ref={ref}
+      class='flex flex-col items-center gap-2'
+      onMouseEnter={showTooltip}
+      onMouseLeave={() => setTooltip(null)}
+    >
+      <div class='flex h-22 w-22 shrink-0 items-center justify-center overflow-hidden rounded border border-base-content/10 bg-base-300 p-2'>
+        {graphicId === null ? (
+          <div class='h-14 w-14 rounded bg-base-content/10' />
+        ) : (
+          <ItemIcon graphicId={graphicId} class='h-16 w-16 object-contain' />
+        )}
+      </div>
+      <p class='w-full text-center font-semibold text-sm leading-tight'>
+        {name}
+      </p>
       {tooltip &&
         createPortal(
           <div
@@ -333,6 +406,8 @@ export function ShopDialog() {
                       <p class='w-full text-center text-base-content/60 text-xs'>
                         {locale.shop.buyPrice}:{' '}
                         {tradeItem.buyPrice.toLocaleString()}
+                        <br />
+                        {locale.shop.canBuy}: {maxAmount.toLocaleString()}
                       </p>
                       <Button
                         variant={['xs', canBuy ? 'primary' : 'disabled']}
@@ -436,7 +511,6 @@ export function ShopDialog() {
 
             {craftItems.map((craftItem) => {
               const canCraft = client.shopController.canCraft(craftItem);
-              const craftedGraphicId = getGraphicId(client, craftItem.itemId);
               const ingredients = craftItem.ingredients.filter(
                 (item) => item.id > 0 && item.amount > 0,
               );
@@ -448,19 +522,7 @@ export function ShopDialog() {
                 >
                   <div class='grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3'>
                     <div class='flex flex-col items-center gap-2'>
-                      <div class='flex h-22 w-22 shrink-0 items-center justify-center overflow-hidden rounded border border-base-content/10 bg-base-300 p-2'>
-                        {craftedGraphicId === null ? (
-                          <div class='h-14 w-14 rounded bg-base-content/10' />
-                        ) : (
-                          <ItemIcon
-                            graphicId={craftedGraphicId}
-                            class='h-16 w-16 object-contain'
-                          />
-                        )}
-                      </div>
-                      <p class='w-full text-center font-semibold text-sm leading-tight'>
-                        {getDisplayName(client, craftItem.itemId)}
-                      </p>
+                      <CraftItemPreview itemId={craftItem.itemId} />
                       <Button
                         variant={['xs', canCraft ? 'accent' : 'disabled']}
                         class='w-full'

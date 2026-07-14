@@ -49,6 +49,7 @@ export { TouchActionButtons } from './hud/touch-action-buttons';
 export { TouchJoystick } from './hud/touch-joystick';
 // Drag
 export { ItemDragProvider, useItemDrag } from './item-drag-context';
+export { NpcLevelIndicator } from './npc-level-indicator';
 export { NpcTooltip } from './npc-tooltip';
 export { PlayerTooltip } from './player-tooltip';
 export { useBackdropBlur } from './use-backdrop-blur';

@@ -37,6 +37,7 @@ import {
   LookupDialog,
   MobileNav,
   NavSidebar,
+  NpcLevelIndicator,
   NpcTooltip,
   PacketLogDialog,
   PartyPanel,
@@ -315,6 +316,7 @@ function InGameContent() {
     <>
       <CombatOverlay />
       <GroundItemTooltip />
+      <NpcLevelIndicator />
       <NpcTooltip />
       <PlayerTooltip />
       {commandPaletteOpen && <CommandPalette onClose={onCommandPaletteClose} />}

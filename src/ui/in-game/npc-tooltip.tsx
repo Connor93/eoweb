@@ -15,13 +15,56 @@ const COMBAT_NPC_TYPES = new Set<NpcType>([
   NpcType.Aggressive,
 ]);
 
-/** Build the tooltip model from an NPC's ENF record. Combat NPCs show level +
+// The one danger cue on a name plate: an Aggressive NPC attacks on sight
+// (REOSERV act_npcs.rs chases/attacks the nearest player only for this type).
+// Every other behavior/role renders muted so red stays meaningful. Chosen for
+// legibility on the bg-base-300 bubble.
+const AGGRESSIVE_COLOR = '#f87171'; // red-400
+
+/** A one-line behavior/role descriptor for the name plate, derived from the
+ *  NPC's ENF `type`. Only Aggressive is colored; reserved/unknown types get no
+ *  line. Passive = only fights back; the role types drive shop/bank/etc. */
+function npcBehaviorRow(type: NpcType): TooltipRow | null {
+  switch (type) {
+    case NpcType.Aggressive:
+      return { text: 'Aggressive', color: AGGRESSIVE_COLOR };
+    case NpcType.Passive:
+      return { text: 'Passive' };
+    case NpcType.Friendly:
+      return { text: 'Friendly' };
+    case NpcType.Shop:
+      return { text: 'Shopkeeper' };
+    case NpcType.Inn:
+      return { text: 'Innkeeper' };
+    case NpcType.Bank:
+      return { text: 'Banker' };
+    case NpcType.Barber:
+      return { text: 'Barber' };
+    case NpcType.Guild:
+      return { text: 'Guild Master' };
+    case NpcType.Priest:
+      return { text: 'Priest' };
+    case NpcType.Lawyer:
+      return { text: 'Lawyer' };
+    case NpcType.Trainer:
+      return { text: 'Skill Master' };
+    case NpcType.Quest:
+      return { text: 'Quest' };
+    default:
+      return null;
+  }
+}
+
+/** Build the tooltip model from an NPC's ENF record. Every NPC shows a
+ *  behavior/role subtitle under its name. Combat NPCs additionally show level +
  *  a damage-type row (None renders as "Plain") and, when the NPC has one, a
- *  weakness row. Non-combat NPCs show name only. Rows are colored element
- *  badges; future per-instance affixes append here. */
+ *  weakness row. Rows are colored element badges; future per-instance affixes
+ *  append here. */
 export function buildNpcTooltipModel(record: EnfRecord): EntityTooltipModel {
+  const subtitle = npcBehaviorRow(record.type) ?? undefined;
+
   if (!COMBAT_NPC_TYPES.has(record.type)) {
-    return { name: record.name, rows: [] };
+    return { name: record.name, subtitle, rows: [] };
   }
 
   const rows: TooltipRow[] = [];
@@ -42,7 +85,7 @@ export function buildNpcTooltipModel(record: EnfRecord): EntityTooltipModel {
     });
   }
 
-  return { name: record.name, level: record.level, rows };
+  return { name: record.name, subtitle, level: record.level, rows };
 }
 
 /** Vertical pixels (logical canvas coords) added on top of the per-NPC

@@ -19,7 +19,7 @@ export {
 } from './get-effect-metadata';
 export { getHatMetadata, HatMaskType } from './get-hat-metadata';
 export { getItemGraphicId } from './get-item-graphic-id';
-export { getItemMeta } from './get-item-meta';
+export { formatItemRequirements, getItemMeta } from './get-item-meta';
 export { getNextCoords } from './get-next-coords';
 export { getNpcMetaData, NPCMetadata } from './get-npc-metadata';
 export { getPrevCoords } from './get-prev-coords';

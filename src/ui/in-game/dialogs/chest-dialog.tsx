@@ -17,6 +17,7 @@ import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { useItemDrag, useRawItemGfxUrl } from '@/ui/in-game';
 import {
+  attackSpeedLine,
   formatInstanceBaseStats,
   formatInstanceMod,
   getItemGraphicId,
@@ -73,6 +74,10 @@ function ChestInstanceSlot({ inst, onTake }: ChestInstanceSlotProps) {
       `${name} (${instanceRarityLabel(inst.rarity)})`,
       `Level ${inst.level}`,
     ];
+    const speed = attackSpeedLine(client, inst.baseItemId);
+    if (speed) {
+      lines.push(speed);
+    }
     if (record) {
       lines.push(...formatInstanceBaseStats(record, inst.level));
     }
@@ -240,7 +245,12 @@ function ChestItemSlot({ item, onTake }: ChestItemSlotProps) {
     if (!record) return [];
     const meta = getItemMeta(record);
     const qty = item.amount > 1 ? ` x${item.amount.toLocaleString()}` : '';
-    return [record.name + qty, ...meta];
+    const lines = [record.name + qty, ...meta];
+    const speed = attackSpeedLine(client, item.id);
+    if (speed) {
+      lines.push(speed);
+    }
+    return lines;
   })();
 
   const name =

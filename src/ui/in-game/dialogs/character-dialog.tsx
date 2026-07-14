@@ -1,5 +1,6 @@
 import type { CharacterDetails, EifRecord } from 'eolib';
 import { StatId } from 'eolib';
+import { createPortal } from 'preact/compat';
 import {
   useCallback,
   useEffect,
@@ -146,7 +147,35 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
     ? rarityBorderClass(equippedInstance.rarity)
     : null;
   const [touchTooltip, setTouchTooltip] = useState(false);
+  const [hoverTooltip, setHoverTooltip] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(
+    null,
+  );
   const slotRef = useRef<HTMLDivElement>(null);
+
+  // Compute a fixed-viewport position for the portaled tooltip: to the slot's
+  // right, flipping left when it would run off the right edge, and shifted up
+  // when it would spill past the bottom. The portal (into #ui) escapes the
+  // dialog's overflow-hidden/overflow-y-auto clip — this keeps it on-screen.
+  const openTooltip = () => {
+    const el = slotRef.current;
+    if (!el || !tooltipLines || tooltipLines.length === 0) return;
+    const r = el.getBoundingClientRect();
+    const W = 176; // max-w-40 (160px) + a little headroom
+    const x =
+      r.right + 4 + W > window.innerWidth ? r.left - 4 - W : r.right + 4;
+    const elementRow =
+      equippedInstance && equippedInstance.element !== CombatElement.Plain
+        ? 1
+        : 0;
+    const estH = (tooltipLines.length + elementRow) * 16 + 12;
+    let y = r.top;
+    if (y + estH > window.innerHeight - 4) {
+      y = window.innerHeight - 4 - estH;
+    }
+    if (y < 4) y = 4;
+    setTooltipPos({ x, y });
+  };
 
   // Clear touch tooltip when touching outside this slot
   useEffect(() => {
@@ -175,6 +204,7 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
 
     if (e.pointerType === 'touch') {
       setTouchTooltip(true);
+      openTooltip();
     }
 
     if (!isOwnCharacter) return;
@@ -194,6 +224,7 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
     }
 
     playSfxById(SfxId.InventoryPickup);
+    setHoverTooltip(false);
 
     startDrag({
       element: e.currentTarget as Element,
@@ -236,10 +267,15 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
     <div
       ref={slotRef}
       data-equip-slot={isOwnCharacter ? slot : undefined}
-      class={`group relative flex items-center justify-center rounded border-2 ${itemId ? itemBorder : UI_PANEL_BORDER}${isOwnCharacter && itemId ? ' cursor-grab' : ''}`}
+      class={`relative flex items-center justify-center rounded border-2 ${itemId ? itemBorder : UI_PANEL_BORDER}${isOwnCharacter && itemId ? ' cursor-grab' : ''}`}
       style={{ gridColumn, gridRow }}
       onPointerDown={onPointerDown}
       onContextMenu={onContextMenu}
+      onMouseEnter={() => {
+        openTooltip();
+        setHoverTooltip(true);
+      }}
+      onMouseLeave={() => setHoverTooltip(false)}
     >
       {record ? (
         <ItemIcon
@@ -252,32 +288,43 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
           {label}
         </span>
       )}
-      {tooltipLines && tooltipLines.length > 0 && (
-        <div
-          class={`pointer-events-none absolute top-0 left-full z-50 ml-1 w-max max-w-40 rounded bg-base-300 px-2 py-1 text-xs shadow-lg ${touchTooltip ? 'block' : 'hidden group-hover:block'}`}
-        >
-          {/* Layout: name (line 0) → element row (if instance is non-Plain) → rest. */}
-          {tooltipLines[0] !== undefined && (
-            <div class='font-semibold'>{tooltipLines[0]}</div>
-          )}
-          {equippedInstance &&
-            equippedInstance.element !== CombatElement.Plain && (
-              <div
-                style={{
-                  color: combatElementColor(equippedInstance.element),
-                  fontSize: '11px',
-                }}
-              >
-                {combatElementLabel(equippedInstance.element)}
-              </div>
+      {tooltipLines &&
+        tooltipLines.length > 0 &&
+        (hoverTooltip || touchTooltip) &&
+        tooltipPos &&
+        createPortal(
+          <div
+            class='pointer-events-none w-max max-w-40 rounded bg-base-300 px-2 py-1 text-xs shadow-lg'
+            style={{
+              position: 'fixed',
+              left: tooltipPos.x,
+              top: tooltipPos.y,
+              zIndex: 9999,
+            }}
+          >
+            {/* Layout: name (line 0) → element row (if instance is non-Plain) → rest. */}
+            {tooltipLines[0] !== undefined && (
+              <div class='font-semibold'>{tooltipLines[0]}</div>
             )}
-          {tooltipLines.slice(1).map((line, i) => (
-            <div key={i} class='opacity-70'>
-              {line}
-            </div>
-          ))}
-        </div>
-      )}
+            {equippedInstance &&
+              equippedInstance.element !== CombatElement.Plain && (
+                <div
+                  style={{
+                    color: combatElementColor(equippedInstance.element),
+                    fontSize: '11px',
+                  }}
+                >
+                  {combatElementLabel(equippedInstance.element)}
+                </div>
+              )}
+            {tooltipLines.slice(1).map((line, i) => (
+              <div key={i} class='opacity-70'>
+                {line}
+              </div>
+            ))}
+          </div>,
+          document.getElementById('ui') ?? document.body,
+        )}
     </div>
   );
 }

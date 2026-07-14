@@ -9,12 +9,24 @@ export interface TooltipRow {
   color?: string;
 }
 
-// Shared display model for entity hover tooltips (NPCs, players). `level` and
-// `rows` are optional content rendered under the name.
+// Shared display model for entity hover tooltips (NPCs, players). `subtitle`,
+// `level`, and `rows` are optional content rendered under the name. `subtitle`
+// sits directly beneath the name (e.g. an NPC's behavior/role); `level` and
+// `rows` follow.
 export interface EntityTooltipModel {
   name: string;
+  subtitle?: TooltipRow;
   level?: number;
   rows: TooltipRow[];
+}
+
+/** One line under the name: colored when `row.color` is set, else muted. */
+function TooltipLine({ row }: { row: TooltipRow }) {
+  return row.color ? (
+    <div style={{ color: row.color, fontSize: '11px' }}>{row.text}</div>
+  ) : (
+    <div class='opacity-70'>{row.text}</div>
+  );
 }
 
 /** Re-render every animation frame so a tooltip tracks the camera / sprite as
@@ -69,20 +81,13 @@ export function EntityTooltip({
           }}
         >
           <div class='font-semibold'>{model.name}</div>
+          {model.subtitle && <TooltipLine row={model.subtitle} />}
           {model.level !== undefined && (
             <div class='opacity-70'>Lvl {model.level}</div>
           )}
-          {model.rows.map((r, i) =>
-            r.color ? (
-              <div key={i} style={{ color: r.color, fontSize: '11px' }}>
-                {r.text}
-              </div>
-            ) : (
-              <div key={i} class='opacity-70'>
-                {r.text}
-              </div>
-            ),
-          )}
+          {model.rows.map((r, i) => (
+            <TooltipLine key={i} row={r} />
+          ))}
         </div>
       </div>
     </div>

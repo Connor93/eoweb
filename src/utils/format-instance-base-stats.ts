@@ -1,4 +1,5 @@
 import type { EifRecord } from 'eolib';
+import { formatItemRequirements } from './get-item-meta';
 
 // Mirrors REOSERV's AUTHOR-AT-MAX item scaling (src/character/calculate_stats.rs
 // + config/Formulas.ron). An item pub stores each stat at its MAX-LEVEL value;
@@ -39,9 +40,10 @@ function scale(value: number, factor: number): number {
  *  tooltip. Shows the same shape as `getItemMeta`'s damage / hp / hit /
  *  def / stat lines but scaled by the author-at-max curves so the player
  *  sees the numbers combat will actually use, not the raw (max-level) pub
- *  values. Stat *requirements* (`levelRequirement`, `strRequirement`,
- *  etc.) aren't scaled and aren't surfaced here — they're on the base
- *  item and unchanged by rolling. */
+ *  values. Equip *requirements* (`levelRequirement`, `strRequirement`,
+ *  etc.) live on the base item and are NOT scaled by rolling, so they're
+ *  appended verbatim as a trailing `req:` line (shared with `getItemMeta`)
+ *  — the player needs to see the gates on every equippable tooltip. */
 export function formatInstanceBaseStats(
   record: EifRecord,
   level: number,
@@ -94,6 +96,11 @@ export function formatInstanceBaseStats(
     if (cha) parts.push(`${cha}cha`);
     if (con) parts.push(`${con}con`);
     lines.push(parts.join(' '));
+  }
+
+  const req = formatItemRequirements(record);
+  if (req) {
+    lines.push(req);
   }
 
   return lines;
