@@ -509,7 +509,7 @@ export function ShopDialog() {
               </p>
             )}
 
-            {craftItems.map((craftItem) => {
+            {craftItems.map((craftItem, recipeIndex) => {
               const canCraft = client.shopController.canCraft(craftItem);
               const ingredients = craftItem.ingredients.filter(
                 (item) => item.id > 0 && item.amount > 0,
@@ -517,7 +517,7 @@ export function ShopDialog() {
 
               return (
                 <div
-                  key={`craft-${craftItem.itemId}`}
+                  key={`craft-${recipeIndex}-${craftItem.itemId}`}
                   class='rounded border border-base-content/10 bg-base-200 p-2'
                 >
                   <div class='grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3'>
@@ -527,7 +527,10 @@ export function ShopDialog() {
                         variant={['xs', canCraft ? 'accent' : 'disabled']}
                         class='w-full'
                         onClick={() =>
-                          client.shopController.craftItem(craftItem.itemId)
+                          client.shopController.craftItem(
+                            craftItem.itemId,
+                            recipeIndex,
+                          )
                         }
                         disabled={!canCraft}
                       >

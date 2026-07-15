@@ -1,8 +1,10 @@
 import {
+  EoWriter,
   Item,
+  PacketAction,
+  type PacketFamily,
   ShopBuyClientPacket,
   type ShopCraftItem,
-  ShopCreateClientPacket,
   ShopSellClientPacket,
   type ShopSoldItem,
   type ShopTradeItem,
@@ -14,6 +16,11 @@ import { EOResourceID } from '@/edf';
 import { SfxId } from '@/sfx';
 import { ChatIcon } from '@/ui/enums';
 import type { InstanceMod, InstanceRarity } from './instance-controller';
+
+// Custom deep family for crafting a specific recipe (mirrors REOSERV's
+// FAMILY_SHOP_CRAFT). The stock ShopCreate packet carries only the output
+// item id, so it can't disambiguate multiple recipes for the same item.
+const FAMILY_SHOP_CRAFT = 59;
 
 type OpenedSubscriber = (
   name: string,
@@ -33,6 +40,13 @@ export interface ShopStockItem {
 
 export class ShopController {
   private client: Client;
+  /** Session id for THIS shop window, captured on open.
+   *  Kept per-controller (like quest/inn/marriage/barber) rather than read
+   *  from the shared `client.sessionId` at send time: the shop dialog stays
+   *  open until the player walks, so an unrelated interaction (warp, bank,
+   *  skillmaster, guild) that rewrites the global session id would otherwise
+   *  make our buy/sell/craft packets get silently dropped by the server. */
+  private sessionId = 0;
   shopName = '';
   tradeItems: ShopTradeItem[] = [];
   craftItems: ShopCraftItem[] = [];
@@ -88,6 +102,7 @@ export class ShopController {
     tradeItems: ShopTradeItem[],
     craftItems: ShopCraftItem[],
   ): void {
+    this.sessionId = sessionId;
     this.client.sessionId = sessionId;
     this.shopName = shopName;
     this.tradeItems = tradeItems;
@@ -249,16 +264,26 @@ export class ShopController {
     return true;
   }
 
-  craftItem(itemId: number): void {
-    const packet = new ShopCreateClientPacket();
-    packet.sessionId = this.client.sessionId;
-    packet.craftItemId = itemId;
-    this.client.bus!.send(packet);
+  /** Craft a specific recipe. `recipeIndex` is the recipe's position in the
+   *  shop's craft list (the order the server sent on open, = shop.crafts[i]),
+   *  so a shop with several recipes for the same output item crafts the exact
+   *  one the player clicked. Sent as a deep packet since the stock ShopCreate
+   *  has no recipe field. */
+  craftItem(itemId: number, recipeIndex: number): void {
+    const writer = new EoWriter();
+    writer.addShort(this.sessionId);
+    writer.addShort(itemId);
+    writer.addShort(recipeIndex);
+    this.client.bus?.sendBuf(
+      FAMILY_SHOP_CRAFT as PacketFamily,
+      PacketAction.Create,
+      writer.toByteArray(),
+    );
   }
 
   private sendBuyItem(itemId: number, amount: number): void {
     const packet = new ShopBuyClientPacket();
-    packet.sessionId = this.client.sessionId;
+    packet.sessionId = this.sessionId;
     packet.buyItem = new Item();
     packet.buyItem.id = itemId;
     packet.buyItem.amount = amount;
@@ -267,7 +292,7 @@ export class ShopController {
 
   private sendSellItem(itemId: number, amount: number): void {
     const packet = new ShopSellClientPacket();
-    packet.sessionId = this.client.sessionId;
+    packet.sessionId = this.sessionId;
     packet.sellItem = new Item();
     packet.sellItem.id = itemId;
     packet.sellItem.amount = amount;

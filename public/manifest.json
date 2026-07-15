@@ -1,11 +1,11 @@
 {
-  "name": "EO Web",
-  "short_name": "EO Web",
+  "name": "Origin Project",
+  "short_name": "OP",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
-  "description": "Endless Online Web Edition",
+  "description": "Origin Project",
   "icons": [
     {
       "src": "favicon-196.png",

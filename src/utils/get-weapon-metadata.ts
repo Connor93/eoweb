@@ -92,5 +92,12 @@ export function getWeaponMetaData(): Map<number, WeaponMetadata> {
     [72, new WeaponMetadata(0, [SfxId.MeleeWeaponAttack], false)], // saw blade
     [73, new WeaponMetadata(0, [SfxId.AttackBow], true)], // scav bow
     [74, new WeaponMetadata(0, [SfxId.MeleeWeaponAttack], false)], // fan
+    [90, new WeaponMetadata(0, [SfxId.AttackBow], true)], // firebow
+    [91, new WeaponMetadata(0, [SfxId.AttackBow], true)], // Dragonbow
+    [92, new WeaponMetadata(0, [SfxId.AttackBow], true)], // someotherbow
+    [93, new WeaponMetadata(0, [SfxId.AttackBow], true)], // forestbow
+    [94, new WeaponMetadata(0, [SfxId.AttackBow], true)], // icebow
+    [95, new WeaponMetadata(0, [SfxId.AttackBow], true)], // xbow2
+    [96, new WeaponMetadata(0, [SfxId.AttackBow], true)], // legendaryicebow
   ]);
 }
