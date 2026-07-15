@@ -96,6 +96,10 @@ type LookupSubscriber = (result: LookupResult | null) => void;
 // Custom deep family for the `#item` / `#npc` lookup (mirrors REOSERV's FAMILY_LOOKUP).
 const FAMILY_LOOKUP = 56;
 
+// Lookup request discriminator (mirrors REOSERV's LookupRequestClientPacket.kind).
+const LOOKUP_KIND_ITEM = 0;
+const LOOKUP_KIND_NPC = 1;
+
 export class LookupController {
   private result: LookupResult | null = null;
   private subscribers: LookupSubscriber[] = [];
@@ -117,8 +121,19 @@ export class LookupController {
   /** Ask the server for an item's catalog entry by id; the reply opens the
    *  lookup dialog via the existing family-56 Reply handler. */
   requestItem(itemId: number): void {
+    this.sendLookupRequest(LOOKUP_KIND_ITEM, itemId);
+  }
+
+  /** Ask the server for an NPC's catalog entry by id (the `#npc` view); the
+   *  reply opens the lookup dialog via the existing family-56 Reply handler. */
+  requestNpc(npcId: number): void {
+    this.sendLookupRequest(LOOKUP_KIND_NPC, npcId);
+  }
+
+  private sendLookupRequest(kind: number, id: number): void {
     const writer = new EoWriter();
-    writer.addShort(itemId);
+    writer.addChar(kind);
+    writer.addShort(id);
     this.client.bus?.sendBuf(
       FAMILY_LOOKUP as PacketFamily,
       PacketAction.Request,

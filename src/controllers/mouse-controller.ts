@@ -1,4 +1,10 @@
-import { Coords, ItemGetClientPacket, MapTileSpec, SitState } from 'eolib';
+import {
+  Coords,
+  ItemGetClientPacket,
+  MapTileSpec,
+  NpcType,
+  SitState,
+} from 'eolib';
 import type { Client } from '@/client';
 import {
   getBoardIntersecting,
@@ -475,6 +481,22 @@ export class MouseController {
       (e.target !== ui && ui.contains(e.target as Node))
     ) {
       return;
+    }
+
+    const npcAt = getNpcIntersecting(this.client.mousePosition!);
+    if (npcAt) {
+      const npc = this.client.nearby.npcs.find((n) => n.index === npcAt.id);
+      if (npc) {
+        const record = this.client.getEnfRecordById(npc.id);
+        if (
+          record &&
+          (record.type === NpcType.Passive ||
+            record.type === NpcType.Aggressive)
+        ) {
+          this.client.lookupController.requestNpc(npc.id);
+        }
+        return; // swallow right-click on any NPC; non-combat NPCs show nothing
+      }
     }
 
     const characterAt = getCharacterIntersecting(this.client.mousePosition!);
