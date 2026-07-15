@@ -30,6 +30,7 @@ export {
   InventoryTab,
   inventoryTabForItemType,
 } from './inventory-tab';
+export { isInstancedItemType } from './is-instanced-item-type';
 export { isMobile } from './is-mobile';
 export { isoToScreen } from './iso-to-screen';
 export {

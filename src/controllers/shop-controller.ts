@@ -15,6 +15,7 @@ import { GOLD_ITEM_ID } from '@/consts';
 import { EOResourceID } from '@/edf';
 import { SfxId } from '@/sfx';
 import { ChatIcon } from '@/ui/enums';
+import { isInstancedItemType } from '@/utils';
 import type { InstanceMod, InstanceRarity } from './instance-controller';
 
 // Custom deep family for crafting a specific recipe (mirrors REOSERV's
@@ -176,7 +177,13 @@ export class ShopController {
       this.client.inventoryController.setItem(ingredient.id, ingredient.amount);
     }
 
-    this.client.inventoryController.addItem(craftItemId);
+    // Gear crafts arrive as rolled instances via the INSTANCE_LIST push, which
+    // already renders the rarity card. Skip the plain stackable add so we don't
+    // double up (mirrors the drop path skipping ItemGet for instance pickups).
+    const craftedType = this.client.getEifRecordById(craftItemId)?.type;
+    if (craftedType === undefined || !isInstancedItemType(craftedType)) {
+      this.client.inventoryController.addItem(craftItemId);
+    }
     this.client.weight.current = weightCurrent;
     this.client.audioController.playById(SfxId.Craft);
     for (const cb of this.changedSubscribers) cb();
