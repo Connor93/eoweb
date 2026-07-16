@@ -737,6 +737,21 @@ export function InventoryGrid({ itemIds }: Props) {
         label: 'Item info',
         onClick: () => client.lookupController.requestItem(inst.baseItemId),
       });
+      items.push({
+        label: 'Salvage',
+        onClick: () => {
+          const itemName = record.name || `Item #${inst.baseItemId}`;
+          client.alertController.showConfirm(
+            'Salvage',
+            `Permanently salvage ${itemName} into shards? This cannot be undone.`,
+            (confirmed) => {
+              if (confirmed) {
+                client.salvageController.sendSalvage([inst.instanceId]);
+              }
+            },
+          );
+        },
+      });
       openContextMenu(e.clientX, e.clientY, items);
     },
     [client, dualSubLocForType, openContextMenu],
