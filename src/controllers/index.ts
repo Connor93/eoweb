@@ -76,6 +76,7 @@ export {
   ReputationTier,
   reputationTierLabel,
 } from './reputation-controller';
+export { SalvageController, type ShardCounts } from './salvage-controller';
 export { SessionController } from './session-controller';
 export { ShopController, type ShopStockItem } from './shop-controller';
 export { type CharacterTab, SocialController } from './social-controller';

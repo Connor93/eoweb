@@ -92,6 +92,21 @@ export interface GroundInstanceItem {
 const FAMILY_INSTANCE = 54;
 const INSTANCE_ID_LEN = 36;
 
+/** Encode an instance id as the fixed 36-byte, space-padded field the
+ *  server expects on the wire (matches `encode_instance_id` server-side).
+ *  Shared with `SalvageController`, which writes the same id shape for
+ *  FAMILY_SALVAGE requests. */
+export function encodeInstanceId(instanceId: string): Uint8Array {
+  const raw = new TextEncoder().encode(instanceId);
+  if (raw.length === INSTANCE_ID_LEN) return raw;
+  const out = new Uint8Array(INSTANCE_ID_LEN);
+  out.set(raw.slice(0, INSTANCE_ID_LEN));
+  if (raw.length < INSTANCE_ID_LEN) {
+    out.fill(0x20, raw.length);
+  }
+  return out;
+}
+
 type InstanceChangedSubscriber = (items: InstanceItem[]) => void;
 
 export class InstanceController {
@@ -191,7 +206,7 @@ export class InstanceController {
 
   sendEquip(instanceId: string, subLoc: number): void {
     const writer = new EoWriter();
-    writer.addBytes(this.encodeInstanceId(instanceId));
+    writer.addBytes(encodeInstanceId(instanceId));
     writer.addChar(Math.max(0, Math.min(1, Math.floor(subLoc))));
     this.client.bus?.sendBuf(
       FAMILY_INSTANCE as PacketFamily,
@@ -202,7 +217,7 @@ export class InstanceController {
 
   sendUnequip(instanceId: string): void {
     const writer = new EoWriter();
-    writer.addBytes(this.encodeInstanceId(instanceId));
+    writer.addBytes(encodeInstanceId(instanceId));
     this.client.bus?.sendBuf(
       FAMILY_INSTANCE as PacketFamily,
       PacketAction.Remove,
@@ -212,7 +227,7 @@ export class InstanceController {
 
   sendLockerDeposit(instanceId: string): void {
     const writer = new EoWriter();
-    writer.addBytes(this.encodeInstanceId(instanceId));
+    writer.addBytes(encodeInstanceId(instanceId));
     this.client.bus?.sendBuf(
       FAMILY_INSTANCE as PacketFamily,
       PacketAction.Drop,
@@ -222,7 +237,7 @@ export class InstanceController {
 
   sendLockerTake(instanceId: string): void {
     const writer = new EoWriter();
-    writer.addBytes(this.encodeInstanceId(instanceId));
+    writer.addBytes(encodeInstanceId(instanceId));
     this.client.bus?.sendBuf(
       FAMILY_INSTANCE as PacketFamily,
       PacketAction.Get,
@@ -232,7 +247,7 @@ export class InstanceController {
 
   sendChestDeposit(instanceId: string): void {
     const writer = new EoWriter();
-    writer.addBytes(this.encodeInstanceId(instanceId));
+    writer.addBytes(encodeInstanceId(instanceId));
     this.client.bus?.sendBuf(
       FAMILY_INSTANCE as PacketFamily,
       PacketAction.Use,
@@ -242,7 +257,7 @@ export class InstanceController {
 
   sendChestTake(instanceId: string): void {
     const writer = new EoWriter();
-    writer.addBytes(this.encodeInstanceId(instanceId));
+    writer.addBytes(encodeInstanceId(instanceId));
     this.client.bus?.sendBuf(
       FAMILY_INSTANCE as PacketFamily,
       PacketAction.Buy,
@@ -252,7 +267,7 @@ export class InstanceController {
 
   sendTradeAdd(instanceId: string): void {
     const writer = new EoWriter();
-    writer.addBytes(this.encodeInstanceId(instanceId));
+    writer.addBytes(encodeInstanceId(instanceId));
     this.client.bus?.sendBuf(
       FAMILY_INSTANCE as PacketFamily,
       PacketAction.Sell,
@@ -262,7 +277,7 @@ export class InstanceController {
 
   sendTradeRemove(instanceId: string): void {
     const writer = new EoWriter();
-    writer.addBytes(this.encodeInstanceId(instanceId));
+    writer.addBytes(encodeInstanceId(instanceId));
     this.client.bus?.sendBuf(
       FAMILY_INSTANCE as PacketFamily,
       PacketAction.Take,
@@ -277,7 +292,7 @@ export class InstanceController {
    *  the 0xFF the legacy `ItemDrop` packet uses server-side. */
   sendKick(instanceId: string, coordX: number, coordY: number): void {
     const writer = new EoWriter();
-    writer.addBytes(this.encodeInstanceId(instanceId));
+    writer.addBytes(encodeInstanceId(instanceId));
     writer.addChar(Math.max(1, Math.min(252, Math.floor(coordX))));
     writer.addChar(Math.max(1, Math.min(252, Math.floor(coordY))));
     this.client.bus?.sendBuf(
@@ -292,7 +307,7 @@ export class InstanceController {
    *  Callers should show a confirmation dialog before invoking. */
   sendJunk(instanceId: string): void {
     const writer = new EoWriter();
-    writer.addBytes(this.encodeInstanceId(instanceId));
+    writer.addBytes(encodeInstanceId(instanceId));
     this.client.bus?.sendBuf(
       FAMILY_INSTANCE as PacketFamily,
       PacketAction.Junk,
@@ -363,17 +378,6 @@ export class InstanceController {
 
   private _notify(): void {
     for (const cb of this.changedSubscribers) cb(this.items);
-  }
-
-  private encodeInstanceId(instanceId: string): Uint8Array {
-    const raw = new TextEncoder().encode(instanceId);
-    if (raw.length === INSTANCE_ID_LEN) return raw;
-    const out = new Uint8Array(INSTANCE_ID_LEN);
-    out.set(raw.slice(0, INSTANCE_ID_LEN));
-    if (raw.length < INSTANCE_ID_LEN) {
-      out.fill(0x20, raw.length);
-    }
-    return out;
   }
 
   private applyEquipmentSlot(slot: number, itemId: number): void {

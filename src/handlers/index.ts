@@ -41,6 +41,7 @@ import { registerRatesHandlers } from './rates';
 import { registerRecoverHandlers } from './recover';
 import { registerRefreshHandlers } from './refresh';
 import { registerReputationHandlers } from './reputation';
+import { registerSalvageHandlers } from './salvage';
 import { registerShopHandlers } from './shop';
 import { registerSitHandlers } from './sit';
 import { registerSpellHandlers } from './spell';
@@ -99,6 +100,7 @@ export function registerAllHandlers(client: Client): void {
   registerPriestHandlers(client);
   registerBossHandlers(client);
   registerReputationHandlers(client);
+  registerSalvageHandlers(client);
   registerInstanceHandlers(client);
   registerRatesHandlers(client);
   registerLookupHandlers(client);
