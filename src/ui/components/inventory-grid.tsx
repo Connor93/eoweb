@@ -134,8 +134,8 @@ function StackableCard({
       class={`flex select-none flex-col items-center gap-2 rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} p-2 transition-colors${selectMode ? ' cursor-not-allowed opacity-50' : ' cursor-grab hover:bg-base-content/10 active:bg-base-content/15'}${isDragging ? ' opacity-30' : ''}`}
       onPointerDown={handlePointerDown}
       onContextMenu={(e) => {
-        if (selectMode) return;
         e.preventDefault();
+        if (selectMode) return;
         onRightClick(e, item);
       }}
       onMouseEnter={showTooltip}
@@ -234,6 +234,7 @@ function InstanceCard({
       class={`flex select-none flex-col items-center gap-2 rounded border-2 ${borderClass} ${ringClass} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10${selectMode ? ' cursor-pointer' : ' cursor-grab'}${isDragging ? ' opacity-30' : ''}`}
       onPointerDown={handlePointerDown}
       onContextMenu={(e) => {
+        if (selectMode) return;
         e.preventDefault();
         onRightClick(e, inst);
       }}
