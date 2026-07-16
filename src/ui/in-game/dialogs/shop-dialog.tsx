@@ -1,4 +1,4 @@
-import type { ShopCraftItem, ShopTradeItem } from 'eolib';
+import type { ShopTradeItem } from 'eolib';
 import { createPortal } from 'preact/compat';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
@@ -215,21 +215,18 @@ export function ShopDialog() {
   const [tradeItems, setTradeItems] = useState<ShopTradeItem[]>(
     () => client.shopController.tradeItems,
   );
-  const [craftItems, setCraftItems] = useState<ShopCraftItem[]>(
-    () => client.shopController.craftItems,
-  );
+  // Crafts arrive in the deep FAMILY_SHOP_CRAFT packet AFTER ShopOpen, so unlike
+  // before they can't be captured into state at open — they're read live from the
+  // controller each render (see `craftItems` below). This tick only forces a
+  // re-render when the packet lands (mirrors how the buy tab reads live stock).
+  const [, setCraftTick] = useState(0);
   const [inventoryTick, setInventoryTick] = useState(0);
   const [stockTick, setStockTick] = useState(0);
 
   useEffect(() => {
-    const handleOpened = (
-      name: string,
-      newTradeItems: ShopTradeItem[],
-      newCraftItems: ShopCraftItem[],
-    ) => {
+    const handleOpened = (name: string, newTradeItems: ShopTradeItem[]) => {
       setShopName(name);
       setTradeItems([...newTradeItems]);
-      setCraftItems([...newCraftItems]);
 
       if (newTradeItems.some((i) => i.buyPrice > 0)) {
         setActiveTab('buy');
@@ -242,7 +239,9 @@ export function ShopDialog() {
 
     const handleChanged = () => {
       setTradeItems([...client.shopController.tradeItems]);
-      setCraftItems([...client.shopController.craftItems]);
+      // Crafts are read live in render; bump the craft tick so an open dialog
+      // re-renders when the deep FAMILY_SHOP_CRAFT packet lands.
+      setCraftTick((t) => t + 1);
     };
 
     const handleInventoryChanged = () => {
@@ -269,6 +268,11 @@ export function ShopDialog() {
   }, [client]);
 
   const goldOnHand = client.inventoryController.goldAmount;
+
+  // Read the craft list live from the controller (see setCraftTick above): any
+  // re-render after the deep FAMILY_SHOP_CRAFT packet arrives will show the
+  // recipes, so a missed subscription tick can't leave the craft tab stuck empty.
+  const craftItems = client.shopController.craftItems;
 
   const tradeByItemId = useMemo(
     () => new Map(tradeItems.map((item) => [item.itemId, item])),
