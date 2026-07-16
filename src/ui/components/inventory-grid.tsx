@@ -42,6 +42,7 @@ import {
   isItemFilterActive,
   stackableMatches,
 } from '@/utils';
+import { Button } from './button';
 import { type ContextMenuItem, useContextMenu } from './context-menu';
 import { InventoryFilterBar } from './inventory-filter-bar';
 import { ItemIcon } from './item-icon';
@@ -83,6 +84,10 @@ function JunkDropZone({ zone }: JunkDropZoneProps) {
 type StackableCardProps = {
   item: Item;
   isDragging: boolean;
+  /** Batch salvage select mode is active; stackables can't be salvaged, so
+   *  they go inert (no drag, no context menu) rather than pretending to
+   *  participate in selection. */
+  selectMode: boolean;
   onPointerDown: (e: PointerEvent, item: Item, target: HTMLElement) => void;
   onRightClick: (e: MouseEvent, item: Item) => void;
   onTooltipShow: (key: string, x: number, y: number) => void;
@@ -92,6 +97,7 @@ type StackableCardProps = {
 function StackableCard({
   item,
   isDragging,
+  selectMode,
   onPointerDown,
   onRightClick,
   onTooltipShow,
@@ -107,6 +113,7 @@ function StackableCard({
   const tooltipKey = `stack:${item.id}`;
 
   const handlePointerDown = (e: PointerEvent) => {
+    if (selectMode) return;
     if (e.button !== 0 && e.pointerType !== 'touch') return;
     e.preventDefault();
     onPointerDown(e, item, e.currentTarget as HTMLElement);
@@ -124,9 +131,10 @@ function StackableCard({
   return (
     <div
       data-inventory-item={item.id}
-      class={`flex cursor-grab select-none flex-col items-center gap-2 rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10 active:bg-base-content/15${isDragging ? ' opacity-30' : ''}`}
+      class={`flex select-none flex-col items-center gap-2 rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} p-2 transition-colors${selectMode ? ' cursor-not-allowed opacity-50' : ' cursor-grab hover:bg-base-content/10 active:bg-base-content/15'}${isDragging ? ' opacity-30' : ''}`}
       onPointerDown={handlePointerDown}
       onContextMenu={(e) => {
+        if (selectMode) return;
         e.preventDefault();
         onRightClick(e, item);
       }}
@@ -163,6 +171,11 @@ function StackableCard({
 type InstanceCardProps = {
   inst: InstanceItem;
   isDragging: boolean;
+  /** Batch salvage select mode: clicking toggles selection instead of
+   *  starting a drag. */
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelect: (instanceId: string) => void;
   onPointerDown: (
     e: PointerEvent,
     inst: InstanceItem,
@@ -176,6 +189,9 @@ type InstanceCardProps = {
 function InstanceCard({
   inst,
   isDragging,
+  selectMode,
+  selected,
+  onToggleSelect,
   onPointerDown,
   onRightClick,
   onTooltipShow,
@@ -191,10 +207,15 @@ function InstanceCard({
   const tooltipKey = `instance:${inst.instanceId}`;
   const borderClass = rarityBorderClass(inst.rarity);
   const textClass = rarityTextClass(inst.rarity);
+  const ringClass = selected ? 'ring-2 ring-primary' : '';
 
   const handlePointerDown = (e: PointerEvent) => {
     if (e.button !== 0 && e.pointerType !== 'touch') return;
     e.preventDefault();
+    if (selectMode) {
+      onToggleSelect(inst.instanceId);
+      return;
+    }
     onPointerDown(e, inst, e.currentTarget as HTMLElement);
   };
 
@@ -210,7 +231,7 @@ function InstanceCard({
   return (
     <div
       data-instance-item={inst.instanceId}
-      class={`flex cursor-grab select-none flex-col items-center gap-2 rounded border-2 ${borderClass} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10${isDragging ? ' opacity-30' : ''}`}
+      class={`flex select-none flex-col items-center gap-2 rounded border-2 ${borderClass} ${ringClass} ${UI_ITEM_BG} p-2 transition-colors hover:bg-base-content/10${selectMode ? ' cursor-pointer' : ' cursor-grab'}${isDragging ? ' opacity-30' : ''}`}
       onPointerDown={handlePointerDown}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -304,6 +325,8 @@ export function InventoryGrid({ itemIds }: Props) {
     x: number;
     y: number;
   } | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const lastTapRef = useRef(0);
 
   useEffect(() => {
@@ -765,6 +788,45 @@ export function InventoryGrid({ itemIds }: Props) {
     setTooltip((t) => (t?.key === key ? null : t));
   }, []);
 
+  const toggleSelectMode = useCallback(() => {
+    setSelectMode((m) => !m);
+    setSelectedIds(new Set());
+  }, []);
+
+  const toggleSelect = useCallback((instanceId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(instanceId)) {
+        next.delete(instanceId);
+      } else {
+        next.add(instanceId);
+      }
+      return next;
+    });
+  }, []);
+
+  const cancelSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  const confirmSalvageSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+    const count = ids.length;
+    client.alertController.showConfirm(
+      'Salvage',
+      `Permanently salvage ${count} item${count === 1 ? '' : 's'} into shards? This cannot be undone.`,
+      (confirmed) => {
+        if (confirmed) {
+          client.salvageController.sendSalvage(ids);
+          setSelectMode(false);
+          setSelectedIds(new Set());
+        }
+      },
+    );
+  }, [client, selectedIds]);
+
   const TAB_LABELS = [
     locale.inventory.tabWeapons,
     locale.inventory.tabArmor,
@@ -828,6 +890,12 @@ export function InventoryGrid({ itemIds }: Props) {
           </span>
         </div>
         <div class='flex items-center gap-1'>
+          <Button
+            variant={selectMode ? ['sm', 'primary'] : ['sm']}
+            onClick={toggleSelectMode}
+          >
+            Salvage
+          </Button>
           <JunkDropZone zone='drop' />
           <JunkDropZone zone='junk' />
         </div>
@@ -916,6 +984,9 @@ export function InventoryGrid({ itemIds }: Props) {
                       currentDrag?.source === 'inventory' &&
                       currentDrag?.instanceId === inst.instanceId
                     }
+                    selectMode={selectMode}
+                    selected={selectedIds.has(inst.instanceId)}
+                    onToggleSelect={toggleSelect}
                     onPointerDown={handleInstancePointerDown}
                     onRightClick={handleInstanceRightClick}
                     onTooltipShow={onTooltipShow}
@@ -930,6 +1001,7 @@ export function InventoryGrid({ itemIds }: Props) {
                       currentDrag?.source === 'inventory' &&
                       currentDrag.itemId === item.id
                     }
+                    selectMode={selectMode}
                     onPointerDown={handleItemPointerDown}
                     onRightClick={handleStackableRightClick}
                     onTooltipShow={onTooltipShow}
@@ -941,6 +1013,26 @@ export function InventoryGrid({ itemIds }: Props) {
           </div>
         </div>
       </div>
+
+      {selectMode && (
+        <div
+          class={`mt-1 flex items-center justify-between gap-2 rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} px-2 py-1 text-xs`}
+        >
+          <span class='tabular-nums'>{selectedIds.size} selected</span>
+          <div class='flex gap-2'>
+            <Button variant={['sm']} onClick={cancelSelectMode}>
+              Cancel
+            </Button>
+            <Button
+              variant={['sm', 'primary']}
+              disabled={selectedIds.size === 0}
+              onClick={confirmSalvageSelected}
+            >
+              Salvage
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div
         class={`mt-1 flex items-center justify-around rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} px-2 py-1 text-xs`}
