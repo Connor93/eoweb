@@ -326,10 +326,12 @@ export function InventoryGrid({ itemIds }: Props) {
     client.inventoryController.subscribeInventoryChanged(handler);
     client.instanceController.subscribeChanged(handler);
     client.tradeController.subscribe(handler);
+    client.salvageController.subscribeChanged(handler);
     return () => {
       client.inventoryController.unsubscribeInventoryChanged(handler);
       client.instanceController.unsubscribeChanged(handler);
       client.tradeController.unsubscribe(handler);
+      client.salvageController.unsubscribeChanged(handler);
     };
   }, [client]);
 
@@ -416,6 +418,11 @@ export function InventoryGrid({ itemIds }: Props) {
   const activeItems = itemsByTab[activeTab];
   const activeInstances = instancesByTab[activeTab];
   const goldAmount = client.inventoryController.goldAmount;
+  const shards = useMemo(
+    () => client.salvageController.shardCounts,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [client, refresh],
+  );
 
   const getCoords = () => {
     const p = client.getPlayerCharacter();
@@ -918,6 +925,29 @@ export function InventoryGrid({ itemIds }: Props) {
             )}
           </div>
         </div>
+      </div>
+
+      <div
+        class={`mt-1 flex items-center justify-around rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} px-2 py-1 text-xs`}
+      >
+        <span class='flex items-center gap-1' title='Weapon shards'>
+          <span class='opacity-70'>Weapon</span>
+          <span class='font-semibold tabular-nums'>
+            {shards.weapon.toLocaleString()}
+          </span>
+        </span>
+        <span class='flex items-center gap-1' title='Armor shards'>
+          <span class='opacity-70'>Armor</span>
+          <span class='font-semibold tabular-nums'>
+            {shards.armor.toLocaleString()}
+          </span>
+        </span>
+        <span class='flex items-center gap-1' title='Accessory shards'>
+          <span class='opacity-70'>Accessory</span>
+          <span class='font-semibold tabular-nums'>
+            {shards.accessory.toLocaleString()}
+          </span>
+        </span>
       </div>
 
       {tooltip &&
