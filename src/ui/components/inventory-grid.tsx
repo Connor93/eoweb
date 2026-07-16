@@ -762,12 +762,21 @@ export function InventoryGrid({ itemIds }: Props) {
         onClick: () => client.lookupController.requestItem(inst.baseItemId),
       });
       items.push({
-        label: 'Salvage',
+        label: locale.inventory.salvage,
         onClick: () => {
-          const itemName = record.name || `Item #${inst.baseItemId}`;
+          const itemName =
+            record.name ||
+            locale.shared.itemFallbackName.replace(
+              '{id}',
+              String(inst.baseItemId),
+            );
+          const message = locale.inventory.salvageConfirmMessage.replace(
+            '{name}',
+            itemName,
+          );
           client.alertController.showConfirm(
-            'Salvage',
-            `Permanently salvage ${itemName} into shards? This cannot be undone.`,
+            locale.inventory.salvage,
+            message,
             (confirmed) => {
               if (confirmed) {
                 client.salvageController.sendSalvage([inst.instanceId]);
@@ -778,7 +787,7 @@ export function InventoryGrid({ itemIds }: Props) {
       });
       openContextMenu(e.clientX, e.clientY, items);
     },
-    [client, dualSubLocForType, openContextMenu],
+    [client, dualSubLocForType, locale, openContextMenu],
   );
 
   const onTooltipShow = useCallback((key: string, x: number, y: number) => {
@@ -815,9 +824,13 @@ export function InventoryGrid({ itemIds }: Props) {
     if (selectedIds.size === 0) return;
     const ids = [...selectedIds];
     const count = ids.length;
+    const message = locale.inventory.salvageConfirm.replace(
+      '{count}',
+      String(count),
+    );
     client.alertController.showConfirm(
-      'Salvage',
-      `Permanently salvage ${count} item${count === 1 ? '' : 's'} into shards? This cannot be undone.`,
+      locale.inventory.salvage,
+      message,
       (confirmed) => {
         if (confirmed) {
           client.salvageController.sendSalvage(ids);
@@ -826,7 +839,7 @@ export function InventoryGrid({ itemIds }: Props) {
         }
       },
     );
-  }, [client, selectedIds]);
+  }, [client, locale, selectedIds]);
 
   const TAB_LABELS = [
     locale.inventory.tabWeapons,
@@ -895,7 +908,7 @@ export function InventoryGrid({ itemIds }: Props) {
             variant={selectMode ? ['sm', 'primary'] : ['sm']}
             onClick={toggleSelectMode}
           >
-            Salvage
+            {locale.inventory.salvage}
           </Button>
           <JunkDropZone zone='drop' />
           <JunkDropZone zone='junk' />
@@ -1019,17 +1032,22 @@ export function InventoryGrid({ itemIds }: Props) {
         <div
           class={`mt-1 flex items-center justify-between gap-2 rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} px-2 py-1 text-xs`}
         >
-          <span class='tabular-nums'>{selectedIds.size} selected</span>
+          <span class='tabular-nums'>
+            {locale.inventory.salvageSelectedCount.replace(
+              '{count}',
+              String(selectedIds.size),
+            )}
+          </span>
           <div class='flex gap-2'>
             <Button variant={['sm']} onClick={cancelSelectMode}>
-              Cancel
+              {locale.shared.btnCancel}
             </Button>
             <Button
               variant={['sm', 'primary']}
               disabled={selectedIds.size === 0}
               onClick={confirmSalvageSelected}
             >
-              Salvage
+              {locale.inventory.salvage}
             </Button>
           </div>
         </div>
@@ -1038,20 +1056,29 @@ export function InventoryGrid({ itemIds }: Props) {
       <div
         class={`mt-1 flex items-center justify-around rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} px-2 py-1 text-xs`}
       >
-        <span class='flex items-center gap-1' title='Weapon shards'>
-          <span class='opacity-70'>Weapon</span>
+        <span
+          class='flex items-center gap-1'
+          title={locale.inventory.shardsWeaponTooltip}
+        >
+          <span class='opacity-70'>{locale.inventory.shardsWeapon}</span>
           <span class='font-semibold tabular-nums'>
             {shards.weapon.toLocaleString()}
           </span>
         </span>
-        <span class='flex items-center gap-1' title='Armor shards'>
-          <span class='opacity-70'>Armor</span>
+        <span
+          class='flex items-center gap-1'
+          title={locale.inventory.shardsArmorTooltip}
+        >
+          <span class='opacity-70'>{locale.inventory.shardsArmor}</span>
           <span class='font-semibold tabular-nums'>
             {shards.armor.toLocaleString()}
           </span>
         </span>
-        <span class='flex items-center gap-1' title='Accessory shards'>
-          <span class='opacity-70'>Accessory</span>
+        <span
+          class='flex items-center gap-1'
+          title={locale.inventory.shardsAccessoryTooltip}
+        >
+          <span class='opacity-70'>{locale.inventory.shardsAccessory}</span>
           <span class='font-semibold tabular-nums'>
             {shards.accessory.toLocaleString()}
           </span>

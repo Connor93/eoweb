@@ -184,6 +184,20 @@ export const locales = {
       filterResults: 'Results',
       filterNoMatches: 'No matching items',
       filterClear: 'Clear filters',
+      salvage: 'Salvage',
+      salvageConfirmMessage:
+        'Permanently salvage {name} into shards? This cannot be undone.',
+      salvageConfirm:
+        'Permanently salvage {count} item(s) into shards? This cannot be undone.',
+      salvageToast:
+        'Salvaged: +{weapon} weapon, +{armor} armor, +{accessory} accessory shards',
+      salvageSelectedCount: '{count} selected',
+      shardsWeapon: 'Weapon',
+      shardsArmor: 'Armor',
+      shardsAccessory: 'Accessory',
+      shardsWeaponTooltip: 'Weapon shards',
+      shardsArmorTooltip: 'Armor shards',
+      shardsAccessoryTooltip: 'Accessory shards',
     },
     settings: {
       title: 'Settings',
@@ -812,6 +826,20 @@ export const locales = {
       filterResults: 'Resultaten',
       filterNoMatches: 'Geen overeenkomende items',
       filterClear: 'Filters wissen',
+      salvage: 'Slopen',
+      salvageConfirmMessage:
+        'Wil je {name} permanent slopen tot brokstukken? Dit kan niet ongedaan worden gemaakt.',
+      salvageConfirm:
+        'Wil je {count} item(s) permanent slopen tot brokstukken? Dit kan niet ongedaan worden gemaakt.',
+      salvageToast:
+        'Gesloopt: +{weapon} wapen-, +{armor} harnas- en +{accessory} accessoirebrokstukken',
+      salvageSelectedCount: '{count} geselecteerd',
+      shardsWeapon: 'Wapen',
+      shardsArmor: 'Harnas',
+      shardsAccessory: 'Accessoire',
+      shardsWeaponTooltip: 'Wapenbrokstukken',
+      shardsArmorTooltip: 'Harnasbrokstukken',
+      shardsAccessoryTooltip: 'Accessoirebrokstukken',
     },
     settings: {
       title: 'Instellingen',
@@ -1443,6 +1471,20 @@ export const locales = {
       filterResults: 'Resultat',
       filterNoMatches: 'Inga matchande föremål',
       filterClear: 'Rensa filter',
+      salvage: 'Skrota',
+      salvageConfirmMessage:
+        'Skrota {name} permanent till skärvor? Detta kan inte ångras.',
+      salvageConfirm:
+        'Skrota {count} föremål permanent till skärvor? Detta kan inte ångras.',
+      salvageToast:
+        'Skrotat: +{weapon} vapen-, +{armor} rustnings- och +{accessory} accessoarskärvor',
+      salvageSelectedCount: '{count} markerade',
+      shardsWeapon: 'Vapen',
+      shardsArmor: 'Rustning',
+      shardsAccessory: 'Accessoar',
+      shardsWeaponTooltip: 'Vapenskärvor',
+      shardsArmorTooltip: 'Rustningsskärvor',
+      shardsAccessoryTooltip: 'Accessoarskärvor',
     },
     settings: {
       title: 'Inställningar',
@@ -2074,6 +2116,20 @@ export const locales = {
       filterResults: 'Resultados',
       filterNoMatches: 'Nenhum item correspondente',
       filterClear: 'Limpar filtros',
+      salvage: 'Reciclar',
+      salvageConfirmMessage:
+        'Reciclar permanentemente {name} em fragmentos? Isso não pode ser desfeito.',
+      salvageConfirm:
+        'Reciclar permanentemente {count} item(ns) em fragmentos? Isso não pode ser desfeito.',
+      salvageToast:
+        'Reciclado: +{weapon} de arma, +{armor} de armadura, +{accessory} de acessório em fragmentos',
+      salvageSelectedCount: '{count} selecionado(s)',
+      shardsWeapon: 'Arma',
+      shardsArmor: 'Armadura',
+      shardsAccessory: 'Acessório',
+      shardsWeaponTooltip: 'Fragmentos de arma',
+      shardsArmorTooltip: 'Fragmentos de armadura',
+      shardsAccessoryTooltip: 'Fragmentos de acessório',
     },
     settings: {
       title: 'Configurações',

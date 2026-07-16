@@ -22,9 +22,11 @@ function handleSalvageReply(client: Client, reader: EoReader) {
 
   const totalGained = gainedWeapon + gainedArmor + gainedAccessory;
   if (totalGained > 0) {
-    client.toastController.showSuccess(
-      `Salvaged: +${gainedWeapon} weapon, +${gainedArmor} armor, +${gainedAccessory} accessory shards`,
-    );
+    const msg = client.locale.inventory.salvageToast
+      .replace('{weapon}', String(gainedWeapon))
+      .replace('{armor}', String(gainedArmor))
+      .replace('{accessory}', String(gainedAccessory));
+    client.toastController.showSuccess(msg);
   }
 }
 
