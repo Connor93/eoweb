@@ -1,8 +1,10 @@
 import {
+  CharItem,
   type EoReader,
   PacketAction,
   PacketFamily,
   ShopBuyServerPacket,
+  ShopCraftItem,
   ShopCreateServerPacket,
   ShopOpenServerPacket,
   ShopSellServerPacket,
@@ -44,6 +46,23 @@ import type {
  *     char   element
  */
 const FAMILY_SHOP_STOCK = 58;
+
+/**
+ * REOSERV custom packet family — not in upstream eolib. SHOP_CRAFT
+ * (family 59, action List) carries the shop's craft recipes with a 4-byte
+ * `int` ingredient amount, so a recipe can cost more than the 253 cap of the
+ * 1-byte `char` amount in the standard ShopOpen packet. Pushed right after
+ * ShopOpen. Wire format mirrors `src/deep/shop_craft_server_packet.rs`:
+ *
+ *   short  entry_count
+ *     -- per entry --
+ *     short  output_item_id
+ *     char   ingredient_count      (0..4)
+ *       -- per ingredient --
+ *       short  item_id
+ *       int    amount
+ */
+const FAMILY_SHOP_CRAFT = 59;
 
 function readStockMod(reader: EoReader): InstanceMod {
   const modIdLen = reader.getChar();
@@ -88,6 +107,40 @@ function parseShopStock(reader: EoReader): ShopStockItem[] {
 function handleShopStock(client: Client, reader: EoReader) {
   const items = parseShopStock(reader);
   client.shopController.handleStockUpdated(items);
+}
+
+function parseShopCrafts(reader: EoReader): ShopCraftItem[] {
+  const count = reader.getShort();
+  const crafts: ShopCraftItem[] = [];
+  for (let i = 0; i < count; i++) {
+    const craft = new ShopCraftItem();
+    craft.itemId = reader.getShort();
+    const ingredientCount = reader.getChar();
+    const ingredients: CharItem[] = [];
+    for (let j = 0; j < ingredientCount; j++) {
+      const ingredient = new CharItem();
+      ingredient.id = reader.getShort();
+      ingredient.amount = reader.getInt();
+      ingredients.push(ingredient);
+    }
+    // eolib's ShopCraftItem expects exactly 4 ingredient slots; pad the rest
+    // with empty (id 0) slots so the dialog's slot filter and canCraft()
+    // behave identically to the old stock-ShopOpen path.
+    while (ingredients.length < 4) {
+      const empty = new CharItem();
+      empty.id = 0;
+      empty.amount = 0;
+      ingredients.push(empty);
+    }
+    craft.ingredients = ingredients;
+    crafts.push(craft);
+  }
+  return crafts;
+}
+
+function handleShopCraftList(client: Client, reader: EoReader) {
+  const crafts = parseShopCrafts(reader);
+  client.shopController.setCraftItems(crafts);
 }
 
 function handleShopOpen(client: Client, reader: EoReader) {
@@ -152,5 +205,10 @@ export function registerShopHandlers(client: Client) {
     FAMILY_SHOP_STOCK as PacketFamily,
     PacketAction.List,
     (reader) => handleShopStock(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_SHOP_CRAFT as PacketFamily,
+    PacketAction.List,
+    (reader) => handleShopCraftList(client, reader),
   );
 }

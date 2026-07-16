@@ -93,6 +93,15 @@ export class ShopController {
     for (const cb of this.stockSubscribers) cb();
   }
 
+  /** Replace the craft list from the deep FAMILY_SHOP_CRAFT packet, which
+   *  arrives right after ShopOpen. Crafts are NOT in the standard ShopOpen
+   *  packet: its 1-byte ingredient amount can't carry costs above 253. Fires
+   *  the "changed" subscribers so an open dialog re-renders (mirrors stock). */
+  setCraftItems(craftItems: ShopCraftItem[]): void {
+    this.craftItems = craftItems;
+    for (const cb of this.changedSubscribers) cb();
+  }
+
   stockFor(itemId: number): ShopStockItem | undefined {
     return this.tradeInstances.find((s) => s.itemId === itemId);
   }
