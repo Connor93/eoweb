@@ -1,6 +1,6 @@
 import { EoWriter, PacketAction, type PacketFamily } from 'eolib';
 import type { Client } from '@/client';
-import { encodeInstanceId } from './instance-controller';
+import { encodeInstanceId, type InstanceRarity } from './instance-controller';
 
 /**
  * REOSERV custom packet family — not in upstream eolib. FAMILY_SALVAGE
@@ -19,6 +19,12 @@ export interface ShardCounts {
   accessory: number;
 }
 
+export interface SalvageYieldConfig {
+  perLevelX100: number;
+  /** Indexed by InstanceRarity (0=common … 3=legendary). */
+  multX100: number[];
+}
+
 type SalvageChangedSubscriber = () => void;
 
 /**
@@ -31,6 +37,10 @@ export class SalvageController {
   private client: Client;
   private counts: ShardCounts = { weapon: 0, armor: 0, accessory: 0 };
   private gained: ShardCounts = { weapon: 0, armor: 0, accessory: 0 };
+  private yieldConfig: SalvageYieldConfig = {
+    perLevelX100: 100,
+    multX100: [100, 200, 500, 1000],
+  };
   private changedSubscribers: SalvageChangedSubscriber[] = [];
 
   constructor(client: Client) {
@@ -46,10 +56,27 @@ export class SalvageController {
     return this.gained;
   }
 
-  setCounts(counts: ShardCounts, gained: ShardCounts): void {
+  setCounts(
+    counts: ShardCounts,
+    gained: ShardCounts,
+    config: SalvageYieldConfig,
+  ): void {
     this.counts = counts;
     this.gained = gained;
+    this.yieldConfig = config;
     this._notify();
+  }
+
+  /**
+   * Estimated shards from salvaging one instance of this level + rarity —
+   * matches the server's `round(level × per_level × mult)`. Integer-domain to
+   * mirror the server's arithmetic. The server's actual credit is authoritative.
+   */
+  yieldFor(level: number, rarity: InstanceRarity): number {
+    const mult = this.yieldConfig.multX100[rarity] ?? 100;
+    return Math.round(
+      (Math.max(1, level) * this.yieldConfig.perLevelX100 * mult) / 10000,
+    );
   }
 
   sendSalvage(instanceIds: string[]): void {

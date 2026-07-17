@@ -14,10 +14,19 @@ function handleSalvageReply(client: Client, reader: EoReader) {
   const gainedWeapon = reader.getInt();
   const gainedArmor = reader.getInt();
   const gainedAccessory = reader.getInt();
+  const perLevelX100 = reader.getInt();
+  const multCommon = reader.getInt();
+  const multRare = reader.getInt();
+  const multEpic = reader.getInt();
+  const multLegendary = reader.getInt();
 
   client.salvageController.setCounts(
     { weapon, armor, accessory },
     { weapon: gainedWeapon, armor: gainedArmor, accessory: gainedAccessory },
+    {
+      perLevelX100,
+      multX100: [multCommon, multRare, multEpic, multLegendary],
+    },
   );
 
   const totalGained = gainedWeapon + gainedArmor + gainedAccessory;

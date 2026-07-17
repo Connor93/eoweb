@@ -24,3 +24,31 @@ export function isInstancedItemType(type: ItemType): boolean {
       return false;
   }
 }
+
+/**
+ * The shard category an item salvages into — mirrors the server's
+ * `src/items/category.rs::item_type_to_category`. Non-gear items return null.
+ */
+export function categoryForItemType(
+  type: ItemType,
+): 'weapon' | 'armor' | 'accessory' | null {
+  switch (type) {
+    case ItemType.Weapon:
+      return 'weapon';
+    case ItemType.Shield:
+    case ItemType.Armor:
+    case ItemType.Hat:
+    case ItemType.Boots:
+    case ItemType.Gloves:
+      return 'armor';
+    case ItemType.Accessory:
+    case ItemType.Belt:
+    case ItemType.Necklace:
+    case ItemType.Ring:
+    case ItemType.Armlet:
+    case ItemType.Bracer:
+      return 'accessory';
+    default:
+      return null;
+  }
+}
