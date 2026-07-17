@@ -1,5 +1,6 @@
 import { type EoReader, PacketAction, type PacketFamily } from 'eolib';
 import type { Client } from '@/client';
+import { SfxId } from '@/sfx';
 
 /**
  * REOSERV custom packet family — not in upstream eolib. See
@@ -36,6 +37,8 @@ function handleSalvageReply(client: Client, reader: EoReader) {
       .replace('{armor}', String(gainedArmor))
       .replace('{accessory}', String(gainedAccessory));
     client.toastController.showSuccess(msg);
+    // Reuse the craft SFX as the "salvage happened" cue for now.
+    client.audioController.playById(SfxId.Craft);
   }
 }
 
