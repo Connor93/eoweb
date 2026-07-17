@@ -186,9 +186,9 @@ export const locales = {
       filterClear: 'Clear filters',
       salvage: 'Salvage',
       salvageConfirmMessage:
-        'Permanently salvage {name} into shards? This cannot be undone.',
+        'Permanently salvage {name} into {shards} shards? This cannot be undone.',
       salvageConfirm:
-        'Permanently salvage {count} item(s) into shards? This cannot be undone.',
+        'Permanently salvage {count} item(s) into {shards} shards total? This cannot be undone.',
       salvageToast:
         'Salvaged: +{weapon} weapon, +{armor} armor, +{accessory} accessory shards',
       salvageSelectedCount: '{count} selected',
@@ -828,9 +828,9 @@ export const locales = {
       filterClear: 'Filters wissen',
       salvage: 'Slopen',
       salvageConfirmMessage:
-        'Wil je {name} permanent slopen tot brokstukken? Dit kan niet ongedaan worden gemaakt.',
+        'Wil je {name} permanent slopen tot {shards} brokstukken? Dit kan niet ongedaan worden gemaakt.',
       salvageConfirm:
-        'Wil je {count} item(s) permanent slopen tot brokstukken? Dit kan niet ongedaan worden gemaakt.',
+        'Wil je {count} item(s) permanent slopen tot in totaal {shards} brokstukken? Dit kan niet ongedaan worden gemaakt.',
       salvageToast:
         'Gesloopt: +{weapon} wapen-, +{armor} harnas- en +{accessory} accessoirebrokstukken',
       salvageSelectedCount: '{count} geselecteerd',
@@ -1473,9 +1473,9 @@ export const locales = {
       filterClear: 'Rensa filter',
       salvage: 'Skrota',
       salvageConfirmMessage:
-        'Skrota {name} permanent till skärvor? Detta kan inte ångras.',
+        'Skrota {name} permanent till {shards} skärvor? Detta kan inte ångras.',
       salvageConfirm:
-        'Skrota {count} föremål permanent till skärvor? Detta kan inte ångras.',
+        'Skrota {count} föremål permanent till totalt {shards} skärvor? Detta kan inte ångras.',
       salvageToast:
         'Skrotat: +{weapon} vapen-, +{armor} rustnings- och +{accessory} accessoarskärvor',
       salvageSelectedCount: '{count} markerade',
@@ -2118,9 +2118,9 @@ export const locales = {
       filterClear: 'Limpar filtros',
       salvage: 'Reciclar',
       salvageConfirmMessage:
-        'Reciclar permanentemente {name} em fragmentos? Isso não pode ser desfeito.',
+        'Reciclar permanentemente {name} em {shards} fragmentos? Isso não pode ser desfeito.',
       salvageConfirm:
-        'Reciclar permanentemente {count} item(ns) em fragmentos? Isso não pode ser desfeito.',
+        'Reciclar permanentemente {count} item(ns) em {shards} fragmentos no total? Isso não pode ser desfeito.',
       salvageToast:
         'Reciclado: +{weapon} de arma, +{armor} de armadura, +{accessory} de acessório em fragmentos',
       salvageSelectedCount: '{count} selecionado(s)',

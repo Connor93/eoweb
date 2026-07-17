@@ -31,6 +31,7 @@ import { SlotType } from '@/ui/enums';
 import { useItemDrag } from '@/ui/in-game';
 import {
   attackSpeedLine,
+  categoryForItemType,
   emptyItemFilter,
   formatInstanceBaseStats,
   formatInstanceMod,
@@ -329,6 +330,21 @@ export function InventoryGrid({ itemIds }: Props) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const lastTapRef = useRef(0);
+
+  const selectionYield = useMemo(() => {
+    const acc = { weapon: 0, armor: 0, accessory: 0 };
+    if (!selectMode) return acc;
+    for (const id of selectedIds) {
+      const inst = client.instanceController.byInstanceId(id);
+      if (!inst) continue;
+      const record = client.getEifRecordById(inst.baseItemId);
+      const cat = record ? categoryForItemType(record.type) : null;
+      if (!cat) continue;
+      acc[cat] += client.salvageController.yieldFor(inst.level, inst.rarity);
+    }
+    return acc;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, selectMode, selectedIds, refresh]);
 
   useEffect(() => {
     const handlePointerDown = (e: PointerEvent) => {
@@ -770,10 +786,13 @@ export function InventoryGrid({ itemIds }: Props) {
               '{id}',
               String(inst.baseItemId),
             );
-          const message = locale.inventory.salvageConfirmMessage.replace(
-            '{name}',
-            itemName,
+          const shards = client.salvageController.yieldFor(
+            inst.level,
+            inst.rarity,
           );
+          const message = locale.inventory.salvageConfirmMessage
+            .replace('{name}', itemName)
+            .replace('{shards}', String(shards));
           client.alertController.showConfirm(
             locale.inventory.salvage,
             message,
@@ -824,10 +843,11 @@ export function InventoryGrid({ itemIds }: Props) {
     if (selectedIds.size === 0) return;
     const ids = [...selectedIds];
     const count = ids.length;
-    const message = locale.inventory.salvageConfirm.replace(
-      '{count}',
-      String(count),
-    );
+    const shards =
+      selectionYield.weapon + selectionYield.armor + selectionYield.accessory;
+    const message = locale.inventory.salvageConfirm
+      .replace('{count}', String(count))
+      .replace('{shards}', String(shards));
     client.alertController.showConfirm(
       locale.inventory.salvage,
       message,
@@ -839,7 +859,7 @@ export function InventoryGrid({ itemIds }: Props) {
         }
       },
     );
-  }, [client, locale, selectedIds]);
+  }, [client, locale, selectedIds, selectionYield]);
 
   const TAB_LABELS = [
     locale.inventory.tabWeapons,
@@ -1064,6 +1084,12 @@ export function InventoryGrid({ itemIds }: Props) {
           <span class='font-semibold tabular-nums'>
             {shards.weapon.toLocaleString()}
           </span>
+          {selectMode && selectionYield.weapon > 0 && (
+            <span class='font-semibold text-success tabular-nums'>
+              {' '}
+              (+{selectionYield.weapon.toLocaleString()})
+            </span>
+          )}
         </span>
         <span
           class='flex items-center gap-1'
@@ -1073,6 +1099,12 @@ export function InventoryGrid({ itemIds }: Props) {
           <span class='font-semibold tabular-nums'>
             {shards.armor.toLocaleString()}
           </span>
+          {selectMode && selectionYield.armor > 0 && (
+            <span class='font-semibold text-success tabular-nums'>
+              {' '}
+              (+{selectionYield.armor.toLocaleString()})
+            </span>
+          )}
         </span>
         <span
           class='flex items-center gap-1'
@@ -1082,6 +1114,12 @@ export function InventoryGrid({ itemIds }: Props) {
           <span class='font-semibold tabular-nums'>
             {shards.accessory.toLocaleString()}
           </span>
+          {selectMode && selectionYield.accessory > 0 && (
+            <span class='font-semibold text-success tabular-nums'>
+              {' '}
+              (+{selectionYield.accessory.toLocaleString()})
+            </span>
+          )}
         </span>
       </div>
 
