@@ -1086,8 +1086,8 @@ export function InventoryGrid({ itemIds }: Props) {
         class={`mt-1 flex items-center justify-around rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} px-2 py-1 text-xs`}
       >
         <span
-          class='flex items-center gap-1'
-          title={locale.inventory.shardsWeaponTooltip}
+          class='tooltip tooltip-top flex items-center gap-1'
+          data-tip={locale.inventory.shardsWeaponTooltip}
         >
           <span class='text-amber-400'>
             <GiCrystalShine size={14} />
@@ -1103,8 +1103,8 @@ export function InventoryGrid({ itemIds }: Props) {
           )}
         </span>
         <span
-          class='flex items-center gap-1'
-          title={locale.inventory.shardsArmorTooltip}
+          class='tooltip tooltip-top flex items-center gap-1'
+          data-tip={locale.inventory.shardsArmorTooltip}
         >
           <span class='text-sky-400'>
             <GiCrystalCluster size={14} />
@@ -1120,8 +1120,8 @@ export function InventoryGrid({ itemIds }: Props) {
           )}
         </span>
         <span
-          class='flex items-center gap-1'
-          title={locale.inventory.shardsAccessoryTooltip}
+          class='tooltip tooltip-top flex items-center gap-1'
+          data-tip={locale.inventory.shardsAccessoryTooltip}
         >
           <span class='text-violet-400'>
             <GiCutDiamond size={14} />
