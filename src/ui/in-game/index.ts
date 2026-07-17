@@ -15,6 +15,7 @@ export { BoardDialog } from './dialogs/board-dialog';
 export { CharacterDialog } from './dialogs/character-dialog';
 export { ChatLogDialog } from './dialogs/chat-log-dialog';
 export { ChestDialog } from './dialogs/chest-dialog';
+export { EnchanterDialog } from './dialogs/enchanter-dialog';
 export { GuildDialog } from './dialogs/guild-dialog';
 export { InnKeeperDialog } from './dialogs/inn-keeper-dialog';
 export { InventoryDialog } from './dialogs/inventory-dialog';

@@ -47,6 +47,12 @@ export class EnchanterController {
   };
   private openedSubscribers: OpenedSubscriber[] = [];
   private resultSubscribers: ResultSubscriber[] = [];
+  /** Client-side selection of the instance currently loaded into the
+   *  enchanter window. Purely local UI state — dragging an item onto
+   *  the drop slot selects it here; there is no server-side deposit
+   *  for the enchanter (unlike chest/locker/trade). */
+  private selectedId: string | null = null;
+  private changedSubscribers: (() => void)[] = [];
 
   constructor(client: Client) {
     this.client = client;
@@ -56,7 +62,18 @@ export class EnchanterController {
     this.sessionId = sessionId;
     this.client.sessionId = sessionId;
     this.pricing = pricing;
+    this.selectedId = null;
     for (const cb of this.openedSubscribers) cb();
+    for (const cb of this.changedSubscribers) cb();
+  }
+
+  get selectedInstanceId(): string | null {
+    return this.selectedId;
+  }
+
+  selectInstance(id: string | null): void {
+    this.selectedId = id;
+    for (const cb of this.changedSubscribers) cb();
   }
 
   handleResult(status: number): void {
@@ -95,5 +112,11 @@ export class EnchanterController {
   }
   unsubscribeResult(cb: ResultSubscriber): void {
     this.resultSubscribers = this.resultSubscribers.filter((s) => s !== cb);
+  }
+  subscribeChanged(cb: () => void): void {
+    this.changedSubscribers.push(cb);
+  }
+  unsubscribeChanged(cb: () => void): void {
+    this.changedSubscribers = this.changedSubscribers.filter((s) => s !== cb);
   }
 }

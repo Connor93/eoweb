@@ -35,7 +35,8 @@ export type DialogId =
   | 'packet-log'
   | 'ping'
   | 'lookup'
-  | 'trade';
+  | 'trade'
+  | 'enchanter';
 
 type DialogMeta = {
   /** Saved layout preference (persisted to localStorage). */

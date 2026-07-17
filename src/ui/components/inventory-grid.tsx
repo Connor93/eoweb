@@ -658,6 +658,8 @@ export function InventoryGrid({ itemIds }: Props) {
             client.instanceController.sendChestDeposit(inst.instanceId);
           } else if (result.type === 'trade') {
             client.instanceController.sendTradeAdd(inst.instanceId);
+          } else if (result.type === 'enchanter') {
+            client.enchanterController.selectInstance(inst.instanceId);
           } else if (result.type === 'ground') {
             // pointer-captured drags don't fire mousemove on the canvas,
             // so client.mouseCoords is stale at pointerup. Refresh from

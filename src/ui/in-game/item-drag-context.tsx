@@ -20,6 +20,7 @@ type DragDropResult =
   | { type: 'chest' }
   | { type: 'locker' }
   | { type: 'trade' }
+  | { type: 'enchanter' }
   | { type: 'junk' }
   | { type: 'drop' }
   | { type: 'ground'; clientX: number; clientY: number }
@@ -218,6 +219,14 @@ export function ItemDragProvider({
       );
       if (tradeEl) {
         resolve({ type: 'trade' });
+        return;
+      }
+
+      const enchanterEl = (target as HTMLElement).closest<HTMLElement>(
+        '[data-enchanter-drop]',
+      );
+      if (enchanterEl) {
+        resolve({ type: 'enchanter' });
         return;
       }
 

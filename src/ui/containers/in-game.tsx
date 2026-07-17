@@ -26,6 +26,7 @@ import {
   CommandPalette,
   DesktopEmoteButton,
   DialogArena,
+  EnchanterDialog,
   GroundItemTooltip,
   GuildDialog,
   HotBar,
@@ -89,6 +90,7 @@ const ALL_DIALOG_IDS: DialogId[] = [
   'ping',
   'lookup',
   'trade',
+  'enchanter',
 ];
 
 function DialogById({ id }: { id: DialogId }) {
@@ -141,6 +143,8 @@ function DialogById({ id }: { id: DialogId }) {
       return <LookupDialog />;
     case 'trade':
       return <TradeDialog />;
+    case 'enchanter':
+      return <EnchanterDialog />;
   }
 }
 
@@ -251,6 +255,11 @@ function InGameContent() {
     };
     client.questController.subscribeDialogOpened(handleQuestDialogOpened);
 
+    const handleEnchanterOpened = () => {
+      openDialog('enchanter');
+    };
+    client.enchanterController.subscribeOpened(handleEnchanterOpened);
+
     const handleWalked = () => {
       closeDialog('bank');
       closeDialog('barber');
@@ -265,6 +274,7 @@ function InGameContent() {
       closeDialog('questNpc');
       client.questController.resetDialog();
       closeDialog('trade');
+      closeDialog('enchanter');
     };
     client.movementController.subscribeWalked(handleWalked);
 
@@ -300,6 +310,7 @@ function InGameContent() {
       client.boardController.unsubscribeBoardOpened(handleBoardOpened);
       client.guildController.unsubscribeOpened(handleGuildOpened);
       client.questController.unsubscribeDialogOpened(handleQuestDialogOpened);
+      client.enchanterController.unsubscribeOpened(handleEnchanterOpened);
       client.tradeController.unsubscribe(handleTradeOpened);
       client.movementController.unsubscribeWalked(handleWalked);
       client.keyboardController.unsubscribeToggleCommandPalette(

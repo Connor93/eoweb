@@ -415,6 +415,8 @@ export const locales = {
       craftedMsg: 'Crafted {name}',
     },
     enchanter: {
+      title: 'Enchanter',
+      dropHint: 'Drag an item here to enchant it',
       resultOk: 'The enchantment succeeded!',
       resultInsufficient: 'You do not have enough shards.',
       resultInvalid: 'That enchantment could not be applied.',
@@ -1064,6 +1066,8 @@ export const locales = {
       craftedMsg: '{name} gemaakt',
     },
     enchanter: {
+      title: 'Betovenaar',
+      dropHint: 'Sleep hier een item naartoe om het te betoveren',
       resultOk: 'De betovering is gelukt!',
       resultInsufficient: 'Je hebt niet genoeg brokstukken.',
       resultInvalid: 'Die betovering kon niet worden toegepast.',
@@ -1714,6 +1718,8 @@ export const locales = {
       craftedMsg: 'Tillverkade {name}',
     },
     enchanter: {
+      title: 'Förtrollare',
+      dropHint: 'Dra ett föremål hit för att förtrolla det',
       resultOk: 'Förtrollningen lyckades!',
       resultInsufficient: 'Du har inte tillräckligt med skärvor.',
       resultInvalid: 'Den förtrollningen kunde inte tillämpas.',
@@ -2364,6 +2370,8 @@ export const locales = {
       craftedMsg: 'Fabricou {name}',
     },
     enchanter: {
+      title: 'Encantador',
+      dropHint: 'Arraste um item aqui para encantá-lo',
       resultOk: 'O encantamento foi bem-sucedido!',
       resultInsufficient: 'Você não tem fragmentos suficientes.',
       resultInvalid: 'Esse encantamento não pôde ser aplicado.',
