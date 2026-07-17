@@ -414,6 +414,11 @@ export const locales = {
       soldMsg: 'Sold {amount}x {name}',
       craftedMsg: 'Crafted {name}',
     },
+    enchanter: {
+      resultOk: 'The enchantment succeeded!',
+      resultInsufficient: 'You do not have enough shards.',
+      resultInvalid: 'That enchantment could not be applied.',
+    },
     trade: {
       title: 'Trade',
       addItem: 'Add Item',
@@ -1057,6 +1062,11 @@ export const locales = {
       boughtMsg: '{amount}x {name} gekocht',
       soldMsg: '{amount}x {name} verkocht',
       craftedMsg: '{name} gemaakt',
+    },
+    enchanter: {
+      resultOk: 'De betovering is gelukt!',
+      resultInsufficient: 'Je hebt niet genoeg brokstukken.',
+      resultInvalid: 'Die betovering kon niet worden toegepast.',
     },
     trade: {
       title: 'Ruilen',
@@ -1703,6 +1713,11 @@ export const locales = {
       soldMsg: 'Sålde {amount}x {name}',
       craftedMsg: 'Tillverkade {name}',
     },
+    enchanter: {
+      resultOk: 'Förtrollningen lyckades!',
+      resultInsufficient: 'Du har inte tillräckligt med skärvor.',
+      resultInvalid: 'Den förtrollningen kunde inte tillämpas.',
+    },
     trade: {
       title: 'Byta',
       addItem: 'Lägg till föremål',
@@ -2347,6 +2362,11 @@ export const locales = {
       boughtMsg: 'Comprou {amount}x {name}',
       soldMsg: 'Vendeu {amount}x {name}',
       craftedMsg: 'Fabricou {name}',
+    },
+    enchanter: {
+      resultOk: 'O encantamento foi bem-sucedido!',
+      resultInsufficient: 'Você não tem fragmentos suficientes.',
+      resultInvalid: 'Esse encantamento não pôde ser aplicado.',
     },
     trade: {
       title: 'Troca',

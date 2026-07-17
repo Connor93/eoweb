@@ -3,10 +3,13 @@ import {
   BarberOpenClientPacket,
   type CharacterMapInfo,
   CitizenOpenClientPacket,
+  EoWriter,
   GuildOpenClientPacket,
   MarriageOpenClientPacket,
   type NpcMapInfo,
   NpcType,
+  PacketAction,
+  type PacketFamily,
   PriestOpenClientPacket,
   QuestUseClientPacket,
   ShopOpenClientPacket,
@@ -15,6 +18,11 @@ import {
 import type { Client } from '@/client';
 import { SpellTarget } from '@/game-state';
 import { ChatBubble } from '@/render';
+
+// REOSERV custom NPC type — not in upstream eolib's NpcType enum. See
+// `src/controllers/enchanter-controller.ts` for the FAMILY_ENCHANTER wire
+// format this dispatches into.
+const ENCHANTER_NPC_TYPE = 16;
 
 export class NpcController {
   private client: Client;
@@ -103,6 +111,16 @@ export class NpcController {
         break;
       }
       default:
+        if ((record.type as number) === ENCHANTER_NPC_TYPE) {
+          const writer = new EoWriter();
+          writer.addShort(npc.index);
+          this.client.bus?.sendBuf(
+            61 as PacketFamily,
+            PacketAction.Open,
+            writer.toByteArray(),
+          );
+          break;
+        }
         return;
     }
 

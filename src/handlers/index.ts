@@ -18,6 +18,7 @@ import { registerCreationHandlers } from './creation';
 import { registerDoorHandlers } from './door';
 import { registerEffectHandlers } from './effect';
 import { registerEmoteHandlers } from './emote';
+import { registerEnchanterHandlers } from './enchanter';
 import { registerFaceHandlers } from './face';
 import { registerGuildHandlers } from './guild';
 import { registerInitHandlers } from './init';
@@ -101,6 +102,7 @@ export function registerAllHandlers(client: Client): void {
   registerBossHandlers(client);
   registerReputationHandlers(client);
   registerSalvageHandlers(client);
+  registerEnchanterHandlers(client);
   registerInstanceHandlers(client);
   registerRatesHandlers(client);
   registerLookupHandlers(client);

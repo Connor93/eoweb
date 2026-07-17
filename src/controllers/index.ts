@@ -29,6 +29,14 @@ export type {
 } from './config-controller';
 export { ConfigController } from './config-controller';
 export { DrunkController } from './drunk-controller';
+export {
+  ENCHANT_REROLL_ALL,
+  ENCHANT_REROLL_ONE,
+  ENCHANT_UPGRADE_RARITY,
+  ENCHANT_UPGRADE_ROLL,
+  EnchanterController,
+  type EnchanterPricing,
+} from './enchanter-controller';
 export { GuildController } from './guild-controller';
 export { HotbarController } from './hotbar-controller';
 export { InnController } from './inn-controller';

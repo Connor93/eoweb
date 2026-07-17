@@ -51,6 +51,7 @@ import {
   CommandController,
   ConfigController,
   DrunkController,
+  EnchanterController,
   GuildController,
   HotbarController,
   InnController,
@@ -258,6 +259,7 @@ export class Client {
   questController: QuestController;
   reputationController: ReputationController;
   salvageController: SalvageController;
+  enchanterController: EnchanterController;
   sessionController: SessionController;
   shopController: ShopController;
   socialController: SocialController;
@@ -409,6 +411,7 @@ export class Client {
     this.quakeController = new QuakeController();
     this.reputationController = new ReputationController(this);
     this.salvageController = new SalvageController(this);
+    this.enchanterController = new EnchanterController(this);
     this.sessionController = new SessionController(this);
     this.shopController = new ShopController(this);
     this.socialController = new SocialController(this);
