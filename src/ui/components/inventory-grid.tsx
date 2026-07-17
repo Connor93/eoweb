@@ -893,10 +893,16 @@ export function InventoryGrid({ itemIds }: Props) {
       if (!inst) return [];
       const record = client.getEifRecordById(inst.baseItemId);
       const name = record?.name ?? `Item ${inst.baseItemId}`;
-      const lines = [
-        `${name} (${instanceRarityLabel(inst.rarity)})`,
-        `Level ${inst.level}`,
-      ];
+      const lines = [`${name} (${instanceRarityLabel(inst.rarity)})`];
+      const category = record ? categoryForItemType(record.type) : null;
+      if (category) {
+        lines.push(
+          { weapon: 'Weapon', armor: 'Armor', accessory: 'Accessory' }[
+            category
+          ],
+        );
+      }
+      lines.push(`Level ${inst.level}`);
       const speed = attackSpeedLine(client, inst.baseItemId);
       if (speed) {
         lines.push(speed);
