@@ -6,10 +6,12 @@ import { encodeInstanceId, type InstanceRarity } from './instance-controller';
  * REOSERV custom packet family — not in upstream eolib. FAMILY_SALVAGE
  * (60) breaks down rolled instances into shard currency. The client sends
  * `Request` (short instance count + that many 36-byte instance ids); the
- * server replies with `Reply` (six ints: weapon/armor/accessory shard
- * totals, then this batch's weapon/armor/accessory deltas). The server
- * also pushes a `Reply` on map enter with all `gained_*` fields zeroed,
- * purely to seed the display.
+ * server replies with `Reply` (eleven ints: weapon/armor/accessory shard
+ * totals, then this batch's weapon/armor/accessory deltas, then the yield
+ * config `per_level_x100` + the four rarity multipliers `×100` in
+ * common/rare/epic/legendary order — used by `yieldFor` to preview yields).
+ * The server also pushes a `Reply` on map enter with all `gained_*` fields
+ * zeroed, purely to seed the display + config.
  */
 const FAMILY_SALVAGE = 60;
 
