@@ -11,7 +11,10 @@ import type { IconType } from 'react-icons';
 import { FaCoins, FaSearch, FaTrash } from 'react-icons/fa';
 import {
   GiBroadsword,
+  GiCrystalCluster,
+  GiCrystalShine,
   GiCubes,
+  GiCutDiamond,
   GiHealthPotion,
   GiScrollQuill,
   GiShield,
@@ -1080,7 +1083,9 @@ export function InventoryGrid({ itemIds }: Props) {
           class='flex items-center gap-1'
           title={locale.inventory.shardsWeaponTooltip}
         >
-          <span class='opacity-70'>{locale.inventory.shardsWeapon}</span>
+          <span class='text-amber-400'>
+            <GiCrystalShine size={14} />
+          </span>
           <span class='font-semibold tabular-nums'>
             {shards.weapon.toLocaleString()}
           </span>
@@ -1095,7 +1100,9 @@ export function InventoryGrid({ itemIds }: Props) {
           class='flex items-center gap-1'
           title={locale.inventory.shardsArmorTooltip}
         >
-          <span class='opacity-70'>{locale.inventory.shardsArmor}</span>
+          <span class='text-sky-400'>
+            <GiCrystalCluster size={14} />
+          </span>
           <span class='font-semibold tabular-nums'>
             {shards.armor.toLocaleString()}
           </span>
@@ -1110,7 +1117,9 @@ export function InventoryGrid({ itemIds }: Props) {
           class='flex items-center gap-1'
           title={locale.inventory.shardsAccessoryTooltip}
         >
-          <span class='opacity-70'>{locale.inventory.shardsAccessory}</span>
+          <span class='text-violet-400'>
+            <GiCutDiamond size={14} />
+          </span>
           <span class='font-semibold tabular-nums'>
             {shards.accessory.toLocaleString()}
           </span>
