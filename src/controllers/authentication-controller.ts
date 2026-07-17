@@ -364,9 +364,11 @@ export class AuthenticationController {
   }
 
   requestAccountCreation(data: AccountCreateData): void {
-    this.accountCreateData = data;
+    // Canonicalize to lowercase up front so the request check, the stored
+    // account name, and later logins all agree on the same casing.
+    this.accountCreateData = { ...data, username: data.username.toLowerCase() };
     const packet = new AccountRequestClientPacket();
-    packet.username = data.username;
+    packet.username = this.accountCreateData.username;
     this.client.bus!.send(packet);
   }
 
@@ -432,17 +434,20 @@ export class AuthenticationController {
     newPassword: string,
   ): void {
     const packet = new AccountAgreeClientPacket();
-    packet.username = username;
+    packet.username = username.toLowerCase();
     packet.oldPassword = oldPassword;
     packet.newPassword = newPassword;
     this.client.bus!.send(packet);
   }
 
   login(username: string, password: string, rememberMe: boolean): void {
-    this.pendingUsername = username;
+    // Account names are canonically lowercase on the server, and its lookups are
+    // case-sensitive. Normalize here so a typed capital letter never fails login.
+    const normalized = username.toLowerCase();
+    this.pendingUsername = normalized;
     const writer = new EoWriter();
     const packet = new LoginRequestClientPacket();
-    packet.username = username;
+    packet.username = normalized;
     packet.password = password;
     packet.serialize(writer);
 
