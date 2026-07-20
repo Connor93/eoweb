@@ -77,6 +77,7 @@ import {
   type SavedSession,
   SessionController,
   ShopController,
+  SkillController,
   SocialController,
   SpellController,
   StatSkillController,
@@ -265,6 +266,7 @@ export class Client {
   enchanterController: EnchanterController;
   sessionController: SessionController;
   shopController: ShopController;
+  skillController: SkillController;
   socialController: SocialController;
   statSkillController: StatSkillController;
   statsController: StatsController;
@@ -417,6 +419,7 @@ export class Client {
     this.enchanterController = new EnchanterController(this);
     this.sessionController = new SessionController(this);
     this.shopController = new ShopController(this);
+    this.skillController = new SkillController(this);
     this.socialController = new SocialController(this);
     this.spellController = new SpellController(this);
     this.statSkillController = new StatSkillController(this);
@@ -705,6 +708,7 @@ export class Client {
       this.drunkController.tick();
       this.cleanupController.tick();
       this.spellController.tick();
+      this.skillController.tick();
       this.npcController.tick();
       this.pingController.tick();
 

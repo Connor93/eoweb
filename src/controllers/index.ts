@@ -87,6 +87,7 @@ export {
 export { SalvageController, type ShardCounts } from './salvage-controller';
 export { SessionController } from './session-controller';
 export { ShopController, type ShopStockItem } from './shop-controller';
+export { type SkillCatalogEntry, SkillController } from './skill-controller';
 export { type CharacterTab, SocialController } from './social-controller';
 export { SpellController } from './spell-controller';
 export { StatSkillController } from './stat-skill-controller';

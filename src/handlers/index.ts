@@ -45,6 +45,7 @@ import { registerReputationHandlers } from './reputation';
 import { registerSalvageHandlers } from './salvage';
 import { registerShopHandlers } from './shop';
 import { registerSitHandlers } from './sit';
+import { registerSkillHandlers } from './skill';
 import { registerSpellHandlers } from './spell';
 import { registerStatSkillHandlers } from './stat-skill';
 import { registerTalkHandlers } from './talk';
@@ -103,6 +104,7 @@ export function registerAllHandlers(client: Client): void {
   registerReputationHandlers(client);
   registerSalvageHandlers(client);
   registerEnchanterHandlers(client);
+  registerSkillHandlers(client);
   registerInstanceHandlers(client);
   registerRatesHandlers(client);
   registerLookupHandlers(client);
