@@ -87,8 +87,9 @@ export class SkillController {
   use(skillId: string): void {
     if (this.remainingMs(skillId) > 0) return; // locally gated; server re-checks
     const writer = new EoWriter();
-    writer.addChar(skillId.length);
-    writer.addBytes(new TextEncoder().encode(skillId));
+    const idBytes = new TextEncoder().encode(skillId);
+    writer.addChar(idBytes.length);
+    writer.addBytes(idBytes);
     this.client.bus?.sendBuf(
       FAMILY_SKILL as PacketFamily,
       PacketAction.Use,
