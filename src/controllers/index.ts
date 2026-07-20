@@ -92,6 +92,11 @@ export { type CharacterTab, SocialController } from './social-controller';
 export { SpellController } from './spell-controller';
 export { StatSkillController } from './stat-skill-controller';
 export { StatsController } from './stats-controller';
+export {
+  StatusController,
+  type StatusEntryWire,
+  type StatusView,
+} from './status-controller';
 export { ToastController } from './toast-controller';
 export { TradeController } from './trade-controller';
 export { UsageController } from './usage-controller';

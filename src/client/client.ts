@@ -82,6 +82,7 @@ import {
   SpellController,
   StatSkillController,
   StatsController,
+  StatusController,
   ToastController,
   TradeController,
   UsageController,
@@ -267,6 +268,7 @@ export class Client {
   sessionController: SessionController;
   shopController: ShopController;
   skillController: SkillController;
+  statusController: StatusController;
   socialController: SocialController;
   statSkillController: StatSkillController;
   statsController: StatsController;
@@ -420,6 +422,7 @@ export class Client {
     this.sessionController = new SessionController(this);
     this.shopController = new ShopController(this);
     this.skillController = new SkillController(this);
+    this.statusController = new StatusController(this);
     this.socialController = new SocialController(this);
     this.spellController = new SpellController(this);
     this.statSkillController = new StatSkillController(this);
@@ -709,6 +712,7 @@ export class Client {
       this.cleanupController.tick();
       this.spellController.tick();
       this.skillController.tick();
+      this.statusController.tick();
       this.npcController.tick();
       this.pingController.tick();
 

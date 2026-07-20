@@ -48,6 +48,7 @@ import { registerSitHandlers } from './sit';
 import { registerSkillHandlers } from './skill';
 import { registerSpellHandlers } from './spell';
 import { registerStatSkillHandlers } from './stat-skill';
+import { registerStatusHandlers } from './status';
 import { registerTalkHandlers } from './talk';
 import { registerTradeHandlers } from './trade';
 import { registerWalkHandlers } from './walk';
@@ -105,6 +106,7 @@ export function registerAllHandlers(client: Client): void {
   registerSalvageHandlers(client);
   registerEnchanterHandlers(client);
   registerSkillHandlers(client);
+  registerStatusHandlers(client);
   registerInstanceHandlers(client);
   registerRatesHandlers(client);
   registerLookupHandlers(client);
