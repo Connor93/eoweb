@@ -38,6 +38,7 @@ export { TradeDialog } from './dialogs/trade-dialog';
 export { GroundItemTooltip } from './ground-item-tooltip';
 // HUD components
 export { BossTracker } from './hud/boss-tracker';
+export { BuffBar } from './hud/buff-bar';
 export { DesktopEmoteButton } from './hud/desktop-emote-button';
 export { HotBar } from './hud/hot-bar';
 export { MobileNav, NavSidebar } from './hud/nav-sidebar';
