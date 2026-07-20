@@ -432,6 +432,7 @@ export const locales = {
       notEnoughTp: 'Not enough TP.',
       onCooldown: 'That skill is still on cooldown.',
       unknownSkill: 'Unknown skill.',
+      invalidTarget: 'Invalid target.',
     },
     trade: {
       title: 'Trade',
@@ -1096,6 +1097,7 @@ export const locales = {
       notEnoughTp: 'Niet genoeg TP.',
       onCooldown: 'Die vaardigheid is nog aan het herladen.',
       unknownSkill: 'Onbekende vaardigheid.',
+      invalidTarget: 'Ongeldig doelwit.',
     },
     trade: {
       title: 'Ruilen',
@@ -1761,6 +1763,7 @@ export const locales = {
       notEnoughTp: 'Inte tillräckligt med TP.',
       onCooldown: 'Den färdigheten har fortfarande nedkylning.',
       unknownSkill: 'Okänd färdighet.',
+      invalidTarget: 'Ogiltigt mål.',
     },
     trade: {
       title: 'Byta',
@@ -2426,6 +2429,7 @@ export const locales = {
       notEnoughTp: 'TP insuficiente.',
       onCooldown: 'Essa habilidade ainda está em recarga.',
       unknownSkill: 'Habilidade desconhecida.',
+      invalidTarget: 'Alvo inválido.',
     },
     trade: {
       title: 'Troca',

@@ -7,6 +7,7 @@ const FAMILY_SKILL = 62;
 const REJECT_UNAFFORDABLE = 1;
 const REJECT_ON_COOLDOWN = 2;
 const REJECT_UNKNOWN = 3;
+const REJECT_INVALID_TARGET = 4;
 
 export interface SkillCatalogEntry {
   skillId: string;
@@ -15,6 +16,7 @@ export interface SkillCatalogEntry {
   costHp: number;
   costTp: number;
   cooldownMs: number;
+  target: 'self' | 'enemy';
 }
 
 interface CooldownState {
@@ -25,6 +27,7 @@ interface CooldownState {
 export class SkillController {
   private client: Client;
   catalog = new Map<string, SkillCatalogEntry>();
+  selectedSkillId: string | null = null;
   private cooldowns = new Map<string, CooldownState>();
   private subscribers: (() => void)[] = [];
 
@@ -67,6 +70,10 @@ export class SkillController {
       this.client.toastController.showWarning(
         this.client.locale.skills.unknownSkill,
       );
+    } else if (reason === REJECT_INVALID_TARGET) {
+      this.client.toastController.showWarning(
+        this.client.locale.skills.invalidTarget,
+      );
     }
     this.notify();
   }
@@ -84,12 +91,25 @@ export class SkillController {
 
   // --- outbound ---
 
-  use(skillId: string): void {
+  arm(skillId: string): void {
+    this.selectedSkillId = skillId;
+    this.notify();
+  }
+
+  clearArmed(): void {
+    if (this.selectedSkillId !== null) {
+      this.selectedSkillId = null;
+      this.notify();
+    }
+  }
+
+  use(skillId: string, targetNpcIndex = 0): void {
     if (this.remainingMs(skillId) > 0) return; // locally gated; server re-checks
     const writer = new EoWriter();
     const idBytes = new TextEncoder().encode(skillId);
     writer.addChar(idBytes.length);
     writer.addBytes(idBytes);
+    writer.addShort(targetNpcIndex);
     this.client.bus?.sendBuf(
       FAMILY_SKILL as PacketFamily,
       PacketAction.Use,

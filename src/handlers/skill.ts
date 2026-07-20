@@ -20,6 +20,7 @@ function handleSkillList(client: Client, reader: EoReader): void {
       costHp: reader.getShort(),
       costTp: reader.getShort(),
       cooldownMs: reader.getInt(),
+      target: reader.getChar() === 1 ? 'enemy' : 'self',
     });
   }
   client.skillController.setCatalog(entries);
