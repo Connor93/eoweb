@@ -63,7 +63,10 @@ export function BuffBar() {
             >
               {(v.name[0] ?? '?').toUpperCase()}
             </span>
-            <span class='min-w-0 flex-1 truncate font-medium' title={v.name}>
+            <span
+              class='pointer-events-auto min-w-0 flex-1 truncate font-medium'
+              title={v.name}
+            >
               {v.name}
             </span>
             {v.stacks > 1 && (
