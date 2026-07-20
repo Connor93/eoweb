@@ -6,6 +6,7 @@ import {
   GiScrollUnfurled,
   GiSpellBook,
   GiSwordman,
+  GiSwordwoman,
   GiThreeFriends,
 } from 'react-icons/gi';
 import { LuLogOut, LuMenu, LuRefreshCcw } from 'react-icons/lu';
@@ -42,6 +43,7 @@ const NAV_BUTTONS: NavDialogButton[] = [
   { id: 'inventory', Icon: GiBackpack },
   { id: 'map', Icon: GiCompass },
   { id: 'spells', Icon: GiSpellBook },
+  { id: 'skills', Icon: GiSwordwoman },
   { id: 'character', Icon: GiSwordman },
   { id: 'quests', Icon: GiScrollUnfurled },
   { id: 'social', Icon: GiThreeFriends },

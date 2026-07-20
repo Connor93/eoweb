@@ -53,6 +53,7 @@ import {
   SettingsDialog,
   ShopDialog,
   SkillMasterDialog,
+  SkillsDialog,
   SocialDialog,
   SpellsDialog,
   StatPointsNudge,
@@ -74,6 +75,7 @@ const ALL_DIALOG_IDS: DialogId[] = [
   'shop',
   'inventory',
   'spells',
+  'skills',
   'character',
   'quests',
   'questNpc',
@@ -111,6 +113,8 @@ function DialogById({ id }: { id: DialogId }) {
       return <ShopDialog />;
     case 'spells':
       return <SpellsDialog />;
+    case 'skills':
+      return <SkillsDialog />;
     case 'character':
       return <CharacterDialog />;
     case 'quests':

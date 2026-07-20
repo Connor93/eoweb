@@ -17,6 +17,7 @@ export type DialogId =
   | 'shop'
   | 'inventory'
   | 'spells'
+  | 'skills'
   | 'character'
   | 'quests'
   | 'questNpc'
