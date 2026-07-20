@@ -43,6 +43,11 @@ function HotBarSlot({ index, pillow }: SlotProps) {
   const slot = slots[index] ?? { type: SlotType.Empty, typeId: 0 };
   const isItem = slot.type === SlotType.Item;
   const isSkill = slot.type === SlotType.Skill;
+  const isNewSkill = slot.type === SlotType.NewSkill;
+  const skillEntry =
+    isNewSkill && slot.skillId
+      ? client.skillController.catalog.get(slot.skillId)
+      : null;
 
   const itemGraphicId = isItem
     ? (client.getEifRecordById(slot.typeId)?.graphicId ?? null)
@@ -68,6 +73,30 @@ function HotBarSlot({ index, pillow }: SlotProps) {
       client.spellController.unsubscribeSpellQueued(update);
     };
   }, [client, isSkill, slot.typeId]);
+
+  const [, forceRender] = useState(0);
+  const [cooldownFrac, setCooldownFrac] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const animate = () => {
+      const f = slot.skillId
+        ? client.skillController.fraction(slot.skillId)
+        : 0;
+      setCooldownFrac(f);
+      if (f > 0) raf = requestAnimationFrame(animate); // stops when ready
+    };
+    const onChange = () => {
+      forceRender((n) => n + 1); // catalog arrival / general re-render
+      cancelAnimationFrame(raf);
+      animate(); // (re)start the sweep if a cast just started
+    };
+    const unsub = client.skillController.subscribe(onChange);
+    animate(); // initial — covers a cooldown already active on mount (relog)
+    return () => {
+      cancelAnimationFrame(raf);
+      unsub();
+    };
+  }, [client, slot.skillId]);
 
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const CLEAR_THRESHOLD = 30;
@@ -95,15 +124,21 @@ function HotBarSlot({ index, pillow }: SlotProps) {
         client.hotbarController.clearSlot(index);
         playSfxById(SfxId.InventoryPlace);
       } else {
-        client.spellController.useHotbarSlot(index);
+        if (slot.type === SlotType.NewSkill) {
+          if (slot.skillId) client.skillController.use(slot.skillId);
+        } else {
+          client.spellController.useHotbarSlot(index);
+        }
       }
     },
-    [client, slot.type, index],
+    [client, slot.type, slot.skillId, index],
   );
 
   const isDropTarget =
     !!currentDrag &&
-    (currentDrag.source === 'inventory' || currentDrag.source === 'spell');
+    (currentDrag.source === 'inventory' ||
+      currentDrag.source === 'spell' ||
+      currentDrag.source === 'skill');
 
   return (
     <div
@@ -158,6 +193,23 @@ function HotBarSlot({ index, pillow }: SlotProps) {
           class='pointer-events-none relative z-10 object-contain'
           style={{ width: `${SPELL_FRAME_W}px`, height: `${SPELL_FRAME_H}px` }}
           draggable={false}
+        />
+      )}
+
+      {/* New-framework skill: placeholder badge + name initial */}
+      {isNewSkill && (
+        <div class='pointer-events-none relative z-10 flex h-8 w-8 items-center justify-center rounded bg-[#3b3b52] font-bold text-[#e8e8f0] text-sm'>
+          {(skillEntry?.name?.[0] ?? '?').toUpperCase()}
+        </div>
+      )}
+
+      {/* Cooldown sweep */}
+      {isNewSkill && cooldownFrac > 0 && (
+        <div
+          class='pointer-events-none absolute inset-0 z-20 rounded'
+          style={{
+            background: `conic-gradient(rgba(0,0,0,0.6) ${cooldownFrac * 360}deg, transparent 0deg)`,
+          }}
         />
       )}
     </div>

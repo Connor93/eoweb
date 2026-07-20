@@ -27,7 +27,7 @@ type DragDropResult =
   | { type: 'cancelled' };
 
 type DragInfo = {
-  source: 'inventory' | 'equipment' | 'spell';
+  source: 'inventory' | 'equipment' | 'spell' | 'skill';
   itemId: number;
   /** Present when the drag source is an instanced (rolled) item card. */
   instanceId?: string;
