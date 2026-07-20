@@ -1,5 +1,14 @@
-import { type EoReader, PacketAction, type PacketFamily } from 'eolib';
+import {
+  type Element as EolibElement,
+  type EoReader,
+  PacketAction,
+  type PacketFamily,
+} from 'eolib';
 import type { Client } from '@/client';
+import {
+  eolibToCombatElement,
+  npcElementEffectiveness,
+} from '@/combat-overlay/element-colors';
 import type { SkillCatalogEntry } from '@/controllers';
 
 const FAMILY_SKILL = 62;
@@ -34,6 +43,48 @@ function handleSkillReply(client: Client, reader: EoReader): void {
   client.skillController.handleReply(skillId, ok, reason, cooldownMs);
 }
 
+function handleSkillDamage(client: Client, reader: EoReader): void {
+  const casterId = reader.getShort(); // reserved (future caster VFX)
+  const npcIndex = reader.getShort();
+  const damage = reader.getInt();
+  const hpPercentage = reader.getChar();
+  const element = reader.getChar();
+  void casterId;
+
+  const npc = client.getNpcByIndex(npcIndex);
+  if (!npc) return;
+  client.combatOverlayController.setHpBar({
+    key: `npc:${npcIndex}`,
+    percent: hpPercentage,
+    worldX: npc.coords.x,
+    worldY: npc.coords.y,
+  });
+  if (damage > 0) {
+    const record = client.getEnfRecordById(npc.id);
+    const combatElement = eolibToCombatElement(element as EolibElement);
+    client.combatOverlayController.pushDamage({
+      amount: damage,
+      element: combatElement,
+      effectiveness: record
+        ? npcElementEffectiveness(
+            combatElement,
+            record.element,
+            record.elementWeakness,
+          )
+        : 'neutral',
+      targetKey: `npc:${npcIndex}`,
+      worldX: npc.coords.x,
+      worldY: npc.coords.y,
+    });
+  } else {
+    client.combatOverlayController.pushMiss({
+      targetKey: `npc:${npcIndex}`,
+      worldX: npc.coords.x,
+      worldY: npc.coords.y,
+    });
+  }
+}
+
 export function registerSkillHandlers(client: Client): void {
   client.bus!.registerPacketHandler(
     FAMILY_SKILL as PacketFamily,
@@ -44,5 +95,10 @@ export function registerSkillHandlers(client: Client): void {
     FAMILY_SKILL as PacketFamily,
     PacketAction.Reply,
     (reader) => handleSkillReply(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_SKILL as PacketFamily,
+    PacketAction.Spec,
+    (reader) => handleSkillDamage(client, reader),
   );
 }

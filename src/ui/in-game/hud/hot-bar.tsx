@@ -76,6 +76,7 @@ function HotBarSlot({ index, pillow }: SlotProps) {
 
   const [, forceRender] = useState(0);
   const [cooldownFrac, setCooldownFrac] = useState(0);
+  const [isArmed, setIsArmed] = useState(false);
   useEffect(() => {
     let raf = 0;
     const animate = () => {
@@ -87,16 +88,21 @@ function HotBarSlot({ index, pillow }: SlotProps) {
     };
     const onChange = () => {
       forceRender((n) => n + 1); // catalog arrival / general re-render
+      setIsArmed(
+        isNewSkill &&
+          !!slot.skillId &&
+          client.skillController.selectedSkillId === slot.skillId,
+      );
       cancelAnimationFrame(raf);
       animate(); // (re)start the sweep if a cast just started
     };
     const unsub = client.skillController.subscribe(onChange);
-    animate(); // initial — covers a cooldown already active on mount (relog)
+    onChange(); // initial — covers arm state + a cooldown already active on mount (relog)
     return () => {
       cancelAnimationFrame(raf);
       unsub();
     };
-  }, [client, slot.skillId]);
+  }, [client, isNewSkill, slot.skillId]);
 
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const CLEAR_THRESHOLD = 30;
@@ -125,7 +131,19 @@ function HotBarSlot({ index, pillow }: SlotProps) {
         playSfxById(SfxId.InventoryPlace);
       } else {
         if (slot.type === SlotType.NewSkill) {
-          if (slot.skillId) client.skillController.use(slot.skillId);
+          if (slot.skillId) {
+            const entry = client.skillController.catalog.get(slot.skillId);
+            if (entry?.target === 'enemy') {
+              // toggle-arm: click again to cancel
+              if (client.skillController.selectedSkillId === slot.skillId) {
+                client.skillController.clearArmed();
+              } else {
+                client.skillController.arm(slot.skillId);
+              }
+            } else {
+              client.skillController.use(slot.skillId, 0);
+            }
+          }
         } else {
           client.spellController.useHotbarSlot(index);
         }
@@ -143,7 +161,11 @@ function HotBarSlot({ index, pillow }: SlotProps) {
   return (
     <div
       class={`relative flex items-center justify-center overflow-visible rounded border ${UI_PANEL_BORDER} ${UI_GHOST_BG} transition-colors ${
-        isDropTarget ? 'ring-2 ring-primary/60' : ''
+        isDropTarget
+          ? 'ring-2 ring-primary/60'
+          : isArmed
+            ? 'ring-2 ring-amber-400'
+            : ''
       }`}
       style={{
         width: SLOT_SIZE,

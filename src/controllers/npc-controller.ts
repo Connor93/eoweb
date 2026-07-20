@@ -97,6 +97,14 @@ export class NpcController {
       }
       case NpcType.Aggressive:
       case NpcType.Passive: {
+        if (this.client.skillController.selectedSkillId) {
+          this.client.skillController.use(
+            this.client.skillController.selectedSkillId,
+            npc.index,
+          );
+          this.client.skillController.clearArmed();
+          return;
+        }
         if (
           !this.client.spellController.selectedSpellId ||
           this.client.spellController.queuedSpellId > 0 ||
