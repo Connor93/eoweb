@@ -44,6 +44,7 @@ import {
   formatInstanceBaseStats,
   formatInstanceMod,
   getItemMeta,
+  rangeLine,
   type StatRowKey,
 } from '@/utils';
 import { DialogBase } from './dialog-base';
@@ -53,10 +54,12 @@ const EQUIP_CELL = 23;
 function getEquipTooltipLines(
   record: EifRecord,
   speedLine: string | null,
+  rangeText: string | null,
 ): string[] {
   return [
     record.name,
     ...(speedLine ? [speedLine] : []),
+    ...(rangeText ? [rangeText] : []),
     ...getItemMeta(record),
   ];
 }
@@ -78,6 +81,7 @@ function getInstanceTooltipLines(
   inst: InstanceItem,
   record: EifRecord | null | undefined,
   speedLine: string | null,
+  rangeText: string | null,
 ): string[] {
   const name = record?.name ?? `Item ${inst.baseItemId}`;
   const lines = [
@@ -86,6 +90,9 @@ function getInstanceTooltipLines(
   ];
   if (speedLine) {
     lines.push(speedLine);
+  }
+  if (rangeText) {
+    lines.push(rangeText);
   }
   if (record) {
     lines.push(...formatInstanceBaseStats(record, inst.level));
@@ -141,10 +148,11 @@ function EquipSlot({ label, itemId, slot, gridColumn, gridRow }: SlotConfig) {
   // itemId is the slot's base item id for both plain and instanced equips, so
   // it keys the authored weapon swing speed for either case.
   const speedLine = itemId ? attackSpeedLine(client, itemId) : null;
+  const rangeText = itemId ? rangeLine(client, itemId) : null;
   const tooltipLines = equippedInstance
-    ? getInstanceTooltipLines(equippedInstance, record, speedLine)
+    ? getInstanceTooltipLines(equippedInstance, record, speedLine, rangeText)
     : record
-      ? getEquipTooltipLines(record, speedLine)
+      ? getEquipTooltipLines(record, speedLine, rangeText)
       : null;
   const rarityBorder = equippedInstance
     ? rarityBorderClass(equippedInstance.rarity)

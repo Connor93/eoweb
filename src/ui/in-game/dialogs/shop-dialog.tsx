@@ -24,6 +24,7 @@ import {
   formatInstanceBaseStats,
   formatInstanceMod,
   getItemMeta,
+  rangeLine,
 } from '@/utils';
 import { DialogBase } from './dialog-base';
 
@@ -155,6 +156,8 @@ function CraftItemPreview({ itemId }: { itemId: number }) {
     const lines = [name, ...getItemMeta(record)];
     const speed = attackSpeedLine(client, itemId);
     if (speed) lines.push(speed);
+    const range = rangeLine(client, itemId);
+    if (range) lines.push(range);
     return lines;
   })();
 

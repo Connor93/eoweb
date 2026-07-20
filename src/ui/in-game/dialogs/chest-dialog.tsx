@@ -22,6 +22,7 @@ import {
   formatInstanceMod,
   getItemGraphicId,
   getItemMeta,
+  rangeLine,
 } from '@/utils';
 import { DialogBase } from './dialog-base';
 
@@ -77,6 +78,10 @@ function ChestInstanceSlot({ inst, onTake }: ChestInstanceSlotProps) {
     const speed = attackSpeedLine(client, inst.baseItemId);
     if (speed) {
       lines.push(speed);
+    }
+    const range = rangeLine(client, inst.baseItemId);
+    if (range) {
+      lines.push(range);
     }
     if (record) {
       lines.push(...formatInstanceBaseStats(record, inst.level));
@@ -249,6 +254,10 @@ function ChestItemSlot({ item, onTake }: ChestItemSlotProps) {
     const speed = attackSpeedLine(client, item.id);
     if (speed) {
       lines.push(speed);
+    }
+    const range = rangeLine(client, item.id);
+    if (range) {
+      lines.push(range);
     }
     return lines;
   })();

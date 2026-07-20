@@ -43,7 +43,9 @@ export function registerRatesHandlers(client: Client) {
     PacketAction.List,
     (reader) => parseEntries(client, reader),
   );
-  // Sparse authored weapon swing speeds — sent at map enter / refresh.
+  // Sparse per-item display list (swing speed + attack range) — sent at map
+  // enter / refresh. Each entry carries both fields; 0 means "no line" (an
+  // unauthored swing speed or a melee range), so only store positive values.
   client.bus!.registerPacketHandler(
     FAMILY_RATES as PacketFamily,
     PacketAction.Reply,
@@ -52,7 +54,13 @@ export function registerRatesHandlers(client: Client) {
       for (let i = 0; i < count; i++) {
         const itemId = reader.getShort();
         const attackMs = reader.getThree();
-        client.itemAttackRates.set(itemId, attackMs);
+        const range = reader.getChar();
+        if (attackMs > 0) {
+          client.itemAttackRates.set(itemId, attackMs);
+        }
+        if (range > 0) {
+          client.itemAttackRanges.set(itemId, range);
+        }
       }
     },
   );

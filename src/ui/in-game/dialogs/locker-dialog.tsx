@@ -38,6 +38,7 @@ import {
   instanceMatches,
   inventoryTabForItemType,
   isItemFilterActive,
+  rangeLine,
   stackableMatches,
 } from '@/utils';
 import { DialogBase } from './dialog-base';
@@ -362,6 +363,10 @@ export function LockerDialog() {
       if (speed) {
         lines.push(speed);
       }
+      const range = rangeLine(client, item.id);
+      if (range) {
+        lines.push(range);
+      }
       return lines;
     }
     if (key.startsWith('instance:')) {
@@ -377,6 +382,10 @@ export function LockerDialog() {
       const speed = attackSpeedLine(client, inst.baseItemId);
       if (speed) {
         lines.push(speed);
+      }
+      const range = rangeLine(client, inst.baseItemId);
+      if (range) {
+        lines.push(range);
       }
       if (record) {
         lines.push(...formatInstanceBaseStats(record, inst.level));

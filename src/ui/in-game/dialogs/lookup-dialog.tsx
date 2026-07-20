@@ -21,6 +21,7 @@ import {
   getItemMeta,
   modCurve,
   prettyTarget,
+  rangeLine,
 } from '@/utils';
 import { DialogBase } from './dialog-base';
 
@@ -140,6 +141,10 @@ function ItemView({ item }: { item: ItemLookup }) {
       ? formatInstanceBaseStats(record, level)
       : getItemMeta(record)
     : [];
+  // Weapon reach comes from the family-55 rates map, not the EIF, so it's
+  // appended here rather than produced by formatInstanceBaseStats/getItemMeta.
+  const range = rangeLine(client, item.id);
+  const statLines = range ? [...baseStats, range] : baseStats;
 
   return (
     <div class='flex flex-col gap-2'>
@@ -191,7 +196,7 @@ function ItemView({ item }: { item: ItemLookup }) {
         </div>
       )}
 
-      {baseStats.length > 0 && (
+      {statLines.length > 0 && (
         <Section
           title={
             instanced
@@ -200,7 +205,7 @@ function ItemView({ item }: { item: ItemLookup }) {
           }
         >
           <div class='flex flex-col text-xs'>
-            {baseStats.map((line, i) => (
+            {statLines.map((line, i) => (
               <span key={i} class='text-base-content/80'>
                 {line}
               </span>

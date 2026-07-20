@@ -12,6 +12,7 @@ import {
   formatInstanceMod,
   getItemMeta,
   isoToScreen,
+  rangeLine,
 } from '@/utils';
 
 // Local copy of rarityTextClass — not exported from inventory-grid.
@@ -80,6 +81,7 @@ export function GroundItemTooltip() {
     const record = client.getEifRecordById(inst.baseItemId);
     const name = record?.name ?? `Item ${inst.baseItemId}`;
     const speedLine = attackSpeedLine(client, inst.baseItemId);
+    const rangeText = rangeLine(client, inst.baseItemId);
 
     content = (
       <>
@@ -98,6 +100,7 @@ export function GroundItemTooltip() {
           </div>
         )}
         {speedLine && <div class='opacity-70'>{speedLine}</div>}
+        {rangeText && <div class='opacity-70'>{rangeText}</div>}
         {record &&
           formatInstanceBaseStats(record, inst.level).map((line, i) => (
             <div key={`base-${i}`} class='opacity-70'>
@@ -120,6 +123,7 @@ export function GroundItemTooltip() {
     const qty = item.amount > 1 ? ` x${item.amount.toLocaleString()}` : '';
     const meta = record ? getItemMeta(record) : [];
     const speedLine = attackSpeedLine(client, item.id);
+    const rangeText = rangeLine(client, item.id);
     content = (
       <>
         <div class='font-semibold'>
@@ -132,6 +136,7 @@ export function GroundItemTooltip() {
           </div>
         ))}
         {speedLine && <div class='opacity-70'>{speedLine}</div>}
+        {rangeText && <div class='opacity-70'>{rangeText}</div>}
       </>
     );
   }

@@ -188,6 +188,9 @@ export class Client {
   // Authored weapon swing speeds (item_id -> ms), from the family-55 Reply
   // packet. Sparse: only items that author attack_rate_ms appear.
   itemAttackRates: Map<number, number> = new Map();
+  // Effective weapon attack range in tiles (item_id -> tiles), from the same
+  // family-55 Reply packet. Sparse: only weapons whose reach exceeds 1 appear.
+  itemAttackRanges: Map<number, number> = new Map();
   // Class ids selectable at character creation (CreationConfig deep packet,
   // family 57). null = not yet received → the create screen falls back to all
   // ECF classes. Pushed after login and on pub reload.
