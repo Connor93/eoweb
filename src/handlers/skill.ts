@@ -52,7 +52,10 @@ function handleSkillDamage(client: Client, reader: EoReader): void {
   void casterId;
 
   const npc = client.getNpcByIndex(npcIndex);
-  if (!npc) return;
+  if (!npc) {
+    client.sessionController.requestNpcRange([npcIndex]);
+    return;
+  }
   client.combatOverlayController.setHpBar({
     key: `npc:${npcIndex}`,
     percent: hpPercentage,
