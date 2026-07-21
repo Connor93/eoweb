@@ -333,6 +333,7 @@ export class MapRenderer {
       this._worldGraphics,
       this._seenWorldGraphics,
       this.client.worldContainer,
+      true,
     );
   }
 
