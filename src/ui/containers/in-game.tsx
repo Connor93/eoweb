@@ -40,6 +40,7 @@ import {
   LookupDialog,
   MobileNav,
   NavSidebar,
+  NpcDebuffOverlay,
   NpcLevelIndicator,
   NpcTooltip,
   PacketLogDialog,
@@ -333,6 +334,7 @@ function InGameContent() {
     <>
       <CombatOverlay />
       <GroundItemTooltip />
+      <NpcDebuffOverlay />
       <NpcLevelIndicator />
       <NpcTooltip />
       <PlayerTooltip />
