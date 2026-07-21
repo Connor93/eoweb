@@ -8,6 +8,7 @@ const REJECT_UNAFFORDABLE = 1;
 const REJECT_ON_COOLDOWN = 2;
 const REJECT_UNKNOWN = 3;
 const REJECT_INVALID_TARGET = 4;
+const REJECT_OUT_OF_RANGE = 5;
 
 export interface SkillCatalogEntry {
   skillId: string;
@@ -75,6 +76,10 @@ export class SkillController {
     } else if (reason === REJECT_INVALID_TARGET) {
       this.client.toastController.showWarning(
         this.client.locale.skills.invalidTarget,
+      );
+    } else if (reason === REJECT_OUT_OF_RANGE) {
+      this.client.toastController.showWarning(
+        this.client.locale.skills.outOfRange,
       );
     }
     this.notify();

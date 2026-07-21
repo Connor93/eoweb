@@ -433,6 +433,7 @@ export const locales = {
       onCooldown: 'That skill is still on cooldown.',
       unknownSkill: 'Unknown skill.',
       invalidTarget: 'Invalid target.',
+      outOfRange: 'Out of range.',
     },
     trade: {
       title: 'Trade',
@@ -1098,6 +1099,7 @@ export const locales = {
       onCooldown: 'Die vaardigheid is nog aan het herladen.',
       unknownSkill: 'Onbekende vaardigheid.',
       invalidTarget: 'Ongeldig doelwit.',
+      outOfRange: 'Buiten bereik.',
     },
     trade: {
       title: 'Ruilen',
@@ -1764,6 +1766,7 @@ export const locales = {
       onCooldown: 'Den färdigheten har fortfarande nedkylning.',
       unknownSkill: 'Okänd färdighet.',
       invalidTarget: 'Ogiltigt mål.',
+      outOfRange: 'Utom räckhåll.',
     },
     trade: {
       title: 'Byta',
@@ -2430,6 +2433,7 @@ export const locales = {
       onCooldown: 'Essa habilidade ainda está em recarga.',
       unknownSkill: 'Habilidade desconhecida.',
       invalidTarget: 'Alvo inválido.',
+      outOfRange: 'Fora de alcance.',
     },
     trade: {
       title: 'Troca',

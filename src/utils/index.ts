@@ -46,7 +46,7 @@ export {
 export { makeDrunk } from './make-drunk';
 export { padWithZeros } from './pad-with-zeros';
 export { randomRange } from './random-range';
-export { getDistance, inRange } from './range';
+export { getChebyshevDistance, getDistance, inRange } from './range';
 export { rangeLine } from './range-line';
 export { screenToIso } from './screen-to-iso';
 export {

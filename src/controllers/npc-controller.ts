@@ -18,6 +18,7 @@ import {
 import type { Client } from '@/client';
 import { SpellTarget } from '@/game-state';
 import { ChatBubble } from '@/render';
+import { getChebyshevDistance } from '@/utils';
 
 // REOSERV custom NPC type — not in upstream eolib's NpcType enum. See
 // `src/controllers/enchanter-controller.ts` for the FAMILY_ENCHANTER wire
@@ -98,6 +99,16 @@ export class NpcController {
       case NpcType.Aggressive:
       case NpcType.Passive: {
         if (this.client.skillController.selectedSkillId) {
+          const armedRange = this.client.skillController.armedEnemyRange();
+          if (armedRange !== null) {
+            const player = this.client.getPlayerCoords();
+            if (getChebyshevDistance(player, npc.coords) > armedRange) {
+              this.client.toastController.showWarning(
+                this.client.locale.skills.outOfRange,
+              );
+              return; // leave the skill armed so the player can pick a closer target
+            }
+          }
           this.client.skillController.use(
             this.client.skillController.selectedSkillId,
             npc.index,
