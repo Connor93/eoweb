@@ -13,6 +13,10 @@ export interface CombatPopup {
   /** Element matchup vs the NPC target — drives the WEAK/RESIST damage-number
    *  treatment. Always 'neutral' for non-NPC targets / heals / misses. */
   effectiveness: ElementEffectiveness;
+  /** Set when an armed augment (e.g. `empower`) boosted this hit — drives
+   *  the golden/larger/⚡-badge damage-number treatment. Only ever set on
+   *  `'damage'` popups via `markAugmented`. */
+  augmented?: boolean;
   /** Stable id of the target if known — `"npc:42"` / `"char:1024"`.
    *  The renderer looks the target up in `client.nearby` each frame
    *  so the popup follows the target if it walks during its lifetime.
@@ -120,6 +124,18 @@ export class CombatOverlayController {
 
   clearHpBar(key: string): void {
     if (this.hpBars.delete(key)) this.notify();
+  }
+
+  /** Mark the most-recently-spawned damage popup for `targetKey` as augmented
+   *  (an augment fired on that hit) so it renders in the augmented style. */
+  markAugmented(targetKey: string): void {
+    for (let i = this.popups.length - 1; i >= 0; i--) {
+      const p = this.popups[i];
+      if (p.kind === 'damage' && p.targetKey === targetKey) {
+        p.augmented = true;
+        return;
+      }
+    }
   }
 
   /** Called by the overlay component on each render-tick to drop

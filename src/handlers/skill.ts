@@ -89,6 +89,11 @@ function handleSkillDamage(client: Client, reader: EoReader): void {
   }
 }
 
+function handleSkillAugment(client: Client, reader: EoReader): void {
+  const npcIndex = reader.getShort();
+  client.combatOverlayController.markAugmented(`npc:${npcIndex}`);
+}
+
 export function registerSkillHandlers(client: Client): void {
   client.bus!.registerPacketHandler(
     FAMILY_SKILL as PacketFamily,
@@ -104,5 +109,10 @@ export function registerSkillHandlers(client: Client): void {
     FAMILY_SKILL as PacketFamily,
     PacketAction.Spec,
     (reader) => handleSkillDamage(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_SKILL as PacketFamily,
+    PacketAction.Agree,
+    (reader) => handleSkillAugment(client, reader),
   );
 }

@@ -54,6 +54,23 @@
   filter: grayscale(55%) brightness(0.85);
 }
 
+/* Augmented (e.g. empower boosted this hit): bigger + golden glow + a ⚡
+   badge. Color is NOT set here — the popup's inline `style.color` always
+   wins over a class, so renderPopup sets the gold color inline when
+   `p.augmented` and this rule only owns size/glow. */
+.combat-popup--augment {
+  font-size: 22px;
+  text-shadow:
+    0 0 6px currentColor,
+    0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.combat-popup__augment {
+  font-size: 0.7em;
+  margin-left: 2px;
+  vertical-align: super;
+}
+
 @keyframes combat-popup-float {
   0% {
     transform: translate(-50%, 0);
