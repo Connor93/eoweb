@@ -73,6 +73,7 @@ enum EntityType {
   Cursor = 2,
   Npc = 3,
   Item = 4,
+  RangeHighlight = 5,
 }
 
 type Entity = {
@@ -259,9 +260,11 @@ export class MapRenderer {
   private readonly _worldSprites = new Map<string, Sprite>();
   private readonly _uiSprites = new Map<string, Sprite>();
   private readonly _uiGraphics = new Map<string, Graphics>();
+  private readonly _worldGraphics = new Map<string, Graphics>();
   private readonly _seenWorldSprites = new Set<string>();
   private readonly _seenUiSprites = new Set<string>();
   private readonly _seenUiGraphics = new Set<string>();
+  private readonly _seenWorldGraphics = new Set<string>();
   private _worldOrder = 0;
   private _uiOrder = 0;
   // Ghost container for the local player's second-pass render (alpha=0.4).
@@ -301,6 +304,7 @@ export class MapRenderer {
     this._seenWorldSprites.clear();
     this._seenUiSprites.clear();
     this._seenUiGraphics.clear();
+    this._seenWorldGraphics.clear();
     this._worldOrder = 0;
     this._uiOrder = 0;
     this._ghostVisible = false;
@@ -325,6 +329,11 @@ export class MapRenderer {
       this._seenUiGraphics,
       this.client.uiContainer,
     );
+    this.sweepGraphics(
+      this._worldGraphics,
+      this._seenWorldGraphics,
+      this.client.worldContainer,
+    );
   }
 
   private clearSceneNodes() {
@@ -340,6 +349,10 @@ export class MapRenderer {
       this.client.uiContainer.removeChild(graphics);
       graphics.destroy();
     }
+    for (const graphics of this._worldGraphics.values()) {
+      this.client.worldContainer.removeChild(graphics);
+      graphics.destroy();
+    }
     if (this._ghostContainer) {
       this.client.worldContainer.removeChild(this._ghostContainer);
       this._ghostContainer.destroy({ texture: false });
@@ -350,9 +363,11 @@ export class MapRenderer {
     this._worldSprites.clear();
     this._uiSprites.clear();
     this._uiGraphics.clear();
+    this._worldGraphics.clear();
     this._seenWorldSprites.clear();
     this._seenUiSprites.clear();
     this._seenUiGraphics.clear();
+    this._seenWorldGraphics.clear();
   }
 
   private sweepSprites(
@@ -439,6 +454,24 @@ export class MapRenderer {
     graphics.scale.set(1);
     graphics.visible = true;
     graphics.zIndex = this._uiOrder++;
+    this.labelGraphics(graphics, label);
+    return graphics;
+  }
+
+  private ensureWorldGraphics(key: string, label: string): Graphics {
+    this._seenWorldGraphics.add(key);
+    let graphics = this._worldGraphics.get(key);
+    if (!graphics) {
+      graphics = new Graphics();
+      graphics.eventMode = 'none';
+      this._worldGraphics.set(key, graphics);
+      this.client.worldContainer.addChild(graphics);
+    }
+    graphics.clear();
+    graphics.alpha = 1;
+    graphics.scale.set(1);
+    graphics.visible = true;
+    graphics.zIndex = this._worldOrder++;
     this.labelGraphics(graphics, label);
     return graphics;
   }
@@ -758,6 +791,40 @@ export class MapRenderer {
       }
     }
 
+    const armedRange = this.client.skillController.armedEnemyRange();
+    if (armedRange !== null && inGame) {
+      const p = this.client.getPlayerCoords();
+      for (let dy = -armedRange; dy <= armedRange; dy++) {
+        for (let dx = -armedRange; dx <= armedRange; dx++) {
+          const x = p.x + dx;
+          const y = p.y + dy;
+          if (
+            x < 0 ||
+            y < 0 ||
+            x > this.client.map.width ||
+            y > this.client.map.height
+          ) {
+            continue;
+          }
+          const spec = this.getTileSpec(x, y);
+          if (
+            spec !== null &&
+            [MapTileSpec.Wall, MapTileSpec.Edge].includes(spec)
+          ) {
+            continue;
+          }
+          dynamics.push({
+            x,
+            y,
+            type: EntityType.RangeHighlight,
+            typeId: 0,
+            layer: Layer.Cursor,
+            depth: this.calculateDepth(Layer.Cursor, x, y),
+          });
+        }
+      }
+    }
+
     this.beginFrame();
     this.client.weaponElementController.beginFrame();
     this.client.npcElementController.beginFrame();
@@ -805,6 +872,9 @@ export class MapRenderer {
           break;
         case EntityType.Cursor:
           this.addCursorSprites(entity, playerScreen);
+          break;
+        case EntityType.RangeHighlight:
+          this.addRangeHighlightSprite(entity, playerScreen);
           break;
       }
     }
@@ -1702,6 +1772,34 @@ export class MapRenderer {
         sprite.position.set(animX, animY);
       }
     }
+  }
+
+  private addRangeHighlightSprite(entity: Entity, playerScreen: Vector2) {
+    const tileScreenX = (entity.x - entity.y) * HALF_TILE_WIDTH;
+    const tileScreenY = (entity.x + entity.y) * HALF_TILE_HEIGHT;
+    const rectX = Math.floor(
+      tileScreenX - HALF_TILE_WIDTH - playerScreen.x + this._halfGameWidth,
+    );
+    const rectY = Math.floor(
+      tileScreenY - HALF_TILE_HEIGHT - playerScreen.y + this._halfGameHeight,
+    );
+    const g = this.ensureWorldGraphics(
+      `range-hl:${entity.x}:${entity.y}`,
+      'map:range-highlight',
+    );
+    // Iso tile diamond within the 64x32 tile rect.
+    g.poly([
+      HALF_TILE_WIDTH,
+      0,
+      TILE_WIDTH,
+      HALF_TILE_HEIGHT,
+      HALF_TILE_WIDTH,
+      TILE_HEIGHT,
+      0,
+      HALF_TILE_HEIGHT,
+    ]);
+    g.fill({ color: 0x35d0e0, alpha: 0.25 });
+    g.position.set(rectX, rectY);
   }
 
   private addEmoteSprite(
