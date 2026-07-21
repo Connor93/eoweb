@@ -23,26 +23,33 @@ function readEntry(reader: EoReader): StatusEntryWire {
   };
 }
 
+function kindStr(kind: number): 'player' | 'npc' {
+  return kind === 2 ? 'npc' : 'player';
+}
+
 function handleSync(client: Client, reader: EoReader): void {
   const entityId = reader.getShort();
-  reader.getChar(); // entity_kind (only Player now)
+  const kind = reader.getChar();
+  const key = `${kindStr(kind)}:${entityId}`;
   const count = reader.getChar();
   const entries: StatusEntryWire[] = [];
   for (let i = 0; i < count; i++) entries.push(readEntry(reader));
-  client.statusController.sync(entityId, entries);
+  client.statusController.sync(key, entries);
 }
 
 function handleAdd(client: Client, reader: EoReader): void {
   const entityId = reader.getShort();
-  reader.getChar(); // entity_kind
-  client.statusController.add(entityId, readEntry(reader));
+  const kind = reader.getChar();
+  const key = `${kindStr(kind)}:${entityId}`;
+  client.statusController.add(key, readEntry(reader));
 }
 
 function handleRemove(client: Client, reader: EoReader): void {
   const entityId = reader.getShort();
-  reader.getChar(); // entity_kind
+  const kind = reader.getChar();
+  const key = `${kindStr(kind)}:${entityId}`;
   const statusId = readStr(reader);
-  client.statusController.remove(entityId, statusId);
+  client.statusController.remove(key, statusId);
 }
 
 export function registerStatusHandlers(client: Client): void {

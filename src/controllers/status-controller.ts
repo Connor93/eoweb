@@ -28,8 +28,8 @@ export interface StatusView {
 
 export class StatusController {
   private client: Client;
-  // entityId -> (statusId -> view)
-  private statuses = new Map<number, Map<string, StatusView>>();
+  // key ("player:<id>" | "npc:<index>") -> (statusId -> view)
+  private statuses = new Map<string, Map<string, StatusView>>();
   private subscribers: (() => void)[] = [];
 
   constructor(client: Client) {
@@ -61,33 +61,43 @@ export class StatusController {
     };
   }
 
-  sync(entityId: number, entries: StatusEntryWire[]): void {
+  sync(key: string, entries: StatusEntryWire[]): void {
     this.statuses.set(
-      entityId,
+      key,
       new Map(entries.map((e) => [e.statusId, this.toView(e)])),
     );
     this.notify();
   }
 
-  add(entityId: number, entry: StatusEntryWire): void {
-    let m = this.statuses.get(entityId);
+  add(key: string, entry: StatusEntryWire): void {
+    let m = this.statuses.get(key);
     if (!m) {
       m = new Map();
-      this.statuses.set(entityId, m);
+      this.statuses.set(key, m);
     }
     m.set(entry.statusId, this.toView(entry));
     this.notify();
   }
 
-  remove(entityId: number, statusId: string): void {
-    this.statuses.get(entityId)?.delete(statusId);
+  remove(key: string, statusId: string): void {
+    this.statuses.get(key)?.delete(statusId);
     this.notify();
   }
 
   /** The local player's statuses — what the buff bar renders. */
   selfStatuses(): StatusView[] {
-    const m = this.statuses.get(this.client.playerId);
+    return this.statusesFor(`player:${this.client.playerId}`);
+  }
+
+  /** All statuses for an arbitrary namespaced key ("player:<id>" | "npc:<index>"). */
+  statusesFor(key: string): StatusView[] {
+    const m = this.statuses.get(key);
     return m ? [...m.values()] : [];
+  }
+
+  /** Convenience accessor for an NPC's statuses, keyed by map NPC index. */
+  npcStatuses(index: number): StatusView[] {
+    return this.statusesFor(`npc:${index}`);
   }
 
   remainingMs(v: StatusView): number {
@@ -101,14 +111,14 @@ export class StatusController {
 
   tick(): void {
     let changed = false;
-    for (const [entityId, m] of this.statuses) {
+    for (const [key, m] of this.statuses) {
       for (const [statusId, v] of m) {
         if (!v.permanent && v.readyAt <= performance.now()) {
           m.delete(statusId);
           changed = true;
         }
       }
-      if (m.size === 0) this.statuses.delete(entityId);
+      if (m.size === 0) this.statuses.delete(key);
     }
     if (changed) this.notify();
   }
