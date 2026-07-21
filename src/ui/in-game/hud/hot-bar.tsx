@@ -130,26 +130,10 @@ function HotBarSlot({ index, pillow }: SlotProps) {
         client.hotbarController.clearSlot(index);
         playSfxById(SfxId.InventoryPlace);
       } else {
-        if (slot.type === SlotType.NewSkill) {
-          if (slot.skillId) {
-            const entry = client.skillController.catalog.get(slot.skillId);
-            if (entry?.target === 'enemy') {
-              // toggle-arm: click again to cancel
-              if (client.skillController.selectedSkillId === slot.skillId) {
-                client.skillController.clearArmed();
-              } else {
-                client.skillController.arm(slot.skillId);
-              }
-            } else {
-              client.skillController.use(slot.skillId, 0);
-            }
-          }
-        } else {
-          client.spellController.useHotbarSlot(index);
-        }
+        client.hotbarController.activate(index);
       }
     },
-    [client, slot.type, slot.skillId, index],
+    [client, slot.type, index],
   );
 
   const isDropTarget =

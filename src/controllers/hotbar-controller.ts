@@ -65,6 +65,30 @@ export class HotbarController {
     }
   }
 
+  activate(index: number): void {
+    const slot = this.client.hotbarSlots[index];
+    if (!slot) {
+      return;
+    }
+    if (slot.type === SlotType.NewSkill) {
+      if (!slot.skillId) {
+        return;
+      }
+      const entry = this.client.skillController.catalog.get(slot.skillId);
+      if (entry?.target === 'enemy') {
+        if (this.client.skillController.selectedSkillId === slot.skillId) {
+          this.client.skillController.clearArmed();
+        } else {
+          this.client.skillController.arm(slot.skillId);
+        }
+      } else {
+        this.client.skillController.use(slot.skillId, 0);
+      }
+    } else {
+      this.client.spellController.useHotbarSlot(index);
+    }
+  }
+
   subscribe(fn: () => void): () => void {
     this.subscribers.push(fn);
     return () => {

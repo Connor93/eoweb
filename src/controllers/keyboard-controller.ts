@@ -722,22 +722,22 @@ export class KeyboardController {
     }
 
     if (this.isOrWasInputHeld(Input.Hotbar1) && this.hotbarTicks === 0) {
-      this.client.spellController.useHotbarSlot(0);
+      this.client.hotbarController.activate(0);
       this.hotbarTicks = HOTBAR_COOLDOWN_TICKS;
     } else if (this.isOrWasInputHeld(Input.Hotbar2) && this.hotbarTicks === 0) {
-      this.client.spellController.useHotbarSlot(1);
+      this.client.hotbarController.activate(1);
       this.hotbarTicks = HOTBAR_COOLDOWN_TICKS;
     } else if (this.isOrWasInputHeld(Input.Hotbar3) && this.hotbarTicks === 0) {
-      this.client.spellController.useHotbarSlot(2);
+      this.client.hotbarController.activate(2);
       this.hotbarTicks = HOTBAR_COOLDOWN_TICKS;
     } else if (this.isOrWasInputHeld(Input.Hotbar4) && this.hotbarTicks === 0) {
-      this.client.spellController.useHotbarSlot(3);
+      this.client.hotbarController.activate(3);
       this.hotbarTicks = HOTBAR_COOLDOWN_TICKS;
     } else if (this.isOrWasInputHeld(Input.Hotbar5) && this.hotbarTicks === 0) {
-      this.client.spellController.useHotbarSlot(4);
+      this.client.hotbarController.activate(4);
       this.hotbarTicks = HOTBAR_COOLDOWN_TICKS;
     } else if (this.isOrWasInputHeld(Input.Hotbar6) && this.hotbarTicks === 0) {
-      this.client.spellController.useHotbarSlot(5);
+      this.client.hotbarController.activate(5);
       this.hotbarTicks = HOTBAR_COOLDOWN_TICKS;
     }
 
