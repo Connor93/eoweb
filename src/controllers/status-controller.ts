@@ -109,6 +109,20 @@ export class StatusController {
     return Math.max(0, Math.min(1, this.remainingMs(v) / v.durationMs));
   }
 
+  /** Drop status entries for NPC map-indices that are no longer present. */
+  pruneNpcs(surviving: Set<number>): void {
+    let changed = false;
+    for (const key of this.statuses.keys()) {
+      if (!key.startsWith('npc:')) continue;
+      const index = Number(key.slice('npc:'.length));
+      if (!surviving.has(index)) {
+        this.statuses.delete(key);
+        changed = true;
+      }
+    }
+    if (changed) this.notify();
+  }
+
   tick(): void {
     let changed = false;
     for (const [key, m] of this.statuses) {
