@@ -17,6 +17,8 @@ export interface SkillCatalogEntry {
   costTp: number;
   cooldownMs: number;
   target: 'self' | 'enemy';
+  /** Cast range in tiles (chebyshev). 0 = use the equipped weapon's range. */
+  range: number;
 }
 
 interface CooldownState {
@@ -141,5 +143,28 @@ export class SkillController {
       }
     }
     if (changed) this.notify();
+  }
+
+  // --- range resolution (for pre-check + tile highlight) ---
+
+  /** Effective cast range in tiles: explicit range, or the equipped weapon's
+   *  range for range:0 (sparse map; melee/absent -> 1). */
+  effectiveRange(entry: SkillCatalogEntry): number {
+    if (entry.range > 0) {
+      return entry.range;
+    }
+    return this.client.itemAttackRanges.get(this.client.equipment.weapon) ?? 1;
+  }
+
+  /** Range of the currently-armed enemy skill, or null if none is armed. */
+  armedEnemyRange(): number | null {
+    if (!this.selectedSkillId) {
+      return null;
+    }
+    const entry = this.catalog.get(this.selectedSkillId);
+    if (!entry || entry.target !== 'enemy') {
+      return null;
+    }
+    return this.effectiveRange(entry);
   }
 }
