@@ -15,6 +15,7 @@ import {
   usePillowGfxUrl,
   useSpellIconUrls,
 } from '@/ui/in-game';
+import { SkillIcon } from './skill-icon';
 
 const SLOT_COUNT = 6;
 const SLOT_SIZE = '3rem';
@@ -204,9 +205,13 @@ function HotBarSlot({ index, pillow }: SlotProps) {
 
       {/* New-framework skill: placeholder badge + name initial */}
       {isNewSkill && (
-        <div class='pointer-events-none relative z-10 flex h-8 w-8 items-center justify-center rounded bg-[#3b3b52] font-bold text-[#e8e8f0] text-sm'>
-          {(skillEntry?.name?.[0] ?? '?').toUpperCase()}
-        </div>
+        <SkillIcon
+          iconId={skillEntry?.iconId}
+          label={skillEntry?.name ?? ''}
+          tone='neutral'
+          active={false}
+          sizeClass='relative z-10 h-8 w-8'
+        />
       )}
 
       {/* Cooldown sweep */}

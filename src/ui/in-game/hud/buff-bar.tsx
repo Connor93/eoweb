@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { UI_PANEL_BG } from '@/ui/consts';
 import { useClient } from '@/ui/context';
 import { useBackdropBlur } from '@/ui/in-game';
+import { SkillIcon } from './skill-icon';
 
 /**
  * Buff bar: one chip per status on the local player (icon + name + countdown +
@@ -54,15 +55,12 @@ export function BuffBar() {
               v.isDebuff ? 'text-red-200' : 'text-slate-100'
             }`}
           >
-            <span
-              class={`flex h-5 w-5 shrink-0 items-center justify-center rounded font-bold text-[10px] ${
-                v.isDebuff
-                  ? 'bg-red-900 text-red-100'
-                  : 'bg-[#3b3b52] text-[#e8e8f0]'
-              }`}
-            >
-              {(v.name[0] ?? '?').toUpperCase()}
-            </span>
+            <SkillIcon
+              iconId={v.iconId}
+              label={v.name}
+              tone={v.isDebuff ? 'debuff' : 'buff'}
+              active={v.permanent}
+            />
             <span
               class='pointer-events-auto min-w-0 flex-1 truncate font-medium'
               title={v.name}

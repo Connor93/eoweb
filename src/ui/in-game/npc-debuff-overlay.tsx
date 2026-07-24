@@ -4,6 +4,7 @@ import type { StatusView } from '@/controllers';
 import { NpcDeathAnimation } from '@/render';
 import { useClient } from '@/ui/context';
 import { useTooltipFrame } from './entity-tooltip';
+import { SkillIcon } from './hud/skill-icon';
 
 const COMBAT_NPC_TYPES = new Set<NpcType>([
   NpcType.Passive,
@@ -130,9 +131,7 @@ function DebuffChip({
 
   return (
     <div class='flex w-5 flex-col items-center gap-0.5' title={status.name}>
-      <span class='flex h-5 w-5 shrink-0 items-center justify-center rounded bg-red-900 font-bold text-[10px] text-red-100'>
-        {(status.name[0] ?? '?').toUpperCase()}
-      </span>
+      <SkillIcon iconId={status.iconId} label={status.name} tone='debuff' />
       {showTimer && (
         <div class='relative h-1 w-5 overflow-hidden rounded bg-slate-800'>
           <div
