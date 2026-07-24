@@ -203,14 +203,14 @@ function HotBarSlot({ index, pillow }: SlotProps) {
         />
       )}
 
-      {/* New-framework skill: placeholder badge + name initial */}
+      {/* New-framework skill icon */}
       {isNewSkill && (
         <SkillIcon
           iconId={skillEntry?.iconId}
           label={skillEntry?.name ?? ''}
           tone='neutral'
           active={false}
-          sizeClass='relative z-10 h-8 w-8'
+          sizeClass='pointer-events-none relative z-10 h-8 w-8'
         />
       )}
 

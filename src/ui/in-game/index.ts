@@ -46,6 +46,7 @@ export { PartyPanel } from './hud/party-panel';
 export { PlayerHud } from './hud/player-hud';
 export { QuestTracker } from './hud/quest-tracker';
 export { ReputationBadge } from './hud/reputation-badge';
+export { SkillIcon } from './hud/skill-icon';
 export { StatPointsNudge } from './hud/stat-points-nudge';
 export { StatusMessages } from './hud/status-messages';
 export { TouchActionButtons } from './hud/touch-action-buttons';

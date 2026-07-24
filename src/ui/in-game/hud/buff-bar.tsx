@@ -7,7 +7,8 @@ import { SkillIcon } from './skill-icon';
 /**
  * Buff bar: one chip per status on the local player (icon + name + countdown +
  * stacks). Fed by `statusController` over the FAMILY_STATUS packets. Hidden
- * when the player has no statuses. Placeholder icons this slice.
+ * when the player has no statuses. Icons via <SkillIcon> (game-icons
+ * mask-tint), letter fallback.
  */
 export function BuffBar() {
   const client = useClient();

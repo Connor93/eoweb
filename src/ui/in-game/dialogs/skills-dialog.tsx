@@ -4,10 +4,14 @@ import { playSfxById, SfxId } from '@/sfx';
 import { UI_ITEM_BG, UI_PANEL_BORDER } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { SlotType } from '@/ui/enums';
-import { useItemDrag } from '@/ui/in-game';
+import { SkillIcon, useItemDrag } from '@/ui/in-game';
 import { DialogBase } from './dialog-base';
 
-/** Placeholder drag-ghost icon (real SVG pipeline is Slice 3). */
+/**
+ * Drag-ghost icon: still an initial-letter data URI. A self-contained
+ * data-URI can't easily mask-tint an external SVG, so the ghost stays a
+ * letter for now (deferred); the card badge itself uses <SkillIcon>.
+ */
 function placeholderIconUri(name: string): string {
   const letter = (name[0] ?? '?').toUpperCase();
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="32"><rect width="34" height="32" rx="4" fill="#3b3b52"/><text x="17" y="22" font-size="18" fill="#e8e8f0" text-anchor="middle" font-family="sans-serif">${letter}</text></svg>`;
@@ -62,9 +66,12 @@ function SkillCard({ entry }: { entry: SkillCatalogEntry }) {
       style={{ touchAction: 'none' }}
       onPointerDown={handlePointerDown}
     >
-      <div class='flex h-12 w-12 items-center justify-center rounded bg-[#3b3b52] font-bold text-[#e8e8f0] text-lg'>
-        {(entry.name[0] ?? '?').toUpperCase()}
-      </div>
+      <SkillIcon
+        iconId={entry.iconId}
+        label={entry.name}
+        tone='neutral'
+        sizeClass='h-12 w-12'
+      />
       <p class='wrap-break-word line-clamp-2 w-full text-center font-semibold text-xs leading-tight'>
         {entry.name}
       </p>
