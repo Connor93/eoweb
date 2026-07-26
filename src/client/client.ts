@@ -78,6 +78,7 @@ import {
   SessionController,
   ShopController,
   SkillController,
+  SkillVfxController,
   SocialController,
   SpellController,
   StatSkillController,
@@ -99,7 +100,11 @@ import { defaultLocale, formatLocaleString, locales } from '@/locale';
 import { MapRenderer } from '@/map';
 import { MinimapRenderer } from '@/minimap';
 import { PacketLogStore } from '@/packet-log';
-import { CharacterDeathAnimation, NpcDeathAnimation } from '@/render';
+import {
+  CharacterDeathAnimation,
+  NpcDeathAnimation,
+  VfxLoader,
+} from '@/render';
 import { SfxId, setAudioController } from '@/sfx';
 import type { ISlot } from '@/ui/enums';
 import type {
@@ -254,6 +259,8 @@ export class Client {
   commandController: CommandController;
   instanceController: InstanceController;
   weaponElementController: WeaponElementController;
+  vfxLoader!: VfxLoader;
+  skillVfxController!: SkillVfxController;
   inventoryController: InventoryController;
   lockerController: LockerController;
   lookupController: LookupController;
@@ -486,6 +493,12 @@ export class Client {
 
     // Sync CSS size now that the canvas is in the DOM
     this.viewportController.resizeCanvases();
+
+    // VfxLoader needs the renderer (generateTexture for procedural
+    // placeholders), so it can only be built once Pixi is up.
+    this.vfxLoader = new VfxLoader(this.app.renderer);
+    this.skillVfxController = new SkillVfxController(this, this.vfxLoader);
+    void this.vfxLoader.preload();
   }
 
   getCharacterById(id: number): CharacterMapInfo | undefined {
@@ -747,6 +760,7 @@ export class Client {
     // is deleted before update() reads the animation slot — otherwise the
     // finishing frame would block the next walk/attack for one extra frame.
     this.animationController.advanceTimed(deltaMs);
+    this.skillVfxController.advance(deltaMs);
     this.keyboardController.update(performance.now());
   }
 

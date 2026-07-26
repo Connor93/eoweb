@@ -565,6 +565,7 @@ export class MapRenderer {
     this.clearSceneNodes();
     this.client.weaponElementController.clear();
     this.client.npcElementController.clear();
+    this.client.skillVfxController?.clear();
   }
 
   getTileSpecAt(position: Vector2): MapTileSpec | undefined {
