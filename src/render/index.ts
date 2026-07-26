@@ -1,3 +1,7 @@
+// IMPORTANT: `./animation` MUST be re-exported before `./vfx/skill-burst` (and any
+// other module that `extends TimedAnimation` via this barrel). Reordering causes a
+// runtime "Cannot access 'TimedAnimation' before initialization" TDZ crash that tsc
+// does NOT catch. Keep animation first.
 export { Animation, TimedAnimation } from './animation';
 export { CharacterAttackAnimation } from './character-attack';
 export { CharacterRangedAttackAnimation } from './character-attack-ranged';

@@ -19,6 +19,7 @@ export class VfxLoader {
   // Load every manifest effect (real sheet or procedural placeholder) into the
   // cache so playBurst is synchronous. Call once after Pixi init.
   async preload(): Promise<void> {
+    if (this.cache.size > 0) return;
     for (const [key, def] of Object.entries(VFX)) {
       this.cache.set(key, await this.build(key, def));
     }

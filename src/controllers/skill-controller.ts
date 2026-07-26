@@ -141,6 +141,13 @@ export class SkillController {
     return this.catalog.get(skillId) ?? null;
   }
 
+  /** Drop any pending impact-VFX entries for `skillId` (e.g. the cast was rejected). */
+  clearPending(skillId: string): void {
+    for (const [npcIndex, id] of this.pendingImpact) {
+      if (id === skillId) this.pendingImpact.delete(npcIndex);
+    }
+  }
+
   entryOf(skillId: string): SkillCatalogEntry | undefined {
     return this.catalog.get(skillId);
   }

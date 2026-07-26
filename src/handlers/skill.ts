@@ -61,6 +61,8 @@ function handleSkillReply(client: Client, reader: EoReader): void {
           pos.y - BURST_UP,
         );
     }
+  } else {
+    client.skillController.clearPending(skillId);
   }
 }
 
