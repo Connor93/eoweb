@@ -20,6 +20,10 @@ export interface SkillCatalogEntry {
   target: 'self' | 'enemy';
   /** Cast range in tiles (chebyshev). 0 = use the equipped weapon's range. */
   range: number;
+  /** VFX ref to burst at the caster on a successful cast. Empty = none. */
+  castVfx: string;
+  /** VFX ref to burst at the target on impact. Empty = none. */
+  impactVfx: string;
 }
 
 interface CooldownState {
@@ -33,6 +37,8 @@ export class SkillController {
   selectedSkillId: string | null = null;
   private cooldowns = new Map<string, CooldownState>();
   private subscribers: (() => void)[] = [];
+  /** The most recently `use()`d skill + its target, for caster-local impact VFX. */
+  private pending: { skillId: string; targetNpcIndex: number } | null = null;
 
   constructor(client: Client) {
     this.client = client;
@@ -112,6 +118,7 @@ export class SkillController {
 
   use(skillId: string, targetNpcIndex = 0): void {
     if (this.remainingMs(skillId) > 0) return; // locally gated; server re-checks
+    this.pending = { skillId, targetNpcIndex };
     const writer = new EoWriter();
     const idBytes = new TextEncoder().encode(skillId);
     writer.addChar(idBytes.length);
@@ -122,6 +129,18 @@ export class SkillController {
       PacketAction.Use,
       writer.toByteArray(),
     );
+  }
+
+  /** The pending cast's target if `casterIsSelf`+`npcIndex` match; else null. Clears on read. */
+  takePendingImpact(npcIndex: number): SkillCatalogEntry | null {
+    if (!this.pending || this.pending.targetNpcIndex !== npcIndex) return null;
+    const entry = this.catalog.get(this.pending.skillId) ?? null;
+    this.pending = null;
+    return entry;
+  }
+
+  entryOf(skillId: string): SkillCatalogEntry | undefined {
+    return this.catalog.get(skillId);
   }
 
   // --- cooldown queries (for the hotbar sweep) ---
