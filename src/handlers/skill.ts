@@ -50,16 +50,15 @@ function handleSkillReply(client: Client, reader: EoReader): void {
 
   if (ok) {
     const entry = client.skillController.entryOf(skillId);
-    if (entry?.castVfx) {
-      const pos = client.mapRenderer?.getEntityIsoScreenPosition(
-        `char:${client.playerId}`,
+    const pos = client.mapRenderer?.getEntityWorldSpritePosition(
+      `char:${client.playerId}`,
+    );
+    if (entry?.castVfx && pos) {
+      client.skillVfxController.playBurst(
+        entry.castVfx,
+        pos.x,
+        pos.y - BURST_UP,
       );
-      if (pos)
-        client.skillVfxController.playBurst(
-          entry.castVfx,
-          pos.x,
-          pos.y - BURST_UP,
-        );
     }
   } else {
     client.skillController.clearPending(skillId);
@@ -111,16 +110,15 @@ function handleSkillDamage(client: Client, reader: EoReader): void {
 
   if (casterId === client.playerId) {
     const entry = client.skillController.takePendingImpact(npcIndex);
-    if (entry?.impactVfx) {
-      const pos = client.mapRenderer?.getEntityIsoScreenPosition(
-        `npc:${npcIndex}`,
+    const pos = client.mapRenderer?.getEntityWorldSpritePosition(
+      `npc:${npcIndex}`,
+    );
+    if (entry?.impactVfx && pos) {
+      client.skillVfxController.playBurst(
+        entry.impactVfx,
+        pos.x,
+        pos.y - BURST_UP,
       );
-      if (pos)
-        client.skillVfxController.playBurst(
-          entry.impactVfx,
-          pos.x,
-          pos.y - BURST_UP,
-        );
     }
   }
 }

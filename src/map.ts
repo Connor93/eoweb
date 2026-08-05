@@ -2336,4 +2336,28 @@ export class MapRenderer {
 
     return null;
   }
+
+  /**
+   * Tile-center of an entity in **worldContainer space** — i.e. with the
+   * camera transform (`- playerScreen + halfGame`) baked in, the same space
+   * every world sprite is positioned in (see the drawEntity math around
+   * `map.ts:1065`). Mount a Pixi sprite in `worldContainer` at these coords
+   * and it lands on the entity.
+   *
+   * Contrast with `getEntityIsoScreenPosition`, which returns RAW iso-screen
+   * coords: DOM overlays (tooltips, combat popups) apply the camera transform
+   * themselves each frame (see `CombatOverlay.worldToScreen`), but a sprite
+   * living inside the un-transformed `worldContainer` needs it pre-applied.
+   * Returns null before the first rendered frame (no camera state yet).
+   */
+  public getEntityWorldSpritePosition(
+    key: string,
+  ): { x: number; y: number } | null {
+    const iso = this.getEntityIsoScreenPosition(key);
+    if (!iso || !this._lastPlayerScreen) return null;
+    return {
+      x: iso.x - this._lastPlayerScreen.x + this._halfGameWidth,
+      y: iso.y - this._lastPlayerScreen.y + this._halfGameHeight,
+    };
+  }
 }

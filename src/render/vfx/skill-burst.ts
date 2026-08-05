@@ -1,6 +1,13 @@
 import { type Container, Sprite, type Texture } from 'pixi.js';
 import { TimedAnimation } from '@/render';
 
+// worldContainer is sortableChildren; every map/entity/effect sprite is re-assigned
+// zIndex 0..N from `_worldOrder` each frame (MapRenderer.beginFrame resets it to 0).
+// A burst is added once and NOT part of that sweep, so without an explicit zIndex it
+// sits at 0 and renders BEHIND the whole world (invisible). Park bursts well above the
+// per-frame world-sprite range so they always draw on top.
+const BURST_Z_INDEX = 1_000_000;
+
 // A one-shot sprite-sheet burst: steps `frames` over `durationMs`, then finished.
 export class SkillBurst extends TimedAnimation {
   readonly sprite: Sprite;
@@ -30,6 +37,7 @@ export class SkillBurst extends TimedAnimation {
     this.sprite.y = Math.floor(y);
     this.sprite.blendMode = additive ? 'add' : 'normal';
     this.sprite.scale.set(scale);
+    this.sprite.zIndex = BURST_Z_INDEX; // draw on top of the world (see note above)
     this.sprite.visible = true;
   }
 
