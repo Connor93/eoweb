@@ -79,6 +79,10 @@ export class VfxLoader {
     // sheet name means it hasn't finished loading (or failed) yet, not that
     // we should build it here — sheets always win over an engine def of the
     // same name, and we never rasterize a sheet inline.
+    // NB `in` walks the prototype chain, so 'constructor'/'toString'/... match
+    // here and return early. That is harmless — those refs are not in the
+    // engine registry either (it is Object.create(null); see buildRegistry),
+    // so both paths yield the same "no effect" result for every such ref.
     if (ref in SHEETS) return null;
 
     const def = getEngineRegistry()[ref];
@@ -92,16 +96,30 @@ export class VfxLoader {
   // Rasterizes every frame of a vfx-engine def via Canvas2D and wraps each
   // canvas in a Pixi texture. Synchronous — Texture.from(HTMLCanvasElement)
   // is valid and synchronous in Pixi v8 (ImageResource covers canvases).
+  //
+  // `skipCache: true` keeps these out of Pixi's global Assets `Cache`. That
+  // cache is keyed for shared, named assets; a procedural texture is owned
+  // solely by this loader's own `cache`, and letting Pixi also retain it
+  // would pin the source HTMLCanvasElement for the session on top of the
+  // GPU texture — double retention for zero reuse.
   private buildProcedural(def: EngineVfxDef): ResolvedVfx {
     const frames: Texture[] = [];
     for (let i = 0; i < def.frames; i++) {
-      frames.push(Texture.from(renderFrameCanvas(def, i)));
+      frames.push(Texture.from(renderFrameCanvas(def, i), true));
     }
     return {
       frames,
       durationMs: def.durationMs,
       additive: def.additive,
-      scale: def.sizeScale,
+      // NOT def.sizeScale. The engine has already baked sizeScale into every
+      // radius/length while rasterizing these frames (drawEffectAt ->
+      // KINDS[kind].draw), so a `-lg` def's pixels are ALREADY 1.5x. Passing
+      // sizeScale on to SkillBurst's sprite.scale.set() would apply it a
+      // second time (0.36x / 2.25x instead of 0.6x / 1.5x) and diverge from
+      // the aio-editor preview, which draws the same frames unscaled.
+      // `ResolvedVfx.scale` is the *sprite-sheet* multiplier — see the sheet
+      // path below, where it comes from the manifest.
+      scale: 1,
     };
   }
 
