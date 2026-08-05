@@ -300,6 +300,54 @@ it when it shouldn't have at all — fix it by re-editing `strike.json` in
 the editor to the exact two lines above and pushing again, then re-check
 `git status` before considering this pass done.
 
+## Step 13: Cross-file field-instance bleed (cosmetic, informational)
+
+`PubBrowser.tsx` renders `<SchemaForm>` with no `key`, and `ObjectField` keys
+its children by property name — so switching which skill file is open does
+**not** remount the `VfxField` component for `cast_vfx`/`impact_vfx`; the
+same React instance (and its `raw` toggle state and `lastElement`/`lastSize`
+axis-memory refs) is reused across files. Nothing writes on mount, so no
+stored value can be corrupted — this check is presentation-only and does
+**not** block the merge; it exists so a human confirms whether the bleed is
+acceptable as-is.
+
+With `strike` open and `cast_vfx`/`impact_vfx` restored to `cast-burst` /
+`fire-impact` per step 12: on `cast_vfx`, redo step 3 — pick **Nova**, click
+the **fire** swatch, click size **L** — so the field carries a memorable,
+distinct state (`→ nova-fire-lg`). Then click **`›`** to put `cast_vfx`
+into raw-text mode.
+
+Without saving anything, switch to a different skill file in the list —
+**bash** (`data/pub/skills/bash.json`; `cast_vfx` is unset/empty on disk) —
+and look at its `cast_vfx` field.
+
+**Expect / record:** note whether `bash`'s `cast_vfx` opens already in the
+raw-text `‹` view (the `raw` toggle carried over from `strike`) instead of
+the picker a freshly-opened field should show. Then — clicking **`‹`**
+first if you're in raw view — open the shape select and pick **Nova**
+again: note whether the element/size swatches immediately highlight
+**fire/L** (carried over from `strike`) instead of defaulting fresh to
+neutral/base.
+
+A `key={selection.filename}` on `SchemaForm` would remount and fix this,
+but was deliberately left out of this change — it would also reset every
+*other* field's local state (any other open raw-mode toggle, any in-progress
+edit), so it belongs in its own follow-up change, not this merge. Record
+what you observed and whether it's acceptable to ship as-is; either answer
+is fine, this step does not block.
+
+**Failure looks like:** anything other than the presentation bleed
+described above — a crash, a console error, or (unlike the cosmetic case)
+`bash`'s actual stored `cast_vfx` value changing in the JSON view as a
+result of switching files — would mean this isn't the purely-cosmetic bug
+the review described, and should be escalated rather than just logged.
+
+Finish by switching back to `strike` and confirming/restoring `cast_vfx`/
+`impact_vfx` to `cast-burst`/`fire-impact` (undo this step's Nova/fire/L
+detour). You did not click Save to staging or Push to live anywhere in this
+step, so `git -C /Users/cfraser/Projects/reoserv status --short` is
+unaffected and still shows only the two pre-existing WIP lines from step 12.
+
 ---
 
 ## Sign-off
