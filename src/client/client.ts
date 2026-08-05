@@ -494,8 +494,8 @@ export class Client {
     // Sync CSS size now that the canvas is in the DOM
     this.viewportController.resizeCanvases();
 
-    // VfxLoader needs the renderer (generateTexture for procedural
-    // placeholders), so it can only be built once Pixi is up.
+    // VfxLoader needs the renderer (generateTexture for the sheet-load
+    // failure placeholder), so it can only be built once Pixi is up.
     this.vfxLoader = new VfxLoader(this.app.renderer);
     this.skillVfxController = new SkillVfxController(this, this.vfxLoader);
     void this.vfxLoader.preload();

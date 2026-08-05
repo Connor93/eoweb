@@ -1,11 +1,28 @@
 import { Assets, Graphics, Rectangle, type Renderer, Texture } from 'pixi.js';
-import { VFX, type VfxDef } from './vfx-manifest';
+import {
+  buildRegistry,
+  type VfxDef as EngineVfxDef,
+  renderFrameCanvas,
+} from '@/vfx-engine';
+import { SHEETS, type VfxDef } from './vfx-manifest';
 
 export interface ResolvedVfx {
   frames: Texture[];
   durationMs: number;
   additive: boolean;
   scale: number;
+}
+
+// buildRegistry() allocates all 379 generated defs on every call. They're
+// cheap plain objects individually, but getFrames sits on a hot per-cast
+// path — build the registry once (module-level, shared across any VfxLoader
+// instance) rather than churning it per lookup.
+let engineRegistry: Record<string, EngineVfxDef> | null = null;
+function getEngineRegistry(): Record<string, EngineVfxDef> {
+  if (!engineRegistry) {
+    engineRegistry = buildRegistry();
+  }
+  return engineRegistry;
 }
 
 export class VfxLoader {
@@ -16,21 +33,58 @@ export class VfxLoader {
     this.renderer = renderer;
   }
 
-  // Load every manifest effect (real sheet or procedural placeholder) into the
-  // cache so playBurst is synchronous. Call once after Pixi init.
+  // Preload only the curated CC0 sheets (SHEETS) so their first playBurst is
+  // synchronous. The other 379 vfx-engine effects are NOT preloaded here —
+  // rasterizing all of them up front would stall startup for effects most
+  // players never trigger. They're built lazily, on demand, in getFrames.
   async preload(): Promise<void> {
     if (this.cache.size > 0) return;
-    for (const [key, def] of Object.entries(VFX)) {
-      this.cache.set(key, await this.build(key, def));
+    for (const [key, def] of Object.entries(SHEETS)) {
+      this.cache.set(key, await this.buildSheet(def));
     }
   }
 
+  // Synchronous by contract: SkillVfxController.playBurst calls this
+  // directly on the hot cast/impact path and must never await. A cache miss
+  // on a vfx-engine ref rasterizes its frames right here, synchronously
+  // (Canvas2D, not a decode), then caches the result for next time.
   getFrames(ref: string): ResolvedVfx | null {
     if (!ref) return null;
-    return this.cache.get(ref) ?? null;
+
+    const cached = this.cache.get(ref);
+    if (cached) return cached;
+
+    // Sheets are preloaded async in preload(); a cache miss on a known
+    // sheet name means it hasn't finished loading (or failed) yet, not that
+    // we should build it here — sheets always win over an engine def of the
+    // same name, and we never rasterize a sheet inline.
+    if (ref in SHEETS) return null;
+
+    const def = getEngineRegistry()[ref];
+    if (!def) return null;
+
+    const resolved = this.buildProcedural(def);
+    this.cache.set(ref, resolved);
+    return resolved;
   }
 
-  private async build(_key: string, def: VfxDef): Promise<ResolvedVfx> {
+  // Rasterizes every frame of a vfx-engine def via Canvas2D and wraps each
+  // canvas in a Pixi texture. Synchronous — Texture.from(HTMLCanvasElement)
+  // is valid and synchronous in Pixi v8 (ImageResource covers canvases).
+  private buildProcedural(def: EngineVfxDef): ResolvedVfx {
+    const frames: Texture[] = [];
+    for (let i = 0; i < def.frames; i++) {
+      frames.push(Texture.from(renderFrameCanvas(def, i)));
+    }
+    return {
+      frames,
+      durationMs: def.durationMs,
+      additive: def.additive,
+      scale: def.sizeScale,
+    };
+  }
+
+  private async buildSheet(def: VfxDef): Promise<ResolvedVfx> {
     const additive = def.additive ?? true;
     const scale = def.scale ?? 1;
     if (
@@ -63,7 +117,7 @@ export class VfxLoader {
           scale,
         };
       } catch {
-        // fall through to procedural placeholder
+        // fall through to placeholder
       }
     }
     return {
@@ -74,7 +128,8 @@ export class VfxLoader {
     };
   }
 
-  // A tinted expanding-then-fading ring, N frames, generated once.
+  // A tinted expanding-then-fading ring, N frames, generated once. Fallback
+  // for a curated sheet whose Assets.load rejects.
   private placeholderFrames(tint: number): Texture[] {
     const size = 64;
     const count = 8;

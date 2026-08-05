@@ -13,11 +13,12 @@ export type VfxDef = {
 };
 
 // effect_ref → def. `cast-burst`/`fire-impact` use curated CC0 sheets (see
-// public/vfx/ATTRIBUTION.md); `buff-aura` still falls back to the procedural
-// tinted-ring placeholder. A curated CC0 sheet is wired in by setting
+// public/vfx/ATTRIBUTION.md). A curated CC0 sheet is wired in by setting
 // sheet/frameWidth/frameHeight/frames/fps; the tint/durationMs fields remain
-// as the fallback if the sheet fails to load.
-export const VFX: Record<string, VfxDef> = {
+// as the fallback if the sheet fails to load. Every other effect ref
+// (including `buff-aura`, now a vfx-engine "special") resolves through the
+// generated `@/vfx-engine` registry instead — see vfx-loader.ts.
+export const SHEETS: Record<string, VfxDef> = {
   'cast-burst': {
     sheet: 'ring-burst.png',
     frameWidth: 100,
@@ -40,5 +41,4 @@ export const VFX: Record<string, VfxDef> = {
     additive: true,
     scale: 1,
   },
-  'buff-aura': { tint: 0xffcc44, durationMs: 500, additive: true, scale: 1 },
 };
