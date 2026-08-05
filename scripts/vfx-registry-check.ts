@@ -137,6 +137,21 @@ assert(
   'unknown shape prefix must not compose',
 );
 
+// A malformed combo shapeId (wrong part count after `split('+')`) must not
+// silently drop the extra content and compose anyway.
+assert(
+  composeVfxName('combo:nova+sparkle+extra', 'fire') === null,
+  'combo shapeId with trailing +extra must not compose',
+);
+assert(
+  composeVfxName('combo:nova', 'fire') === null,
+  'combo shapeId with only one part must not compose',
+);
+assert(
+  composeVfxName('combo:nova+nova', 'fire') === null,
+  'combo of two real kinds never paired in COMBOS must not compose',
+);
+
 console.log(
   `vfx-index: ${indexNames.length} names, ${shapes.length} shapes, round-trip OK`,
 );
