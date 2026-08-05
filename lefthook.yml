@@ -6,6 +6,21 @@ pre-commit:
     typecheck:
       glob: "*.{ts,tsx}"
       run: npx tsc --noEmit
+    # Only the vfx-engine can break these, so both are scoped to it rather
+    # than taxing every commit in the repo with a tsx startup.
+    #
+    # vfx-check is self-contained (registry data only, no DOM, no sibling
+    # repo) and also runs in CI. vfx-parity additionally diffs the copy
+    # vendored into aio-editor, which CI cannot do — GitHub Actions has no
+    # sibling checkout — so pre-commit is the ONLY place it can run. It uses
+    # the :optional variant, which skips (exit 0) when that sibling isn't on
+    # disk: a missing neighbouring repo must never reject someone's commit.
+    vfx-check:
+      glob: "src/vfx-engine/*"
+      run: pnpm vfx:check
+    vfx-parity:
+      glob: "src/vfx-engine/*"
+      run: pnpm vfx:parity:optional
 
 pre-push:
   commands:

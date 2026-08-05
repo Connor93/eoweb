@@ -29,4 +29,9 @@ jobs:
       - run: pnpm build
       - run: pnpm exec biome ci .
       - run: pnpm knip
+      # Registry sanity only — self-contained, no DOM and no sibling repo.
+      # The cross-repo `vfx:parity` guard deliberately does NOT run here:
+      # it diffs against an aio-editor checkout that CI does not have. That
+      # one is wired into lefthook pre-commit instead (see lefthook.yml).
+      - run: pnpm vfx:check
     # - run: pnpm test

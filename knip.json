@@ -2,5 +2,15 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "project": ["**/*.{ts,tsx}"],
   "ignoreDependencies": ["daisyui", "tailwindcss"],
-  "ignoreMembers": ["PreLoginUI", "SpellIcons", "LocaleStrings"]
+  "ignoreMembers": ["PreLoginUI", "SpellIcons", "LocaleStrings"],
+  // Suppress "unused export" for anything carrying a `@vendored` JSDoc tag:
+  // an export that exists for a consumer OUTSIDE this repo, and so is
+  // legitimately never referenced within it. Today that is vfx-engine's
+  // `drawEffectAt`, called only by aio-editor's VfxPreview against the copy
+  // that eoweb/scripts/sync-vfx-engine.sh vendors over there.
+  //
+  // NB this cannot go in `ignoreMembers` — that option only covers enum and
+  // namespace members, not module exports, so knip keeps reporting the
+  // export regardless of what you put there.
+  "tags": ["-vendored"]
 }

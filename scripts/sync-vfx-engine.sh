@@ -33,6 +33,15 @@ set -euo pipefail
 #       re-synced)
 #   Prints one line per file plus a pass/fail summary. Intended for `pnpm
 #   vfx:parity` / CI — run it any time after a sync to prove the trees match.
+#
+# Env: VFX_PARITY_OPTIONAL=1
+#   Turns "aio-editor checkout not found" from a hard error into a skip
+#   (message + exit 0). Set by `pnpm vfx:parity:optional`, which the
+#   lefthook pre-commit hook uses: a contributor who has only cloned eoweb
+#   must never have their commit rejected because a SIBLING repository
+#   isn't on their disk. Leave it unset for an explicit, human-run check
+#   (`pnpm vfx:parity`), where a missing sibling really is a failure to
+#   report rather than something to paper over.
 
 CHECK_MODE=0
 if [[ "${1:-}" == "--check" ]]; then
@@ -46,6 +55,10 @@ SRC_DIR="$EOWEB_DIR/src/vfx-engine"
 
 AIO_EDITOR_DIR="${1:-${AIO_EDITOR_DIR:-$EOWEB_DIR/../aio-editor}}"
 if [[ ! -d "$AIO_EDITOR_DIR" ]]; then
+  if [[ "${VFX_PARITY_OPTIONAL:-0}" == "1" ]]; then
+    echo "vfx-engine parity: SKIPPED (no aio-editor checkout at $AIO_EDITOR_DIR)"
+    exit 0
+  fi
   echo "aio-editor checkout not found: $AIO_EDITOR_DIR" >&2
   exit 1
 fi

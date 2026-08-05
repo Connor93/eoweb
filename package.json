@@ -11,7 +11,8 @@
     "format": "biome check --write .",
     "knip": "knip",
     "vfx:check": "tsx scripts/vfx-registry-check.ts",
-    "vfx:parity": "scripts/sync-vfx-engine.sh --check && tsx scripts/vfx-registry-parity-check.ts"
+    "vfx:parity": "scripts/sync-vfx-engine.sh --check && tsx scripts/vfx-registry-parity-check.ts",
+    "vfx:parity:optional": "VFX_PARITY_OPTIONAL=1 scripts/sync-vfx-engine.sh --check && VFX_PARITY_OPTIONAL=1 tsx scripts/vfx-registry-parity-check.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",

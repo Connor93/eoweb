@@ -33,6 +33,17 @@ const AIO_ENGINE_INDEX = path.join(
 );
 
 if (!existsSync(AIO_ENGINE_INDEX)) {
+  // VFX_PARITY_OPTIONAL=1 (set by `pnpm vfx:parity:optional`, which the
+  // lefthook pre-commit hook runs) downgrades "no sibling checkout" from an
+  // error to a skip — a missing SIBLING repo must never block a commit in
+  // this one, and GitHub Actions never has one. Unset, it stays a hard
+  // failure so an explicit `pnpm vfx:parity` still means something.
+  if (process.env.VFX_PARITY_OPTIONAL === '1') {
+    console.log(
+      `vfx-registry-parity: SKIPPED (no vendored engine at ${AIO_ENGINE_INDEX})`,
+    );
+    process.exit(0);
+  }
   console.error(
     `vfx-registry-parity-check: vendored engine not found at ${AIO_ENGINE_INDEX}. Run eoweb/scripts/sync-vfx-engine.sh first.`,
   );
