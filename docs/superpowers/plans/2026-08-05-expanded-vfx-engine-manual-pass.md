@@ -60,13 +60,22 @@ calibrate your eye before you start:
   looks *smaller* than you remember, that is the fix, not a regression.
 - **Nothing should be square-cropped any more.** Every kind's geometry was
   retuned so the widest paint at `-lg` sits ~62px from centre inside a 128px
-  frame. Previously 13 of 15 kinds painted past the edge and got clipped to
-  a hard square, and `rain`/`beam-pop` lost their top/bottom at *every*
-  size. Watch specifically for straight-edged cuts across a circle, ring or
-  streak — there should be none at any size.
-- Absolute sizes are therefore a bit smaller than the original build across
-  the board. What matters is that `sm` < base < `lg` stays clearly readable
-  and that nothing touches the tile edge.
+  frame (measured max 61.5px). Previously **14 of 15** kinds painted past the
+  edge and got clipped to a hard square, and `rain`/`beam-pop` lost their
+  top/bottom at *every* size. Watch specifically for straight-edged cuts
+  across a circle, ring or streak — there should be none at any size.
+- **Sizes did NOT all shrink — the direction depends on the variant.** The
+  double-scaling fix unsquared the multiplier in *both* directions, so:
+  `-sm` now renders **~40% BIGGER** in-game than the original build
+  (0.36x → 0.6x), while base and `-lg` render smaller. What matters is that
+  `sm` < base < `lg` stays clearly readable (verified strictly monotonic:
+  base/sm ≈ 1.63-1.67, lg/base ≈ 1.48-1.50) and that nothing touches the
+  tile edge.
+- **`beam-pop` changed shape, not just size.** Its pillar was re-anchored to
+  span symmetrically around the entity instead of rising from it, so it keeps
+  its full height inside the frame. This visibly affects `level-up` and all
+  21 `beam-pop-*` names. No round below exercises it — worth one ad-hoc look
+  if you care about those.
 
 ## eoweb pass (in-game rendering)
 
@@ -83,7 +92,7 @@ your caster's feet on cast, one at the target on hit.
 | 5 | a special | `heal-glow` | `stun-stars` | A soft green glow on cast (normally used for heals — fine to reuse here, it's just a shape+color+timing tuple); yellow dots orbiting the target. |
 | 6 | legacy sheet-backed names still work | `cast-burst` | `fire-impact` | These are the file's original values — the curated CC0 sprite-sheet burst on cast, the curated fire flicker on the target (NOT vfx-engine draws — this is the pre-existing sheet path, confirming it wasn't broken by the engine work). |
 | 7 | graceful degradation on an invalid name | `impact-water-lg` | `impact-water-lg` | **Nothing renders. No error, no crash, no console warning.** The skill still deals damage/hits normally — only the VFX is silently absent. This is the exact typo the plan/spec docs made; it should fail exactly as quietly as any other unknown ref. |
-| 8 | graceful degradation on a JS prototype key | `constructor` | `toString` | **Identical to round 7 — nothing renders, nothing errors.** These are the pathological refs: effect names are free-form server-authored strings, and the registry used to be a plain `{}`, so these returned inherited `Object.prototype` values that passed the "is it a known effect?" guard and then produced a `durationMs` of `NaN` — a burst that never finished and got stepped every frame for the rest of the session. The registry is now `Object.create(null)`. If the client feels progressively heavier after casting these, that fix regressed. |
+| 8 | graceful degradation on a JS prototype key | `constructor` | `toString` | **Identical to round 7 — nothing renders, nothing errors.** These are the pathological refs: effect names are free-form server-authored strings, and the registry used to be a plain `{}`, so these returned inherited `Object.prototype` values. The registry is now `Object.create(null)`. **Expect this round to pass trivially** — a later review established that eoweb was never actually exposed here, because `'constructor' in SHEETS` is `true` and `getFrames` short-circuits to `null` at that guard before ever reaching the registry. The real damage was **editor-side only** (see aio-editor step 5, which is the round that matters for this fix). Run it anyway as a cheap regression check, but don't expect drama. |
 
 Also confirm while doing the above:
 - **`buff-aura` still renders** — it's no longer a manifest sheet entry (it
