@@ -48,6 +48,26 @@ None of these were picked "by eye."
   save the file and re-cast. **Do not leave `strike.json` in a modified
   state when you're done** — restore the two lines above as the last step.
 
+## What to expect on size (changed by the final fix wave)
+
+Two size-related defects were fixed after this doc was first written, so
+calibrate your eye before you start:
+
+- **`-lg` is now exactly 1.5x the base size, not 2.25x.** `sizeScale` used to
+  be applied twice in-game — once when the engine rasterized the frames and
+  again on the Pixi sprite — so `-sm` rendered at 0.36x and `-lg` at 2.25x
+  while the editor showed the correct 0.6x/1.5x. They now agree. If `-lg`
+  looks *smaller* than you remember, that is the fix, not a regression.
+- **Nothing should be square-cropped any more.** Every kind's geometry was
+  retuned so the widest paint at `-lg` sits ~62px from centre inside a 128px
+  frame. Previously 13 of 15 kinds painted past the edge and got clipped to
+  a hard square, and `rain`/`beam-pop` lost their top/bottom at *every*
+  size. Watch specifically for straight-edged cuts across a circle, ring or
+  streak — there should be none at any size.
+- Absolute sizes are therefore a bit smaller than the original build across
+  the board. What matters is that `sm` < base < `lg` stays clearly readable
+  and that nothing touches the tile edge.
+
 ## eoweb pass (in-game rendering)
 
 For each round: edit `cast_vfx`/`impact_vfx` in `strike.json` to the pair
@@ -63,6 +83,7 @@ your caster's feet on cast, one at the target on hit.
 | 5 | a special | `heal-glow` | `stun-stars` | A soft green glow on cast (normally used for heals — fine to reuse here, it's just a shape+color+timing tuple); yellow dots orbiting the target. |
 | 6 | legacy sheet-backed names still work | `cast-burst` | `fire-impact` | These are the file's original values — the curated CC0 sprite-sheet burst on cast, the curated fire flicker on the target (NOT vfx-engine draws — this is the pre-existing sheet path, confirming it wasn't broken by the engine work). |
 | 7 | graceful degradation on an invalid name | `impact-water-lg` | `impact-water-lg` | **Nothing renders. No error, no crash, no console warning.** The skill still deals damage/hits normally — only the VFX is silently absent. This is the exact typo the plan/spec docs made; it should fail exactly as quietly as any other unknown ref. |
+| 8 | graceful degradation on a JS prototype key | `constructor` | `toString` | **Identical to round 7 — nothing renders, nothing errors.** These are the pathological refs: effect names are free-form server-authored strings, and the registry used to be a plain `{}`, so these returned inherited `Object.prototype` values that passed the "is it a known effect?" guard and then produced a `durationMs` of `NaN` — a burst that never finished and got stepped every frame for the rest of the session. The registry is now `Object.create(null)`. If the client feels progressively heavier after casting these, that fix regressed. |
 
 Also confirm while doing the above:
 - **`buff-aura` still renders** — it's no longer a manifest sheet entry (it
@@ -98,19 +119,27 @@ your edits net out to zero).
    `heal-glow`) into `cast_vfx`. For each: confirm the **preview canvas**
    (128×128, dark checker background) animates and that its shape/color/
    timing **visually matches** what you just saw render in-game for that
-   same name in the eoweb pass. Use the ▶/⏸ button — pausing should freeze
-   the current frame (if it visibly resets to frame 0 instead, that's a
-   known deferred minor from Task 5's review, not a Task 6 regression —
-   note it but don't block on it).
+   same name in the eoweb pass. Use the ▶/⏸ button: **⏸ must freeze the
+   frame that is currently on screen, and ▶ must resume from there** — the
+   canvas must NOT go blank and must NOT snap back to the start. This is
+   worth testing on `ring-slash-wind` and `nova-fire` specifically: 7 of the
+   15 kinds have zero radius/length/height at progress 0, so the old
+   "redraw at progress 0" pause blanked the canvas outright. That is now
+   fixed, so a blank or restarting pause is a **regression, and does block**.
 4. Type `cast-burst` (a legacy sheet name, not a generated def) into
    `cast_vfx`. Confirm the preview area shows the **muted "no preview
    (sheet/unknown)" state** instead of a blank canvas or an error — this is
    the documented, deliberate degradation for sheet-backed names the
    procedural registry doesn't know about.
-5. Type the deliberately invalid `impact-water-lg` into `impact_vfx`.
-   Confirm it *also* shows the muted "no preview" state — same code path as
-   a typo, same as step 4, proving the editor degrades exactly like the game
-   does (nothing renders, nothing errors).
+5. Type the deliberately invalid `impact-water-lg` into `impact_vfx`, then
+   `constructor`, then `toString`. Confirm each *also* shows the muted "no
+   preview" state — same code path as a typo, same as step 4, proving the
+   editor degrades exactly like the game does (nothing renders, nothing
+   errors). The prototype keys are the important ones: before the registry
+   became `Object.create(null)` they resolved to a truthy inherited value,
+   which threw a `TypeError` synchronously inside `useEffect` and — with no
+   error boundary around it — **unmounted the whole form**. If typing
+   `constructor` makes the editor form vanish, that fix regressed.
 6. Open an **item** and an **NPC** form (any entries). Confirm they render
    normally with no `VfxPreview` widget anywhere and no console errors —
    `isVfxPath()` only matches fields whose path ends in `cast_vfx` or
