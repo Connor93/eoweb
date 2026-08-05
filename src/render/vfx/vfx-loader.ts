@@ -28,6 +28,13 @@ function getEngineRegistry(): Record<string, EngineVfxDef> {
 export class VfxLoader {
   private renderer: Renderer;
   private cache = new Map<string, ResolvedVfx>();
+  // Guards preload() independently of `cache` — the cache is now shared with
+  // lazily-built procedural effects (see getFrames), so `cache.size > 0` no
+  // longer implies "sheets are loaded". Stored as the in-flight/settled
+  // promise itself (not a boolean) so a concurrent second caller awaits real
+  // completion instead of resolving early while the first load is still in
+  // flight.
+  private preloadPromise: Promise<void> | null = null;
 
   constructor(renderer: Renderer) {
     this.renderer = renderer;
@@ -38,7 +45,21 @@ export class VfxLoader {
   // rasterizing all of them up front would stall startup for effects most
   // players never trigger. They're built lazily, on demand, in getFrames.
   async preload(): Promise<void> {
-    if (this.cache.size > 0) return;
+    if (!this.preloadPromise) {
+      this.preloadPromise = this.loadSheets().catch((err) => {
+        // buildSheet already swallows per-sheet load failures (falls back
+        // to a placeholder), so this only fires on something unexpected
+        // (e.g. a broken renderer). Clear the memo so a later retry is
+        // possible instead of wedging the loader "loaded" forever on a
+        // failure that never actually populated the sheet cache entries.
+        this.preloadPromise = null;
+        throw err;
+      });
+    }
+    return this.preloadPromise;
+  }
+
+  private async loadSheets(): Promise<void> {
     for (const [key, def] of Object.entries(SHEETS)) {
       this.cache.set(key, await this.buildSheet(def));
     }
