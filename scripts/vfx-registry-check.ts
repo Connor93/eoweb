@@ -5,6 +5,7 @@ import {
   buildIndex,
   buildRegistry,
   buildShapes,
+  type CycleKey,
   composeVfxName,
   DEPTH_LAYERS,
   DESIGN_SIZE,
@@ -90,7 +91,7 @@ assert(
 const registry = buildRegistry();
 const names = Object.keys(registry);
 
-assert(names.length === 407, `expected 407 effects, got ${names.length}`);
+assert(names.length === 449, `expected 449 effects, got ${names.length}`);
 assert(names.length === new Set(names).size, 'effect names must be unique');
 
 for (const name of names) {
@@ -175,6 +176,72 @@ for (const sp of ['bolt', 'smite', 'rockfall', 'ring-of-fire']) {
   assert(shape.hasElement === true, `${sp}: hasElement must be true`);
   assert(shape.hasSize === false, `${sp}: hasSize must be false`);
 }
+
+// Descents have the cycles axis; ring-of-fire and everything else do not.
+for (const s of shapes) {
+  const expected = [
+    'setpiece:bolt',
+    'setpiece:smite',
+    'setpiece:rockfall',
+  ].includes(s.id);
+  assert(
+    s.hasCycles === expected,
+    `${s.id}: hasCycles ${s.hasCycles}, expected ${expected}`,
+  );
+}
+
+// No cycles leak onto ring-of-fire, and no size leaks onto any set piece
+// (including with a cycles suffix already applied).
+for (const element of Object.keys(ELEMENTS)) {
+  for (const suffix of ['x2', 'x3']) {
+    assert(
+      registry[`ring-of-fire-${element}-${suffix}`] === undefined,
+      `cycles leaked onto ring-of-fire: ${element}-${suffix}`,
+    );
+  }
+  for (const sp of ['bolt', 'smite', 'rockfall', 'ring-of-fire']) {
+    for (const suffix of ['sm', 'lg']) {
+      assert(
+        registry[`${sp}-${element}-${suffix}`] === undefined,
+        `size leaked onto a set piece: ${sp}-${element}-${suffix}`,
+      );
+    }
+  }
+}
+
+// The loop counts actually differ, or the axis is decorative.
+assert(registry['bolt-fire']?.loops === 1, 'bolt-fire must be 1 cycle');
+assert(registry['bolt-fire-x2']?.loops === 2, 'bolt-fire-x2 must be 2 cycles');
+assert(registry['bolt-fire-x3']?.loops === 3, 'bolt-fire-x3 must be 3 cycles');
+// frames/frameMs never move with the axis — only loops does (see registry.ts:
+// the first cycle must still complete in frames * frameMs so the first
+// impact_vfx lands with the damage number).
+assert(
+  registry['bolt-fire']?.frames === registry['bolt-fire-x3']?.frames &&
+    registry['bolt-fire']?.frameMs === registry['bolt-fire-x3']?.frameMs,
+  'cycles must vary loops only, never frames or frameMs',
+);
+
+// composeVfxName ignores the axis where absent, and honours it where present.
+assert(
+  composeVfxName('setpiece:ring-of-fire', 'fire', undefined, 3) ===
+    'ring-of-fire-fire',
+  'cycles must be ignored for ring-of-fire',
+);
+assert(
+  composeVfxName('setpiece:bolt', 'fire', 'lg', 2) === 'bolt-fire-x2',
+  'size must be ignored, cycles honoured, for a descent',
+);
+// An unknown cycle value must return null, never silently fall back to 1.
+// `as CycleKey`, matching the 'toString' as ElementKey pattern above — a
+// runtime value that couldn't reach here past the static type, exactly the
+// class of input composeVfxName must survive since it may come from
+// persisted UI state.
+assert(
+  composeVfxName('setpiece:bolt', 'fire', undefined, 4 as CycleKey) === null,
+  'unknown cycle value must not compose',
+);
+
 const indexNames = Object.keys(index);
 
 // Identical KEY SETS, not just equal counts — a rename must fail loudly.
@@ -200,7 +267,12 @@ for (const name of indexNames) {
 // combo mis-parse, and a SizeKey('base') leaking into a name suffix.
 for (const name of names) {
   const axes = index[name];
-  const round = composeVfxName(axes.shapeId, axes.element, axes.size);
+  const round = composeVfxName(
+    axes.shapeId,
+    axes.element,
+    axes.size,
+    axes.cycles,
+  );
   assert(round === name, `round-trip failed: ${name} -> ${round}`);
 }
 
@@ -224,6 +296,10 @@ for (const name of indexNames) {
   assert(
     shape.hasSize === (axes.size !== undefined),
     `${name}: shape.hasSize=${shape.hasSize} but size=${axes.size}`,
+  );
+  assert(
+    shape.hasCycles === (axes.cycles !== undefined),
+    `${name}: shape.hasCycles=${shape.hasCycles} but cycles=${axes.cycles}`,
   );
   assert(
     KIND_NAMES.has(axes.kind),
