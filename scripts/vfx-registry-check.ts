@@ -13,10 +13,13 @@ import {
   effectDurationMs,
   FRAME_SIZE,
   frameProgress,
+  GROUND_FRAME,
   INTERNAL_SIZE,
   KINDS,
   PIXEL_SCALE,
   RAMP_BASE,
+  SQUARE_FRAME,
+  TALL_FRAME,
 } from '@/vfx-engine';
 
 const KIND_NAMES = new Set(Object.keys(KINDS));
@@ -373,6 +376,23 @@ for (const name of names) {
     `${name}: anchorY out of sync with groundY`,
   );
 }
+
+// Assert bodyLift in BOTH directions per def. A one-sided check ("nothing
+// tall is lifted") would miss the failure that actually matters: a
+// pre-existing effect silently LOSING its lift and dropping 20px.
+for (const name of names) {
+  const f = registry[name].frame;
+  const isRingOfFire = name.startsWith('ring-of-fire-');
+  const isTall = f.designH !== f.designW;
+  const expected = !isRingOfFire && !isTall; // only body-centred squares lift
+  assert(
+    f.bodyLift === expected,
+    `${name}: bodyLift ${f.bodyLift}, expected ${expected}`,
+  );
+}
+assert(SQUARE_FRAME.bodyLift === true, 'SQUARE_FRAME must keep the body lift');
+assert(GROUND_FRAME.bodyLift === false, 'GROUND_FRAME must not be lifted');
+assert(TALL_FRAME.bodyLift === false, 'TALL_FRAME must not be lifted');
 
 console.log(
   `vfx-index: ${indexNames.length} names, ${shapes.length} shapes, round-trip OK`,

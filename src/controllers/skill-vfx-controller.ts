@@ -1,12 +1,21 @@
 import type { Client } from '@/client';
 import { SkillBurst, type VfxLoader } from '@/render';
 
-// Vertical offset (px) applied ONLY to a centred (SQUARE_FRAME, anchorY 0.5)
-// burst, so it mounts near the body centre rather than the feet — the look
+// Vertical offset (px) applied ONLY to a burst whose ResolvedVfx.bodyLift is
+// true, so it mounts near the body centre rather than the feet — the look
 // every effect had before FrameGeometry existed. A frame carrying its own
-// ground point (TALL_FRAME, anchorY 0.75) must land ON the ground instead:
-// applying this lift there would float a descent's impact 20px above the
-// target's feet, fighting the very anchor the frame was built to express.
+// meaningful ground point (TALL_FRAME) or an effect that belongs on the
+// floor (GROUND_FRAME) must land ON the ground instead: applying this lift
+// there would float it above the target's feet, fighting the very anchor the
+// frame was built to express.
+//
+// This used to be inferred as `anchorY === 0.5`, which is why ring-of-fire
+// floated at chest height: it uses a square frame, so its anchorY is exactly
+// 0.5 too, and it silently inherited a rule meant for body-centred blobs.
+// bodyLift is now an explicit flag on the frame (see FrameGeometry.bodyLift
+// in vfx-engine/types.ts) instead of something inferred from geometry that
+// happens to coincide for the wrong reason.
+//
 // Call sites (skill.ts) pass the raw sprite position; this is the ONLY place
 // the lift is applied — see playBurst below.
 const BURST_UP = 20;
@@ -39,11 +48,9 @@ export class SkillVfxController {
   playBurst(ref: string, x: number, y: number, targetKey: string | null): void {
     const resolved = this.loader.getFrames(ref);
     if (!resolved) return;
-    // A centred frame (anchorY 0.5) is authored as a blob around the body,
-    // so it keeps the historic body-centre lift. A frame carrying its own
-    // ground point (TALL_FRAME, anchorY 0.75) must land ON the ground — no
-    // lift. See BURST_UP's doc comment above.
-    const yy = resolved.anchorY === 0.5 ? y - BURST_UP : y;
+    // See BURST_UP's doc comment above: bodyLift is an explicit per-effect
+    // flag, not inferred from anchorY.
+    const yy = resolved.bodyLift ? y - BURST_UP : y;
     const targetZIndex = targetKey
       ? (this.client.mapRenderer?.getEntityZIndex(targetKey) ?? null)
       : null;

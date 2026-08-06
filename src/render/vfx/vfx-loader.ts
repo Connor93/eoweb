@@ -29,6 +29,13 @@ export interface ResolvedVfx {
   // extra headroom rises above the target instead of pushing the whole
   // sprite down. See FrameGeometry.anchorY in vfx-engine/types.ts.
   anchorY: number;
+  // Whether SkillVfxController.playBurst should apply the historic 20px
+  // body-centre lift when mounting this burst. Carries FrameGeometry.bodyLift
+  // through for procedural defs; the two curated sheets (body-centred by
+  // construction) hardcode `true` in both buildSheet return paths below. See
+  // FrameGeometry.bodyLift's doc comment in vfx-engine/types.ts for why this
+  // is an explicit flag rather than inferred from anchorY.
+  bodyLift: boolean;
 }
 
 // buildRegistry() allocates all 407 generated defs on every call. They're
@@ -156,6 +163,7 @@ export class VfxLoader {
       // path below, where it comes from the manifest.
       scale: 1,
       anchorY: def.frame.anchorY,
+      bodyLift: def.frame.bodyLift,
     };
   }
 
@@ -201,6 +209,11 @@ export class VfxLoader {
           // centred by construction; hardcode the value the sprites already
           // used before ResolvedVfx.anchorY existed.
           anchorY: 0.5,
+          // Both curated sheets (cast-burst, fire-impact) are body-centred
+          // art; they must keep the lift regardless of which return path
+          // resolves them, or a load failure would silently move an effect
+          // 20px on the one path nobody exercises in normal testing.
+          bodyLift: true,
         };
       } catch {
         // fall through to placeholder
@@ -217,6 +230,9 @@ export class VfxLoader {
       additive,
       scale,
       anchorY: 0.5,
+      // See the loaded-sheet path above: same body-centred sheets, same
+      // lift, on the Assets.load-failure fallback.
+      bodyLift: true,
     };
   }
 
