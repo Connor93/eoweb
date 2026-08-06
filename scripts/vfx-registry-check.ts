@@ -458,6 +458,16 @@ for (const name of names) {
 // pre-existing effect silently LOSING its lift and dropping 20px.
 for (const name of names) {
   const f = registry[name].frame;
+  // Identifying "is this a ground effect?" by NAME (not by frame identity,
+  // e.g. `f === GROUND_FRAME`) only guards ONE direction safely: a future
+  // GROUND_FRAME def under some other name fails this assert loudly (its
+  // name won't start with 'ring-of-fire-', so `expected` computes `true`
+  // while `f.bodyLift` is `false`). It CANNOT catch the opposite mistake —
+  // a future ground-level effect wrongly left on SQUARE_FRAME (bodyLift
+  // `true`) would compute the same `expected`/`bodyLift` pair as a correct
+  // body-centred effect and pass silently. This is a general guard only in
+  // the direction that matters for regressions of what already ships; it is
+  // not a substitute for reviewing a new set piece's frame choice by hand.
   const isRingOfFire = name.startsWith('ring-of-fire-');
   const isTall = f.designH !== f.designW;
   const expected = !isRingOfFire && !isTall; // only body-centred squares lift

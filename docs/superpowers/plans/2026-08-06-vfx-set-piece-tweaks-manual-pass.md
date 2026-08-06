@@ -299,7 +299,7 @@ aliasing wasn't actually broken (check `RING_OF_FIRE_TONGUE_PHASE_MULT` in
 
 ## Step 6: The centre fill sits UNDER the NPC, and the ring loops without a visible seam
 
-Same cast as Steps 4-5, but now watch two different things over the ring's
+Same cast as Steps 4-5, but now watch four different things over the ring's
 full **1200ms** duration (4 frames × 100ms × 3 loops — three times longer
 than a plain descent):
 
@@ -312,18 +312,55 @@ than a plain descent):
    all three loop repeats. Because this is a `loops: 3` effect, you'll see
    the wrap from end-of-cycle back to start-of-cycle **three times** over
    the full cast.
+3. **Glow, or blob? (the centre fill itself — judge THIS IN GAME, not the
+   editor.)** Step 9 below carries the inherited tint glow-vs-blob question
+   forward for `bolt`/`smite`/`rockfall`, but explicitly excludes
+   `ring-of-fire` because it has no `tint` layer — nobody is otherwise asked
+   to judge the new centre fill the same way. It deserves the same scrutiny:
+   `drawRingOfFireCentreFill` authors alpha as `0.6 ± 0.15` (a continuous
+   swing), but `quantizeToRamp` collapses that onto a small number of
+   discrete ramp rungs, so post-quantisation the swing becomes a rung *flip*
+   — measured: mid↔shadow for `fire`/`water`/`earth`, base↔mid for
+   `neutral`, and flat (no flip, steady on one rung) for `wind`/`light`/
+   `dark`. Watch each element (recast with `ring-of-fire-<element>` for the
+   ones not already in your rotation) and judge whether the flicker reads as
+   a believable pulsing glow or as a patch of color visibly snapping between
+   two flat shades. **This must be judged in the game, even after Fix 1** —
+   the editor's `behind`/`front` compositing previously always used
+   `source-over` regardless of the def's `additive` flag (now fixed, see
+   Fix 1), but the editor is still a Canvas2D approximation of a Pixi
+   renderer; treat in-game as the ground truth for this call the same way
+   Step 9 already treats it as the ground truth for tint.
+4. **Front-layer occlusion.** This project widened
+   `RING_OF_FIRE_TONGUE_BASE_H` 9→12 and `RING_OF_FIRE_TONGUE_AMP` 8→24. The
+   *near* tongues (the half of the ring drawn in `front`, over the
+   character's legs/feet) now rise 17–34 design px above the ground point at
+   full flicker, up from 8–14 before — and the front layer's total painted
+   area grew roughly 60–95%. In plain terms: flames that used to lick the
+   character's shins now reach roughly waist height on the near side. This
+   is in budget (nothing is clipped or overflowing its frame) and was a
+   deliberate part of this project's art rework, not a bug — but nobody has
+   judged by eye whether it now obscures too much of the character/target
+   standing in it. Watch the near-side tongues specifically and decide.
 
 **Expect:** the centre glow is visibly tucked behind the character's sprite,
 not painted over it. The flicker pulses smoothly through all three
 repeats — no visible jump, flash, or reset at the two seam points (the
-transition from cycle 1→2 and 2→3).
+transition from cycle 1→2 and 2→3). For items 3 and 4 there is no automated
+pass condition — record your verdict explicitly, the same way Step 2 and
+Step 9 require.
 
-**Failure looks like:** the glow renders in front of / on top of the
-character instead of behind — would mean it leaked into the `front` layer.
-Or: you can see a distinct "pop" or discontinuity at the loop boundary
-(a value jumping rather than continuing its sine wave smoothly) — would
-contradict the analytic proof that a 4-evenly-spaced-sample sine wrap has
-the same magnitude as any interior step.
+**Failure looks like:** for items 1-2 — the glow renders in front of / on
+top of the character instead of behind (would mean it leaked into the
+`front` layer), or you can see a distinct "pop"/discontinuity at the loop
+boundary (would contradict the analytic proof that a 4-evenly-spaced-sample
+sine wrap has the same magnitude as any interior step). For item 3 — the
+fill reads as an ugly flat patch of color snapping between shades rather
+than a believable pulse; record which element(s) failed, same as Step 9's
+tint failure protocol. For item 4 — the near-side flames obscure so much of
+the character/target that the effect reads as visually excessive; if so,
+flag it as follow-up design work (this pass has no fix available for
+`TONGUE_BASE_H`/`AMP`, which are explicitly out of scope for this branch).
 
 ## Step 7: All three boulders land
 
@@ -356,9 +393,16 @@ could shift all 379 legacy effects (plus the two curated sprite sheets) by
 20px. The automated proof below checked this exhaustively (byte-for-byte,
 not by eye); this step is the human corroboration.
 
-**Ordinary effects.** In the aio-editor (fastest way to flip through many
-names), type each of the following into `cast_vfx` and eyeball it — these
-were verified to exist in the current registry (see the table at the top):
+**Ordinary effects — check THIS IN GAME, not the editor.** `bodyLift` has no
+consumer in aio-editor: `VfxPreview`'s stand-in is planted at
+`outH * anchorY` with no lift applied, for every effect, lifted or not — so
+all ten names below render **pixel-identically in the editor** whether
+`SQUARE_FRAME.bodyLift` is `true` or `false`. Checking them there would
+prove nothing; it's the one change in this whole project that fails
+silently, and the editor cannot corroborate it at all. Use the editor only
+to browse/confirm the names exist (they were verified against the current
+registry, see the table at the top) — do the actual judgment in-game:
+
 ```
 nova-fire-lg
 ring-water
@@ -371,10 +415,24 @@ crit-flash
 buff-aura
 heal-glow
 ```
+
+Edit `strike.json`'s `cast_vfx` to each name in turn (one at a time — leave
+`impact_vfx` alone), save, and cast Strike so it fires on your own
+character. Time permitting, spot-check all ten; if short on time, a couple
+(e.g. `nova-fire-lg` and `buff-aura`) are enough to catch a global
+regression, since `bodyLift` is a single shared flag on `SQUARE_FRAME`, not
+a per-effect setting. Watch where each effect centres **relative to your
+character**, specifically for a ~20px shift.
+
 **Expect:** every one renders exactly as it did before this project — same
-shape, color, size, timing, square 132×132 frame, centred ground point
-(chest-height for a humanoid stand-in, same as it's always been — these are
-NOT `ring-of-fire`, they should **not** have moved to the ground).
+shape, color, size, timing, square 132×132 frame, centred at roughly
+**chest height** on the character (the lift these 379 legacy effects have
+always had — these are NOT `ring-of-fire`, they should **not** have moved
+to the ground). Correcting a claim in an earlier draft of this doc: the
+editor's "centred ground point" is at the stand-in's **feet**, not chest
+height, for every effect it previews — the chest-height look is produced
+entirely in-game by the very `bodyLift` this task added, which the editor
+never applies. That is why this check has to happen in-game.
 
 **Both sprite sheets.** Restore `strike.json` to the curated sheet pair
 temporarily:
@@ -390,12 +448,15 @@ frame-strips resolved through a completely separate code path from
 project should be able to touch them, but "should be able to" is exactly
 what T1's silent-failure risk is about.
 
-**Failure looks like:** any of the ten spot-checked effects, or either
-sheet, renders shifted, resized, or otherwise different than you recall —
-would directly contradict the automated byte-identity proof below and
+**Failure looks like:** any of the ten spot-checked effects visibly drops to
+ground level instead of sitting at chest height — a ~20px downward shift is
+the specific signature of a `bodyLift` regression (`SQUARE_FRAME.bodyLift`
+reverting to `false`, or `SkillVfxController.playBurst` no longer applying
+the lift). More generally, anything shifted, resized, or otherwise
+different than you recall for either the ten effects or the two sprite
+sheets would directly contradict the automated byte-identity proof below and
 should be escalated immediately, since it means either this step or that
-proof is wrong. A 20px vertical shift specifically (up or down) is the
-signature of a `bodyLift` regression.
+proof is wrong.
 
 ## Step 9: Carry forward the still-unresolved tint question — glow, or blob?
 
@@ -407,7 +468,10 @@ wash authored as a soft glow resolves, post-quantisation, to either a solid
 rung of color or nothing — never a gradient. **This project does not answer
 that question either** — `bolt`, `smite`, and `rockfall` all still author
 `tint` layers (confirmed in the table above: `true`/`true`/`true`;
-`ring-of-fire` has none).
+`ring-of-fire` has none). `ring-of-fire` is not exempt from this style of
+judgment call, though — it has its own equivalent in its centre fill's
+alpha swing, which quantises the same way; that's Step 6 item 3 above, not
+here, since it's a `behind`-layer fill rather than a `tint` layer.
 
 Cast each of the following at an NPC and watch **your own character
 sprite** (these set `cast_vfx`, which fires on the caster, not the target):
@@ -552,7 +616,9 @@ above with bit-for-bit pixel comparison, not just "looks the same."
 Record in the vault ([[Eoweb]] / VFX planning note, per the user's usual
 session wrap-up) whether all of the above matched expectations, and flag
 anything that didn't — **especially Step 2 (the wave-vs-stutter verdict for
-looped rockfall) and Step 9 (the tint glow-vs-blob verdict, now also
-covering the once-per-loop repeat)**, neither of which has an automated
-substitute and both of which are explicitly unresolved as of this pass. This
-doc doesn't self-certify; a human needs to watch the canvases and say so.
+looped rockfall), Step 6 items 3-4 (the centre fill's glow-vs-blob verdict,
+and whether the widened front-layer tongues now obscure too much), and
+Step 9 (the tint glow-vs-blob verdict, now also covering the once-per-loop
+repeat)** — none of which has an automated substitute and all of which are
+explicitly unresolved as of this pass. This doc doesn't self-certify; a
+human needs to watch the canvases and say so.
