@@ -5,6 +5,7 @@ import {
   buildIndex,
   buildRegistry,
   buildShapes,
+  CLEAVE_FRAMES_PER_CYCLE,
   type CycleKey,
   composeVfxName,
   DEPTH_LAYERS,
@@ -91,7 +92,7 @@ assert(
 const registry = buildRegistry();
 const names = Object.keys(registry);
 
-assert(names.length === 449, `expected 449 effects, got ${names.length}`);
+assert(names.length === 470, `expected 470 effects, got ${names.length}`);
 assert(names.length === new Set(names).size, 'effect names must be unique');
 
 for (const name of names) {
@@ -164,8 +165,20 @@ const shapes = buildShapes();
 // The mode a shape SHOULD use is restated here, not read from SET_PIECES —
 // reading it back would make this tautological, and both modes yield the
 // same total duration, so a mis-wired multiplier is otherwise invisible.
-const FRAME_MODE_SHAPES = new Set<string>([]);
+const FRAME_MODE_SHAPES = new Set<string>(['cleave']);
 const CYCLE_BASE_FRAMES = 4;
+
+// drawCleave recovers "how many cleaves am I part of" as
+// def.frames / CLEAVE_FRAMES_PER_CYCLE, so the registry's base frame count
+// must equal that constant or every flurry mis-partitions.
+assert(
+  CLEAVE_FRAMES_PER_CYCLE === CYCLE_BASE_FRAMES,
+  `CLEAVE_FRAMES_PER_CYCLE (${CLEAVE_FRAMES_PER_CYCLE}) must equal the registry's base frame count (${CYCLE_BASE_FRAMES})`,
+);
+assert(
+  shapes.filter((s) => s.id === 'setpiece:cleave').length === 1,
+  'cleave must be registered as exactly one shape',
+);
 
 const CYCLE_SHAPE_IDS = new Set(
   shapes.filter((s) => s.layer === 'setpiece' && s.hasCycles).map((s) => s.id),
@@ -218,12 +231,15 @@ for (const sp of ['bolt', 'smite', 'rockfall', 'ring-of-fire']) {
   assert(shape.hasSize === false, `${sp}: hasSize must be false`);
 }
 
-// Descents have the cycles axis; ring-of-fire and everything else do not.
+// Descents have the cycles axis, and so does cleave (its flurry variants
+// reuse the same axis for a different reason — see FRAME_MODE_SHAPES above);
+// ring-of-fire does not.
 for (const s of shapes) {
   const expected = [
     'setpiece:bolt',
     'setpiece:smite',
     'setpiece:rockfall',
+    'setpiece:cleave',
   ].includes(s.id);
   assert(
     s.hasCycles === expected,
@@ -320,7 +336,7 @@ for (const name of names) {
 // Shapes: unique ids, correct axis flags, and a 1:1 relationship with the index.
 const shapeIds = shapes.map((s) => s.id);
 assert(shapeIds.length === new Set(shapeIds).size, 'shape ids must be unique');
-assert(shapes.length === 35, `expected 35 shapes, got ${shapes.length}`);
+assert(shapes.length === 36, `expected 36 shapes, got ${shapes.length}`);
 
 const shapeById = new Map(shapes.map((s) => [s.id, s]));
 for (const name of indexNames) {
