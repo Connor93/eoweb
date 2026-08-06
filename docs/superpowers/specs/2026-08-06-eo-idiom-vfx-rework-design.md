@@ -35,8 +35,10 @@ transparent one, 20 the front one.
 
 ## Decision record
 
-Each was chosen by the user from live animated side-by-side mockups
-(`.superpowers/brainstorm/39322-1785983625/content/`):
+Each was chosen by the user from live animated side-by-side mockups, rendered with
+the engine's real drawing math. (Those mockups live under `.superpowers/brainstorm/`,
+which is **gitignored scratch** — they exist on the author's machine only and are
+not part of the repo. The table below is the durable record.)
 
 | lever | choice | rejected |
 |---|---|---|
