@@ -16,9 +16,18 @@ import { SkillBurst, type VfxLoader } from '@/render';
 // in vfx-engine/types.ts) instead of something inferred from geometry that
 // happens to coincide for the wrong reason.
 //
-// Call sites (skill.ts) pass the raw sprite position; this is the ONLY place
-// the lift is applied — see playBurst below.
+// Call sites (skill.ts) pass the raw sprite position; this file is the ONLY
+// place the lift is applied — via liftY below, which both playBurst (at cast
+// time) and advance (on every position refresh) go through so the two can't
+// drift apart.
 const BURST_UP = 20;
+
+// The lift itself, in one place. Applied at cast time by playBurst and again
+// on every per-frame position refresh in advance — if only one of the two
+// applied it, the burst would visibly jump 20px on its second frame.
+function liftY(y: number, bodyLift: boolean): number {
+  return bodyLift ? y - BURST_UP : y;
+}
 
 // Fire-and-forget one-shot skill bursts mounted in worldContainer. Pooled.
 export class SkillVfxController {
@@ -50,7 +59,7 @@ export class SkillVfxController {
     if (!resolved) return;
     // See BURST_UP's doc comment above: bodyLift is an explicit per-effect
     // flag, not inferred from anchorY.
-    const yy = resolved.bodyLift ? y - BURST_UP : y;
+    const yy = liftY(y, resolved.bodyLift);
     const targetZIndex = targetKey
       ? (this.client.mapRenderer?.getEntityZIndex(targetKey) ?? null)
       : null;
@@ -72,6 +81,19 @@ export class SkillVfxController {
       if (b.targetKey) {
         const z = this.client.mapRenderer?.getEntityZIndex(b.targetKey);
         if (z !== null && z !== undefined) b.updateZIndex(z);
+        // Re-derive position for the same reason, and with the same null
+        // handling — but where a stale zIndex is merely a paint-order glitch, a
+        // stale position is a visible bug: worldContainer coordinates are
+        // camera-baked, so a burst left at its cast-time position drifts across
+        // the screen with the camera instead of staying on its target. See
+        // SkillBurst.updatePosition. A null result (target despawned mid-effect,
+        // e.g. an NPC whose death animation has already cleared its sprite)
+        // leaves the burst where it last was, so an impact effect still plays
+        // out over the corpse rather than snapping to the viewport origin.
+        const pos = this.client.mapRenderer?.getEntityWorldSpritePosition(
+          b.targetKey,
+        );
+        if (pos) b.updatePosition(pos.x, liftY(pos.y, b.bodyLift));
       }
       b.step(deltaMs);
       if (b.finished) {

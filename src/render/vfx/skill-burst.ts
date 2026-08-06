@@ -61,6 +61,11 @@ export class SkillBurst extends TimedAnimation {
   // entity to track. Public so SkillVfxController.advance can read it
   // without a getter — set only from reset().
   targetKey: string | null = null;
+  // This effect's ResolvedVfx.bodyLift, carried here so that advance()'s
+  // per-frame position refresh can re-apply the same vertical lift playBurst
+  // applied at cast time. Without it the burst would jump down by BURST_UP on
+  // its second frame. Public for the same reason as targetKey.
+  bodyLift = false;
 
   constructor() {
     super(1);
@@ -91,6 +96,7 @@ export class SkillBurst extends TimedAnimation {
     // ground-targeted effect) means updateZIndex is never called and the
     // fallback z below holds for the burst's whole life.
     this.targetKey = targetKey;
+    this.bodyLift = resolved.bodyLift;
 
     // All three depth sprites are the same frame, so they share one anchor.
     // 0.5 for a centred effect (SQUARE_FRAME); a tall descent frame carries
@@ -157,6 +163,31 @@ export class SkillBurst extends TimedAnimation {
     this.behind.sprite.zIndex = z - 1;
     this.tint.sprite.zIndex = z + 1;
     this.front.sprite.zIndex = z + 2;
+  }
+
+  // Moves all three layers to a freshly-read position — called every frame by
+  // SkillVfxController.advance for the same reason updateZIndex is.
+  //
+  // This is NOT an optional refinement. worldContainer coordinates are
+  // *camera-baked*: MapRenderer.getEntityWorldSpritePosition returns
+  // `iso - lastPlayerScreen + halfViewport`, which is only valid for the frame
+  // it was computed in. A position snapshotted at cast time and left alone is
+  // therefore pinned to a point on the SCREEN, so once the camera moves the
+  // burst slides along with it instead of staying on its target — the whole
+  // effect appears to follow the player around. Re-deriving from the target's
+  // key every frame is what makes the burst track the entity it was cast on,
+  // for a walking player and a walking NPC alike.
+  //
+  // Set unconditionally on all three sprites, including any layer with no
+  // frames (invisible, so its coordinates are inert) — keeping them in lockstep
+  // is cheaper than branching and avoids a stale layer surfacing later.
+  updatePosition(x: number, y: number): void {
+    const px = Math.floor(x);
+    const py = Math.floor(y);
+    for (const layer of this.layers) {
+      layer.sprite.x = px;
+      layer.sprite.y = py;
+    }
   }
 
   step(deltaMs: number): void {
