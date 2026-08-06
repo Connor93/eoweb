@@ -98,6 +98,27 @@ Set-piece shapes: 4 (expect 4)
 | heal-glow            | true        | true     | EXISTS   |
 ```
 
+**Addendum (final fix-wave pass):** the table above covers only the pairs
+used in Step 1. Five more names get cited later in this doc — `smite-fire`
+(Step 2), `nova-fire` (Step 6), and `bolt-neutral`/`smite-water`/
+`rockfall-light` (Step 9) — and were not in the original verification run.
+Checked the same way, against the same live `buildRegistry()`/`buildIndex()`
+(`pnpm exec tsx .superpowers/verify-fix6-names.ts` from `eoweb/`, a second
+throwaway git-ignored script — not part of the repo):
+
+```
+| name           | in registry | in index | frames | loops | frameMs | kind     | frame(outW x outH) | anchorY |
+|----------------|-------------|----------|--------|-------|---------|----------|---------------------|---------|
+| smite-fire     | true        | true     | 4      | 1     | 100     | smite    | 132x264             | 0.75    |
+| smite-water    | true        | true     | 4      | 1     | 100     | smite    | 132x264             | 0.75    |
+| bolt-neutral   | true        | true     | 4      | 1     | 100     | bolt     | 132x264             | 0.75    |
+| rockfall-light | true        | true     | 4      | 1     | 100     | rockfall | 132x264             | 0.75    |
+| nova-fire      | true        | true     | 4      | 1     | 100     | nova     | 132x132             | 0.5     |
+```
+
+All five EXIST. `nova-fire` is a pre-existing base-size matrix name, not a
+set piece — cited in Step 6 purely as the "ordinary square kind" comparison.
+
 `ring-of-fire` deliberately has **no** `tint` layer — a sustained, 3-loop
 ground ring would strobe the character's sprite three times if it did, so
 `KINDS['ring-of-fire'].draw.tint` is simply absent. The inherited tint
@@ -163,6 +184,17 @@ then, for a fourth element on at least one of the three (bolt is fine):
 "cast_vfx": "bolt-wind",
 ```
 
+**Note before you look:** a burst's mount point used to get lifted 20px
+toward the body centre unconditionally (`BURST_UP`, previously in
+`src/handlers/skill.ts`) — a leftover from when every effect was a centred
+symmetric blob. That lift is now conditional on the frame's own anchor
+(`SkillVfxController.playBurst`, `src/controllers/skill-vfx-controller.ts`):
+a centred frame (`SQUARE_FRAME`, anchorY 0.5) still gets the historic lift,
+but a `TALL_FRAME` def (anchorY 0.75) gets none, since its ground point is
+already where the target's feet are. So the expectation below — contact
+sitting exactly at the feet, no lift — is what this fix is supposed to
+produce.
+
 **Expect:** each effect is centred horizontally on the character/target and
 its ground contact — the flash, the strike, the landing rocks — sits at
 their feet, not floating above their head or cut off at the sprite's base.
@@ -175,9 +207,13 @@ shifted, squashed, or clipped at the bottom compared to how the legacy
 target instead of centred on their feet; the bottom of the effect (the
 ground flash, the point of impact) is cut off or floats off the ground; or
 the effect appears clipped at the frame edge (a hard flat cut through the
-strike or the rocks) — any of those points at the ground-point/anchor wiring
-(`FrameGeometry.anchorY`, `drawEffectAt`'s `cy - outH*anchorY` in
-`src/vfx-engine/render.ts`) being wrong for a tall frame, not an art issue.
+strike or the rocks). If you still see a vertical float here, that is a
+**real regression** — but look at the burst-mounting code named above
+(`SkillVfxController.playBurst`'s anchorY branch), not at
+`src/vfx-engine/render.ts`'s ground-point/anchor math
+(`FrameGeometry.anchorY`, `drawEffectAt`'s `cy - outH*anchorY`), which was
+reviewed and confirmed correct. Horizontal mis-centring or edge clipping
+would still point at the frame/anchor geometry itself.
 
 ## Step 2: Descent-vs-damage sync
 
@@ -223,6 +259,15 @@ Cast `rockfall-earth` (or any element) at an NPC repeatedly — this is the
 kind most exposed to the risk, since it has three independently-scheduled
 rocks rather than one continuous shape. Watch closely, frame by frame if you
 can (400ms is fast; recast several times, or record and step through).
+
+**Pre-pass note — watch rock 1 specifically:** of the three rocks
+(`ROCKFALL_TOP_OFFSET`/`ROCKFALL_LAND_PROGRESS` in `src/vfx-engine/kinds.ts`),
+rock 1 has the largest single-frame displacement — it falls from 150px above
+the ground point to 75px between sampled frames 0 and 1, a 75px jump covered
+by only a 26px motion streak (`ROCKFALL_STREAK_LEN`). That is the sharpest
+instance of the jump-cut risk this step asks about: if the streak is going to
+fail to sell continuous travel anywhere, it's most likely to show up on this
+rock, on that specific frame transition.
 
 **Expect:** across the 4 frames, each rock's position visibly progresses
 downward with a trailing streak above it implying motion, landing with an
@@ -438,8 +483,9 @@ elements — worth knowing when you're judging whether a specific element's
 flash looks like glow-or-blob, since `fire`/`dark`/`water` are judged against
 a different (dimmer) rung than `neutral`/`light`/`wind`/`earth`.
 
-Cast each of the following at an NPC and watch the **character sprite
-itself** (not the falling/striking shape) at the moment of impact:
+Cast each of the following at an NPC and watch **your own character
+sprite** (not the falling/striking shape) as you cast — these set
+`cast_vfx`, which fires on the caster at cast time, not on impact:
 ```json
 "cast_vfx": "bolt-fire",
 ```
@@ -493,8 +539,9 @@ before this pass —
 — and nothing mentioning `strike.json` or anything else.
 
 **Failure looks like:** `data/pub/skills/strike.json` (or any other file)
-shows up in that status output. If it does, re-edit `strike.json` to the
-exact two lines above, save, and re-check before considering this pass
+shows up in that status output. If it does, re-edit `strike.json`'s
+`cast_vfx`/`impact_vfx` pair back to the `"cast-burst"`/`"fire-impact"`
+values from Step 8 above, save, and re-check before considering this pass
 done.
 
 ---
