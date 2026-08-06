@@ -4,7 +4,7 @@
 
 import { KINDS } from './kinds';
 import { ELEMENTS, type ElementKey, type Ramp } from './palette';
-import type { ShapeKind, VfxDef } from './types';
+import { type ShapeKind, SQUARE_FRAME, type VfxDef } from './types';
 
 export type VfxLayer = 'matrix' | 'combo' | 'special';
 export type SizeKey = 'sm' | 'base' | 'lg';
@@ -82,6 +82,7 @@ const SPECIALS: Record<string, VfxDef> = {
     frames: 4,
     loops: 3,
     frameMs: 100,
+    frame: SQUARE_FRAME,
   },
   // Overridden to sustained (loops: 3) — `ring` is impact-role by default,
   // but an aura buff should read as ongoing, not a one-shot flourish.
@@ -93,6 +94,7 @@ const SPECIALS: Record<string, VfxDef> = {
     frames: 4,
     loops: 3,
     frameMs: 100,
+    frame: SQUARE_FRAME,
   },
   // `implode` default (impact-role): 4 * 1 * 100ms = 400ms.
   'debuff-sink': {
@@ -103,6 +105,7 @@ const SPECIALS: Record<string, VfxDef> = {
     frames: 4,
     loops: 1,
     frameMs: 100,
+    frame: SQUARE_FRAME,
   },
   // `shockwave` default (impact-role): 4 * 1 * 100ms = 400ms.
   'shield-flash': {
@@ -113,6 +116,7 @@ const SPECIALS: Record<string, VfxDef> = {
     frames: 4,
     loops: 1,
     frameMs: 100,
+    frame: SQUARE_FRAME,
   },
   // `spiral` default (sustained-role): 4 * 3 * 100ms = 1200ms.
   'cast-arcane': {
@@ -123,6 +127,7 @@ const SPECIALS: Record<string, VfxDef> = {
     frames: 4,
     loops: 3,
     frameMs: 100,
+    frame: SQUARE_FRAME,
   },
   // `beam-pop` default (sustained-role): 4 * 3 * 100ms = 1200ms.
   'level-up': {
@@ -133,6 +138,7 @@ const SPECIALS: Record<string, VfxDef> = {
     frames: 4,
     loops: 3,
     frameMs: 100,
+    frame: SQUARE_FRAME,
   },
   // Overridden: a single fast pop, quicker than a stock nova (frameMs 60
   // instead of 100) — 4 * 1 * 60ms = 240ms.
@@ -144,6 +150,7 @@ const SPECIALS: Record<string, VfxDef> = {
     frames: 4,
     loops: 1,
     frameMs: 60,
+    frame: SQUARE_FRAME,
   },
   // `orbit` default (sustained-role): 4 * 3 * 100ms = 1200ms.
   'stun-stars': {
@@ -154,6 +161,7 @@ const SPECIALS: Record<string, VfxDef> = {
     frames: 4,
     loops: 3,
     frameMs: 100,
+    frame: SQUARE_FRAME,
   },
 };
 
@@ -181,6 +189,7 @@ export function buildRegistry(): Record<string, VfxDef> {
           frames: config.frames,
           loops: config.loops,
           frameMs: config.frameMs,
+          frame: SQUARE_FRAME,
         };
       }
     }
@@ -200,6 +209,7 @@ export function buildRegistry(): Record<string, VfxDef> {
         loops: config.loops,
         frameMs: config.frameMs,
         combo: kindB,
+        frame: SQUARE_FRAME,
       };
     }
   }

@@ -287,6 +287,34 @@ for (const name of names) {
   );
 }
 
+// Per-def frame geometry (Task 1): every def carries a `frame`, and its
+// derived numbers must be internally consistent — the integer-upscale rule
+// applies PER AXIS now (a frame can be taller than it is wide), and the
+// ground point must actually lie inside the draw-space box.
+for (const name of names) {
+  const f = registry[name].frame;
+  assert(
+    f.outW === f.internalW * PIXEL_SCALE,
+    `${name}: outW ${f.outW} != internalW ${f.internalW} * ${PIXEL_SCALE}`,
+  );
+  assert(
+    f.outH === f.internalH * PIXEL_SCALE,
+    `${name}: outH ${f.outH} != internalH ${f.internalH} * ${PIXEL_SCALE}`,
+  );
+  assert(
+    Number.isInteger(f.internalW) && Number.isInteger(f.internalH),
+    `${name}: raster dims must be integers`,
+  );
+  assert(
+    f.groundY > 0 && f.groundY <= f.designH,
+    `${name}: groundY ${f.groundY} outside the frame`,
+  );
+  assert(
+    f.anchorY > 0 && f.anchorY <= 1,
+    `${name}: anchorY ${f.anchorY} out of range`,
+  );
+}
+
 console.log(
   `vfx-index: ${indexNames.length} names, ${shapes.length} shapes, round-trip OK`,
 );
