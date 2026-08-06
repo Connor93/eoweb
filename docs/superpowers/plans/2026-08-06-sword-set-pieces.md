@@ -550,6 +550,10 @@ assert(
 
 Import `SWORDFALL_TOTAL_HEIGHT` from `@/vfx-engine`. `TALL_FRAME` is already imported.
 
+**Also update the pre-existing `hasCycles` expectation list** around `scripts/vfx-registry-check.ts:238`. It hardcodes which shapes carry the cycles axis and currently reads `['setpiece:bolt', 'setpiece:smite', 'setpiece:rockfall', 'setpiece:cleave']`. `swordfall` carries the axis too, so add `'setpiece:swordfall'` or the run fails. Task 2 hit exactly this and confirmed it with a failing run first — do the same rather than adding it speculatively.
+
+Leave the other hardcoded lists in that script (the matrix-leak check and the `hasElement`/`hasSize` check) alone unless a run actually fails on them. Task 2 deliberately did not touch them.
+
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `npm run vfx:check`
