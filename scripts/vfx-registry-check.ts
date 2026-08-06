@@ -21,6 +21,7 @@ import {
   PIXEL_SCALE,
   RAMP_BASE,
   SQUARE_FRAME,
+  SWORDFALL_TOTAL_HEIGHT,
   TALL_FRAME,
 } from '@/vfx-engine';
 
@@ -92,7 +93,7 @@ assert(
 const registry = buildRegistry();
 const names = Object.keys(registry);
 
-assert(names.length === 470, `expected 470 effects, got ${names.length}`);
+assert(names.length === 491, `expected 491 effects, got ${names.length}`);
 assert(names.length === new Set(names).size, 'effect names must be unique');
 
 for (const name of names) {
@@ -215,7 +216,14 @@ for (const [name, def] of Object.entries(registry)) {
 // exists to avoid — see registry.ts). If Object.keys(KINDS) ever crept back
 // into a matrix-generating loop, each set piece would silently gain 21
 // matrix names (7 elements x 3 sizes) and these would fail.
-for (const sp of ['bolt', 'smite', 'rockfall', 'ring-of-fire']) {
+for (const sp of [
+  'bolt',
+  'smite',
+  'rockfall',
+  'ring-of-fire',
+  'cleave',
+  'swordfall',
+]) {
   for (const element of Object.keys(ELEMENTS)) {
     for (const suffix of ['sm', 'lg']) {
       const leaked = `${sp}-${element}-${suffix}`;
@@ -240,6 +248,7 @@ for (const s of shapes) {
     'setpiece:smite',
     'setpiece:rockfall',
     'setpiece:cleave',
+    'setpiece:swordfall',
   ].includes(s.id);
   assert(
     s.hasCycles === expected,
@@ -256,7 +265,14 @@ for (const element of Object.keys(ELEMENTS)) {
       `cycles leaked onto ring-of-fire: ${element}-${suffix}`,
     );
   }
-  for (const sp of ['bolt', 'smite', 'rockfall', 'ring-of-fire']) {
+  for (const sp of [
+    'bolt',
+    'smite',
+    'rockfall',
+    'ring-of-fire',
+    'cleave',
+    'swordfall',
+  ]) {
     for (const suffix of ['sm', 'lg']) {
       assert(
         registry[`${sp}-${element}-${suffix}`] === undefined,
@@ -336,7 +352,7 @@ for (const name of names) {
 // Shapes: unique ids, correct axis flags, and a 1:1 relationship with the index.
 const shapeIds = shapes.map((s) => s.id);
 assert(shapeIds.length === new Set(shapeIds).size, 'shape ids must be unique');
-assert(shapes.length === 36, `expected 36 shapes, got ${shapes.length}`);
+assert(shapes.length === 37, `expected 37 shapes, got ${shapes.length}`);
 
 const shapeById = new Map(shapes.map((s) => [s.id, s]));
 for (const name of indexNames) {
@@ -536,6 +552,15 @@ for (const name of names) {
 assert(SQUARE_FRAME.bodyLift === true, 'SQUARE_FRAME must keep the body lift');
 assert(GROUND_FRAME.bodyLift === false, 'GROUND_FRAME must not be lifted');
 assert(TALL_FRAME.bodyLift === false, 'TALL_FRAME must not be lifted');
+
+// swordfall's PLANTED sword must fit the tall frame's headroom above the
+// ground point. Early descent frames deliberately clip at the top — the frame
+// edge is the sky the blade falls out of — but once planted the whole sword
+// (blade + guard + grip + pommel) has to be on screen or it reads as broken.
+assert(
+  SWORDFALL_TOTAL_HEIGHT <= TALL_FRAME.groundY,
+  `planted swordfall is ${SWORDFALL_TOTAL_HEIGHT} design-px tall but the tall frame only has ${TALL_FRAME.groundY}px above its ground point`,
+);
 
 console.log(
   `vfx-index: ${indexNames.length} names, ${shapes.length} shapes, round-trip OK`,
