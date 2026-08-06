@@ -176,6 +176,18 @@ split wouldn't mean anything for them. `ring`/`shockwave` are the two
 exemplars chosen specifically because they're ground-anchored expanding
 rings, where "goes around the character's feet" is the correct read.
 
+**Note before you judge this step — where the ring sits vertically on the
+body is not the thing being tested here.** The editor anchors the effect at
+the character stand-in's feet, but in-game the burst mounts 20px higher
+(`BURST_UP`, `eoweb/src/handlers/skill.ts:16`), and the new ground ellipses
+have an output `ry` of only ~17px — so in-game the ring will visibly sit
+around the shins/waist, not flush at the feet. That's expected, not a
+failure of the layer split: `BURST_UP` is pre-existing (predates this task)
+and giving each def its own vertical origin offset is explicitly the *next*
+project's scope, not this one — **do not change any code over this**. The
+real check for this step is the far/near occlusion behaviour described
+below; the ellipse's height on the body is not.
+
 **Expect:** the **far side** of the ring/ellipse (top, on screen) is
 partly hidden behind your character/the target's sprite as it expands —
 you should NOT see a complete, unbroken ellipse floating in front of
@@ -247,21 +259,56 @@ then
 ```
 Watch the character sprite itself (not the ring shape) each time.
 
-**Expect / judge:** for each of the three, decide — does the flash on the
-sprite read as an intentional highlight/glow effect, or as an ugly, flat
-patch of solid colour sitting on the character? There is no automated pass
-condition here; this is a subjective call the pipeline's design explicitly
-cannot make for you.
+Then the two worst tint cases this pass hasn't covered yet. Both are still
+`ring`'s tint mechanism underneath — nothing new to look up — but the
+*exposure* to it is worse than anything cast above:
 
-**Failure looks like, and what to do about it:** if any of the three reads
+**`buff-aura`** is the registry's worst case for this check. It's `ring`
+with `loops: 3`, so its tint patch strobes on the character sprite **six
+times over its 1.2s life**, where every element cast above is `loops: 1` (a
+single 400ms flash). If any tint is going to read as an ugly blob, it reads
+worst here. (Step 6 only confirms `buff-aura` still *renders* — it does not
+judge the tint.) Cast it as in Step 6:
+```json
+"cast_vfx": "buff-aura",
+```
+
+**The 7 `implode-ring-<element>` combos** — `implode-ring-fire`,
+`implode-ring-water`, `implode-ring-earth`, `implode-ring-wind`,
+`implode-ring-light`, `implode-ring-dark`, `implode-ring-neutral`. A def's
+layers resolve per-layer across *both* its base kind and its combo kind,
+and `implode` itself has no `behind`/`tint` of its own — so these combos
+carry `ring`'s tint onto a third surface (a combo shape) that nobody has
+looked at yet. Cast at least the three worst measured shadow-rung
+luminances from above:
+```json
+"cast_vfx": "implode-ring-light",
+```
+then
+```json
+"cast_vfx": "implode-ring-wind",
+```
+then
+```json
+"cast_vfx": "implode-ring-neutral",
+```
+
+**Expect / judge:** for every cast in this step — the three `ring-*`
+elements, `buff-aura`, and the `implode-ring-*` combos — decide: does the
+flash on the sprite read as an intentional highlight/glow effect, or as an
+ugly, flat patch of solid colour sitting on the character? There is no
+automated pass condition here; this is a subjective call the pipeline's
+design explicitly cannot make for you.
+
+**Failure looks like, and what to do about it:** if any of the above reads
 as an ugly solid-colour blob rather than a glow, **do not silently accept
-it and move on**. Record which element(s) failed and pick one of the two
-honest fixes for a follow-up task: **(a)** exempt the `tint` layer from
-`quantizeToRamp` entirely (let it stay a smooth low-alpha wash instead of
-snapping to a ramp rung), or **(b)** drop `tint` from the two exemplar
-kinds' definitions until a version of quantisation that tolerates a soft
-wash exists. Either is legitimate; picking neither and shipping the blob
-is not.
+it and move on**. Record which element(s)/case(s) failed and pick one of
+the two honest fixes for a follow-up task: **(a)** exempt the `tint` layer
+from `quantizeToRamp` entirely (let it stay a smooth low-alpha wash instead
+of snapping to a ramp rung), or **(b)** drop `tint` from the affected
+kinds'/combos' definitions until a version of quantisation that tolerates a
+soft wash exists. Either is legitimate; picking neither and shipping the
+blob is not.
 
 ## Step 5: Sheet-backed effects still animate, unchanged
 
@@ -317,38 +364,44 @@ it did before this task.
 before — worth filing as a regression, not something to wave through as
 "probably fine."
 
-## Step 8: Cosmetic edge — burst depth snapshot (informational, does not block)
+## Step 8: Burst depth tracks the target live (regression check)
 
-A `SkillBurst`'s three sprites derive their z-order once, from the
-target's `zIndex` at the moment `playBurst` is called
-(`src/handlers/skill.ts:120` → `MapRenderer.getEntityZIndex`,
-`src/map.ts:2377`) — see `SkillBurst.reset` in
-`src/render/vfx/skill-burst.ts`. It is never re-derived for the rest of
-the burst's life.
+A `SkillBurst`'s three sprites used to derive their z-order **once**, from
+the target's `zIndex` at the moment `playBurst` was called, and never
+re-derive it — that was a known, accepted cosmetic edge (see git history on
+this doc if you need the old writeup). It no longer works that way: the
+burst now stores the target's entity key and `SkillVfxController.advance`
+re-derives `MapRenderer.getEntityZIndex` for it **every frame**
+(`src/controllers/skill-vfx-controller.ts` → `SkillBurst.updateZIndex` in
+`src/render/vfx/skill-burst.ts`), so the sandwich should now track the
+target's live paint order for the burst's whole life, not just its first
+frame.
+
+The trigger for this step is **the player or the target moving** — not
+just the target. `map.ts` reassigns zIndex 0..N across the whole
+viewport-clipped tile+entity band every frame, so the target's ordinal
+shifts whenever the sprite count ahead of it changes, and your own
+movement causes that just as much as the target's does, by re-clipping the
+static tile band as the viewport re-centers on you.
 
 Edit `strike.json`:
 ```json
 "impact_vfx": "spiral-fire",
 ```
-(1200ms, long enough to walk during). Cast Strike at an NPC that is
-actively walking/patrolling, ideally landing the hit just as it's about to
-step to a different row/depth on screen.
+(1200ms, long enough to move during). Cast Strike at an NPC, and during the
+burst's 1.2s life, move — try it both ways across a few casts: stand still
+and let the target walk/patrol through the hit, and separately, walk
+yourself while the target stays put.
 
-**Expect / record:** the burst's depth relative to the target may visibly
-fall out of sync partway through its 1.2s life if the target walks during
-it — e.g. the effect appears to render in front of the target when it
-should now be behind it, or vice versa, once the target has moved. This
-was flagged and accepted as a known, rare cosmetic edge during an earlier
-task in this series (matches pre-existing position-snapshot behavior for
-other one-shot effects, not a new shortcut introduced here) — it does
-**not** block this pass. Just confirm it's the mild, occasional artifact
-described here and not something worse (e.g. the burst never rendering at
-all, or persisting after the target despawns).
+**Expect:** the burst continues to sandwich correctly around the target for
+the whole 1.2s, regardless of which of you moved — front layer over the
+target, behind layer under it, no visible pop or snap in depth ordering
+partway through.
 
-**Failure looks like:** anything beyond the described mild z-order
-drift — a crash, a burst that never disappears, or a burst that renders
-nowhere near the target — would be a different, real bug and should be
-escalated rather than filed under this known limitation.
+**Failure looks like:** the burst sinks below map tiles/terrain and
+effectively disappears, or ends up rendering nowhere near the target at
+all. Either of those is now a genuine regression — not the known
+limitation this step used to describe — and should be escalated.
 
 ## Step 9: Restore
 
