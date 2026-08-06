@@ -1,6 +1,16 @@
 import type { Client } from '@/client';
 import { SkillBurst, type VfxLoader } from '@/render';
 
+// Vertical offset (px) applied ONLY to a centred (SQUARE_FRAME, anchorY 0.5)
+// burst, so it mounts near the body centre rather than the feet — the look
+// every effect had before FrameGeometry existed. A frame carrying its own
+// ground point (TALL_FRAME, anchorY 0.75) must land ON the ground instead:
+// applying this lift there would float a descent's impact 20px above the
+// target's feet, fighting the very anchor the frame was built to express.
+// Call sites (skill.ts) pass the raw sprite position; this is the ONLY place
+// the lift is applied — see playBurst below.
+const BURST_UP = 20;
+
 // Fire-and-forget one-shot skill bursts mounted in worldContainer. Pooled.
 export class SkillVfxController {
   private client: Client;
@@ -29,11 +39,16 @@ export class SkillVfxController {
   playBurst(ref: string, x: number, y: number, targetKey: string | null): void {
     const resolved = this.loader.getFrames(ref);
     if (!resolved) return;
+    // A centred frame (anchorY 0.5) is authored as a blob around the body,
+    // so it keeps the historic body-centre lift. A frame carrying its own
+    // ground point (TALL_FRAME, anchorY 0.75) must land ON the ground — no
+    // lift. See BURST_UP's doc comment above.
+    const yy = resolved.anchorY === 0.5 ? y - BURST_UP : y;
     const targetZIndex = targetKey
       ? (this.client.mapRenderer?.getEntityZIndex(targetKey) ?? null)
       : null;
     const burst = this.pool.pop() ?? new SkillBurst();
-    burst.reset(resolved, x, y, targetZIndex, targetKey);
+    burst.reset(resolved, x, yy, targetZIndex, targetKey);
     burst.mount(this.client.worldContainer);
     this.active.push(burst);
   }

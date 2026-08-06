@@ -13,9 +13,6 @@ import type { SkillCatalogEntry } from '@/controllers';
 
 const FAMILY_SKILL = 62;
 
-/** Vertical offset (px) so bursts mount near the body center, not the feet. */
-const BURST_UP = 20;
-
 function readStr(reader: EoReader): string {
   const len = reader.getChar();
   return new TextDecoder().decode(new Uint8Array(reader.getBytes(len)));
@@ -56,7 +53,7 @@ function handleSkillReply(client: Client, reader: EoReader): void {
       client.skillVfxController.playBurst(
         entry.castVfx,
         pos.x,
-        pos.y - BURST_UP,
+        pos.y,
         casterKey,
       );
     }
@@ -116,7 +113,7 @@ function handleSkillDamage(client: Client, reader: EoReader): void {
       client.skillVfxController.playBurst(
         entry.impactVfx,
         pos.x,
-        pos.y - BURST_UP,
+        pos.y,
         targetKey,
       );
     }
