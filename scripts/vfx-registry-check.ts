@@ -6,9 +6,13 @@ import {
   buildRegistry,
   buildShapes,
   composeVfxName,
+  DESIGN_SIZE,
   ELEMENTS,
   type ElementKey,
+  FRAME_SIZE,
+  INTERNAL_SIZE,
   KINDS,
+  PIXEL_SCALE,
   RAMP_BASE,
 } from '@/vfx-engine';
 
@@ -30,6 +34,19 @@ function assert(condition: boolean, message: string): void {
     throw new Error(`vfx-registry-check: ${message}`);
   }
 }
+
+assert(
+  FRAME_SIZE === INTERNAL_SIZE * PIXEL_SCALE,
+  `FRAME_SIZE ${FRAME_SIZE} must equal INTERNAL_SIZE ${INTERNAL_SIZE} * PIXEL_SCALE ${PIXEL_SCALE} — a fractional upscale gives unevenly-sized pixels`,
+);
+assert(
+  Number.isInteger(PIXEL_SCALE) && PIXEL_SCALE >= 1,
+  'PIXEL_SCALE must be a positive integer',
+);
+assert(
+  DESIGN_SIZE === 128,
+  "DESIGN_SIZE is the tuned draw space — changing it invalidates every kind's geometry budget",
+);
 
 const registry = buildRegistry();
 const names = Object.keys(registry);
