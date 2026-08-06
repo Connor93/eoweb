@@ -6,8 +6,10 @@ import {
   buildRegistry,
   buildShapes,
   composeVfxName,
+  ELEMENTS,
   type ElementKey,
   KINDS,
+  RAMP_BASE,
 } from '@/vfx-engine';
 
 const KIND_NAMES = new Set(Object.keys(KINDS));
@@ -151,6 +153,43 @@ assert(
   composeVfxName('combo:nova+nova', 'fire') === null,
   'combo of two real kinds never paired in COMBOS must not compose',
 );
+
+// The combat-element colours the engine palette mirrors. If these drift, the
+// damage numbers and the VFX stop agreeing about what "fire" looks like.
+const COMBAT_COLORS: Record<string, number> = {
+  neutral: 0xfff8e1,
+  fire: 0xfb923c,
+  water: 0x60a5fa,
+  earth: 0x84cc16,
+  wind: 0xfacc15,
+  light: 0xfde047,
+  dark: 0xa855f7,
+};
+
+for (const [element, ramp] of Object.entries(ELEMENTS)) {
+  assert(
+    ramp.length === 4,
+    `${element}: ramp must have 4 rungs, got ${ramp.length}`,
+  );
+  for (const c of ramp) {
+    assert(
+      Number.isInteger(c) && c >= 0 && c <= 0xffffff,
+      `${element}: bad rung ${c}`,
+    );
+  }
+  assert(
+    ramp[RAMP_BASE] === COMBAT_COLORS[element],
+    `${element}: base rung 0x${(ramp[RAMP_BASE] as number).toString(16)} != combat colour 0x${COMBAT_COLORS[element]?.toString(16)}`,
+  );
+}
+
+for (const name of names) {
+  const def = registry[name];
+  assert(
+    Array.isArray(def.ramp) && def.ramp.length === 4,
+    `${name}: def.ramp must have 4 rungs`,
+  );
+}
 
 console.log(
   `vfx-index: ${indexNames.length} names, ${shapes.length} shapes, round-trip OK`,

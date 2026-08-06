@@ -37,6 +37,7 @@
 // If you change a constant below, re-verify with an instrumented context —
 // eyeballing a 128px tile does not catch a 3px overrun.
 
+import { RAMP_BASE } from './palette';
 import type { ShapeKind, VfxDef } from './types';
 
 export interface KindConfig {
@@ -52,27 +53,23 @@ export interface KindConfig {
   ): void;
 }
 
-function toHex(color: number): string {
-  return `#${color.toString(16).padStart(6, '0')}`;
+/** A rung of the def's ramp as a CSS hex. Index is clamped, so `rung(def, 4)`
+ *  is the hot rung rather than a crash. */
+function rung(def: VfxDef, index: number): string {
+  const i = Math.max(0, Math.min(def.ramp.length - 1, index));
+  const c = def.ramp[i] as number;
+  return `#${c.toString(16).padStart(6, '0')}`;
 }
 
-function toRgba(color: number, alpha: number): string {
-  const r = (color >> 16) & 0xff;
-  const g = (color >> 8) & 0xff;
-  const b = color & 0xff;
-  return `rgba(${r},${g},${b},${alpha})`;
+/** The def's base rung — the drop-in replacement for the old `toHex(def.color)`. */
+function base(def: VfxDef): string {
+  return rung(def, RAMP_BASE);
 }
 
-// Blends `color` toward white by `amount` (0..1) — used for a "brighter
-// core" highlight without needing a second palette entry.
-function lighten(color: number, amount: number): number {
-  const r = (color >> 16) & 0xff;
-  const g = (color >> 8) & 0xff;
-  const b = color & 0xff;
-  const lr = Math.round(r + (255 - r) * amount);
-  const lg = Math.round(g + (255 - g) * amount);
-  const lb = Math.round(b + (255 - b) * amount);
-  return (lr << 16) | (lg << 8) | lb;
+function rungRgba(def: VfxDef, index: number, alpha: number): string {
+  const i = Math.max(0, Math.min(def.ramp.length - 1, index));
+  const c = def.ramp[i] as number;
+  return `rgba(${(c >> 16) & 0xff},${(c >> 8) & 0xff},${c & 0xff},${alpha})`;
 }
 
 // Deterministic per-index pseudo-scatter in [0, 1), generalizing the
@@ -94,7 +91,7 @@ function drawRing(
   const radius = progress * 40 * def.sizeScale;
   ctx.globalAlpha = 1 - progress;
   ctx.lineWidth = 3;
-  ctx.strokeStyle = toHex(def.color);
+  ctx.strokeStyle = base(def);
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
   ctx.stroke();
@@ -111,7 +108,7 @@ function drawDisc(
   const radius = progress * 41 * def.sizeScale;
 
   ctx.globalAlpha = 0.6 * (1 - progress);
-  ctx.fillStyle = toHex(def.color);
+  ctx.fillStyle = base(def);
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
   ctx.fill();
@@ -119,7 +116,7 @@ function drawDisc(
   // Brighter core ring to sell a "hot center".
   ctx.globalAlpha = 1 - progress;
   ctx.lineWidth = 2;
-  ctx.strokeStyle = toHex(lighten(def.color, 0.6));
+  ctx.strokeStyle = rung(def, RAMP_BASE + 1);
   ctx.beginPath();
   ctx.arc(cx, cy, radius * 0.5, 0, Math.PI * 2);
   ctx.stroke();
@@ -139,7 +136,7 @@ function drawSparkBurst(
 
   ctx.globalAlpha = 1 - progress;
   ctx.lineWidth = 2;
-  ctx.strokeStyle = toHex(def.color);
+  ctx.strokeStyle = base(def);
 
   for (let i = 0; i < sparkCount; i++) {
     // Deterministic per-spark jitter derived from the index — no Math.random().
@@ -173,7 +170,7 @@ function drawSlash(
   const segments = 24;
 
   ctx.globalAlpha = 1 - progress;
-  ctx.strokeStyle = toHex(def.color);
+  ctx.strokeStyle = base(def);
   ctx.lineCap = 'round';
 
   for (let i = 0; i < segments; i++) {
@@ -206,7 +203,7 @@ function drawSpiral(
 
   ctx.globalAlpha = 1 - progress * 0.8;
   ctx.lineWidth = 2.5 * def.sizeScale;
-  ctx.strokeStyle = toHex(def.color);
+  ctx.strokeStyle = base(def);
   ctx.lineCap = 'round';
   ctx.beginPath();
   for (let i = 0; i <= steps; i++) {
@@ -261,7 +258,7 @@ function drawSparkle(
   cy: number,
 ): void {
   const count = 10;
-  ctx.fillStyle = toHex(def.color);
+  ctx.fillStyle = base(def);
 
   for (let i = 0; i < count; i++) {
     const angle = i * 2.399;
@@ -303,7 +300,7 @@ function drawNova(
     Math.max(flashRadius, 0.01),
   );
   gradient.addColorStop(0, '#ffffff');
-  gradient.addColorStop(1, toHex(def.color));
+  gradient.addColorStop(1, base(def));
 
   ctx.globalAlpha = 1 - progress;
   ctx.fillStyle = gradient;
@@ -314,7 +311,7 @@ function drawNova(
   const ringRadius = progress * 40 * def.sizeScale;
   ctx.globalAlpha = (1 - progress) * 0.85;
   ctx.lineWidth = 2;
-  ctx.strokeStyle = toHex(def.color);
+  ctx.strokeStyle = base(def);
   ctx.beginPath();
   ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
   ctx.stroke();
@@ -334,7 +331,7 @@ function drawShockwave(
 
   ctx.globalAlpha = 1 - progress;
   ctx.lineWidth = 3;
-  ctx.strokeStyle = toHex(def.color);
+  ctx.strokeStyle = base(def);
   ctx.beginPath();
   ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   ctx.stroke();
@@ -365,8 +362,8 @@ function drawBeamPop(
   const top = baseY - height;
 
   const gradient = ctx.createLinearGradient(cx, baseY, cx, top);
-  gradient.addColorStop(0, toRgba(def.color, 1));
-  gradient.addColorStop(1, toRgba(def.color, 0));
+  gradient.addColorStop(0, rungRgba(def, RAMP_BASE, 1));
+  gradient.addColorStop(1, rungRgba(def, RAMP_BASE, 0));
 
   ctx.globalAlpha = 1 - progress * 0.6;
   ctx.fillStyle = gradient;
@@ -389,13 +386,13 @@ function drawImplode(
 
   ctx.globalAlpha = 0.25 + progress * 0.75;
   ctx.lineWidth = 3;
-  ctx.strokeStyle = toHex(def.color);
+  ctx.strokeStyle = base(def);
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
   ctx.stroke();
 
   const count = 8;
-  ctx.fillStyle = toHex(def.color);
+  ctx.fillStyle = base(def);
   for (let i = 0; i < count; i++) {
     const angle = (i / count) * Math.PI * 2 + i * 2.399;
     const x = cx + Math.cos(angle) * radius;
@@ -428,7 +425,7 @@ function drawVortex(
 
   ctx.globalAlpha = 1 - progress;
   ctx.lineWidth = 3;
-  ctx.strokeStyle = toHex(def.color);
+  ctx.strokeStyle = base(def);
 
   for (let i = 0; i < arms; i++) {
     const start = rotation + (i / arms) * Math.PI * 2;
@@ -462,7 +459,7 @@ function drawRain(
   const fallTop = -28 * def.sizeScale;
   const fallSpan = 68 * def.sizeScale;
 
-  ctx.strokeStyle = toHex(def.color);
+  ctx.strokeStyle = base(def);
   ctx.lineWidth = 2;
 
   for (let i = 0; i < count; i++) {
@@ -494,7 +491,7 @@ function drawChains(
   // ratio: 40 * 1.5 + jag + lineWidth/2 = 61.9px extent at -lg.
   const length = 40 * def.sizeScale * Math.min(1, progress * 1.5);
 
-  ctx.strokeStyle = toHex(def.color);
+  ctx.strokeStyle = base(def);
   ctx.lineWidth = 2;
 
   for (let c = 0; c < chainCount; c++) {
@@ -534,7 +531,7 @@ function drawOrbit(
   // Each dot's own radius stacks on the orbit: (37 + 4) * 1.5 = 61.5px at -lg.
   const radius = 37 * def.sizeScale;
 
-  ctx.fillStyle = toHex(def.color);
+  ctx.fillStyle = base(def);
   ctx.globalAlpha = 1 - progress * 0.2;
 
   for (let i = 0; i < count; i++) {
@@ -563,7 +560,7 @@ function drawBurstLines(
   const inner = 4 * def.sizeScale;
   const lenFactor = Math.sin(Math.min(progress * 1.6, 1) * Math.PI * 0.5);
 
-  ctx.strokeStyle = toHex(def.color);
+  ctx.strokeStyle = base(def);
   ctx.lineWidth = 1.5;
   ctx.globalAlpha = 1 - progress;
 
