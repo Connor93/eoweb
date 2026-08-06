@@ -348,6 +348,18 @@ for (const name of names) {
     Number.isInteger(f.internalW) && Number.isInteger(f.internalH),
     `${name}: raster dims must be integers`,
   );
+  // The two outW/outH assertions above only prove EACH axis upscales evenly
+  // from ITS OWN internal size — neither says the two axes were derived from
+  // the SAME factor. rasterizeLayer (render.ts) derives a single k =
+  // internalW / designW and applies it to both axes via ctx.scale(k, k), so
+  // a makeFrame() call whose designW:designH ratio doesn't divide evenly at
+  // this resolution (verified via cross-multiplication, not division, to
+  // stay exact in integer math) would still pass every check above while
+  // rendering vertically mis-scaled with the ground point off.
+  assert(
+    f.internalW * f.designH === f.internalH * f.designW,
+    `${name}: design ${f.designW}x${f.designH} does not scale to raster ${f.internalW}x${f.internalH} by one factor`,
+  );
   assert(
     f.groundY > 0 && f.groundY <= f.designH,
     `${name}: groundY ${f.groundY} outside the frame`,
@@ -355,6 +367,10 @@ for (const name of names) {
   assert(
     f.anchorY > 0 && f.anchorY <= 1,
     `${name}: anchorY ${f.anchorY} out of range`,
+  );
+  assert(
+    f.anchorY === f.groundY / f.designH,
+    `${name}: anchorY out of sync with groundY`,
   );
 }
 
