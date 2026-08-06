@@ -57,7 +57,7 @@ function handleSkillReply(client: Client, reader: EoReader): void {
         entry.castVfx,
         pos.x,
         pos.y - BURST_UP,
-        client.mapRenderer?.getEntityZIndex(casterKey) ?? null,
+        casterKey,
       );
     }
   } else {
@@ -117,7 +117,7 @@ function handleSkillDamage(client: Client, reader: EoReader): void {
         entry.impactVfx,
         pos.x,
         pos.y - BURST_UP,
-        client.mapRenderer?.getEntityZIndex(targetKey) ?? null,
+        targetKey,
       );
     }
   }

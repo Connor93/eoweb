@@ -5,14 +5,18 @@ import type { ResolvedVfx } from './vfx-loader';
 // worldContainer is sortableChildren; every map/entity/effect sprite is re-assigned
 // zIndex 0..N from `_worldOrder` each frame (MapRenderer.beginFrame resets it to 0).
 // A burst is added once and NOT part of that sweep, so it needs an explicit zIndex
-// or it sits at 0 and renders BEHIND the whole world (invisible). Ordinarily that
-// zIndex is derived from the target's own current zIndex (see reset() below) so the
-// three layers sandwich the character correctly; this constant is only the fallback
-// for the rare case a target has no live world sprite to key off of (e.g. it
-// despawned between the packet that triggered the cast and this call, or the
-// character-ghost render pass, which doesn't register a `character:*:main` sprite).
-// Falling back still parks the burst well above the per-frame world-sprite range so
-// it draws on top rather than vanishing.
+// or it sits at 0 and renders BEHIND the whole world (invisible). That zIndex is
+// derived from the target's own current zIndex (see reset()/updateZIndex() below,
+// and SkillVfxController.advance, which re-derives it every frame rather than
+// trusting the value snapshotted at cast time — the target's ordinal shifts
+// whenever the sprite count ahead of it changes, which the player's OWN movement
+// causes just as much as the target's, by re-clipping the viewport's static tile
+// band) so the three layers keep sandwiching the character correctly for the
+// burst's whole life. This constant is only the fallback for the rare case a
+// target has no live world sprite to key off of at all (e.g. it despawned between
+// the packet that triggered the cast and this call, or hasn't been rendered yet
+// this frame). Falling back still parks the burst well above the per-frame
+// world-sprite range so it draws on top rather than vanishing.
 const BURST_Z_INDEX_FALLBACK = 1_000_000;
 
 /** One depth layer of a burst: its own sprite plus the (single-cycle) frames it
@@ -52,6 +56,11 @@ export class SkillBurst extends TimedAnimation {
   ];
   // Hold time (ms) per discrete playback step, from ResolvedVfx.frameMs.
   private frameMs = 100;
+  // Entity key to re-derive this burst's zIndex from every frame (see
+  // updateZIndex below), or null for a ground-targeted effect with no
+  // entity to track. Public so SkillVfxController.advance can read it
+  // without a getter — set only from reset().
+  targetKey: string | null = null;
 
   constructor() {
     super(1);
@@ -70,11 +79,18 @@ export class SkillBurst extends TimedAnimation {
     x: number,
     y: number,
     targetZIndex: number | null,
+    targetKey: string | null,
   ): void {
     this.durationMs = Math.max(1, resolved.durationMs);
     this.frameMs = Math.max(1, resolved.frameMs);
     this.elapsedMs = 0;
     this.renderedFirstFrame = true; // advance immediately (frame 0 shows this frame)
+    // Stored so SkillVfxController.advance can re-derive the sandwich zIndex
+    // every frame via updateZIndex below, instead of it staying pinned to
+    // whatever zIndex the target happened to have at cast time. Null (a
+    // ground-targeted effect) means updateZIndex is never called and the
+    // fallback z below holds for the burst's whole life.
+    this.targetKey = targetKey;
 
     const z = targetZIndex ?? BURST_Z_INDEX_FALLBACK;
     const blendMode = resolved.additive ? 'add' : 'normal';
@@ -120,6 +136,19 @@ export class SkillBurst extends TimedAnimation {
     sprite.blendMode = blendMode;
     sprite.scale.set(scale);
     sprite.zIndex = zIndex;
+  }
+
+  // Re-applies the behind/tint/front sandwich around a freshly-read target
+  // zIndex — called every frame by SkillVfxController.advance (only when
+  // `targetKey` is set) so the burst tracks the target's live paint order
+  // for its whole life instead of the value snapshotted once in reset().
+  // Mirrors reset()'s z-1/z+1/z+2 offsets but touches only zIndex, not
+  // texture/position/scale/blendMode, so it's cheap to call unconditionally
+  // every frame for every active burst.
+  updateZIndex(z: number): void {
+    this.behind.sprite.zIndex = z - 1;
+    this.tint.sprite.zIndex = z + 1;
+    this.front.sprite.zIndex = z + 2;
   }
 
   step(deltaMs: number): void {

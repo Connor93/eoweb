@@ -13,20 +13,27 @@ export class SkillVfxController {
     this.loader = loader;
   }
 
-  // `targetZIndex` sandwiches the burst's behind/tint/front layers around the
+  // `targetKey` sandwiches the burst's behind/tint/front layers around the
   // target's own current paint order (see MapRenderer.getEntityZIndex) —
   // pass null when the caller has no target to key off of (e.g. a
   // ground-targeted effect), and SkillBurst falls back to a flat z.
-  playBurst(
-    ref: string,
-    x: number,
-    y: number,
-    targetZIndex: number | null,
-  ): void {
+  //
+  // Unlike a one-off zIndex, the key itself is stored on the burst
+  // (SkillBurst.targetKey) and re-resolved every frame in advance() below,
+  // so the sandwich keeps tracking the target for the burst's whole life
+  // instead of going stale the moment the target's paint order shifts.
+  // That shift isn't rare: map.ts reassigns zIndex 0..N across the whole
+  // viewport-clipped tile+entity band every frame, so ANY change in sprite
+  // count ahead of the target moves its ordinal — including the player's
+  // own movement, which re-clips the static tile band on every step.
+  playBurst(ref: string, x: number, y: number, targetKey: string | null): void {
     const resolved = this.loader.getFrames(ref);
     if (!resolved) return;
+    const targetZIndex = targetKey
+      ? (this.client.mapRenderer?.getEntityZIndex(targetKey) ?? null)
+      : null;
     const burst = this.pool.pop() ?? new SkillBurst();
-    burst.reset(resolved, x, y, targetZIndex);
+    burst.reset(resolved, x, y, targetZIndex, targetKey);
     burst.mount(this.client.worldContainer);
     this.active.push(burst);
   }
@@ -34,6 +41,16 @@ export class SkillVfxController {
   advance(deltaMs: number): void {
     for (let i = this.active.length - 1; i >= 0; i--) {
       const b = this.active[i];
+      // Re-derive the target's zIndex fresh every frame (one Map lookup per
+      // active burst) instead of trusting the value snapshotted at cast
+      // time — see playBurst's comment above. A null result (e.g. the
+      // target despawned mid-effect) is left alone: the sprites keep
+      // whatever zIndex they last had rather than snapping to 0 and sinking
+      // to the bottom of the world.
+      if (b.targetKey) {
+        const z = this.client.mapRenderer?.getEntityZIndex(b.targetKey);
+        if (z !== null && z !== undefined) b.updateZIndex(z);
+      }
       b.step(deltaMs);
       if (b.finished) {
         b.unmount();
