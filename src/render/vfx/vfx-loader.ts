@@ -106,7 +106,14 @@ export class VfxLoader {
   private buildProcedural(def: EngineVfxDef): ResolvedVfx {
     const frames: Texture[] = [];
     for (let i = 0; i < def.frames; i++) {
-      frames.push(Texture.from(renderFrameCanvas(def, i), true));
+      // STOPGAP (Task 4): renderFrameCanvas now returns a three-layer
+      // { behind?, tint?, front } object instead of a single canvas — this
+      // consumes only `.front` (always present) and drops `.behind`/`.tint`
+      // on the floor, preserving today's single-decal-layer look. Wiring
+      // all three into an actual behind/tint/front sprite stack is the
+      // eoweb 3-sprite renderer task; this call site is exactly what it
+      // replaces.
+      frames.push(Texture.from(renderFrameCanvas(def, i).front, true));
     }
     return {
       frames,

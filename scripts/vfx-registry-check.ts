@@ -6,6 +6,7 @@ import {
   buildRegistry,
   buildShapes,
   composeVfxName,
+  DEPTH_LAYERS,
   DESIGN_SIZE,
   ELEMENTS,
   type ElementKey,
@@ -19,6 +20,39 @@ import {
 } from '@/vfx-engine';
 
 const KIND_NAMES = new Set(Object.keys(KINDS));
+
+// Three-layer draw API (Task 4): `front` is mandatory for every kind —
+// TypeScript already enforces this at compile time (KindConfig.draw.front is
+// non-optional), but this is the runtime proof for the one thing tsc can't
+// see: that every entry in KINDS actually satisfies the type rather than,
+// say, a stray `as any`. `behind`/`tint` are optional, so they're checked
+// only for "function or absent", never required.
+//
+// This script never touches the DOM (see the header comment above), so it
+// can't call renderFrameCanvas/drawEffectAt to prove a canvas comes out the
+// other end — `KINDS[kind].draw.front` being a function is the closest
+// headless proxy for "renderFrameCanvas(def, 0).front is non-null" for every
+// def, since renderFrameCanvas always rasterises `front` unconditionally.
+for (const [kind, config] of Object.entries(KINDS)) {
+  assert(
+    typeof config.draw.front === 'function',
+    `${kind}: draw.front must be a function`,
+  );
+  for (const layer of DEPTH_LAYERS) {
+    const fn = config.draw[layer];
+    assert(
+      fn === undefined || typeof fn === 'function',
+      `${kind}: draw.${layer} must be a function or undefined`,
+    );
+  }
+}
+assert(
+  DEPTH_LAYERS.length === 3 &&
+    DEPTH_LAYERS.includes('behind') &&
+    DEPTH_LAYERS.includes('tint') &&
+    DEPTH_LAYERS.includes('front'),
+  `DEPTH_LAYERS must be exactly ['behind', 'tint', 'front'], got ${JSON.stringify(DEPTH_LAYERS)}`,
+);
 
 const SPECIALS = [
   'heal-glow',
@@ -61,10 +95,21 @@ for (const name of names) {
   assert(KIND_NAMES.has(def.kind), `${name}: unknown kind "${def.kind}"`);
   assert(def.frames > 0, `${name}: frames must be > 0`);
   assert(def.sizeScale > 0, `${name}: sizeScale must be > 0`);
+  // Stand-in for `renderFrameCanvas(def, 0).front` being non-null (see the
+  // KINDS loop above for why this script can't rasterise and check that
+  // directly): every def's kind must resolve to a `front` draw function.
+  assert(
+    typeof KINDS[def.kind].draw.front === 'function',
+    `${name}: KINDS["${def.kind}"].draw.front must be a function`,
+  );
   if (def.combo !== undefined) {
     assert(
       KIND_NAMES.has(def.combo),
       `${name}: unknown combo kind "${def.combo}"`,
+    );
+    assert(
+      typeof KINDS[def.combo].draw.front === 'function',
+      `${name}: KINDS["${def.combo}"].draw.front must be a function`,
     );
   }
 
@@ -244,6 +289,10 @@ for (const name of names) {
 
 console.log(
   `vfx-index: ${indexNames.length} names, ${shapes.length} shapes, round-trip OK`,
+);
+
+console.log(
+  `vfx-kinds: ${KIND_NAMES.size} kinds, front present for all, behind/tint optional`,
 );
 
 console.log(`vfx-registry: ${names.length} effects, checks passed`);
