@@ -13,18 +13,20 @@ export class SkillVfxController {
     this.loader = loader;
   }
 
-  playBurst(ref: string, x: number, y: number): void {
+  // `targetZIndex` sandwiches the burst's behind/tint/front layers around the
+  // target's own current paint order (see MapRenderer.getEntityZIndex) —
+  // pass null when the caller has no target to key off of (e.g. a
+  // ground-targeted effect), and SkillBurst falls back to a flat z.
+  playBurst(
+    ref: string,
+    x: number,
+    y: number,
+    targetZIndex: number | null,
+  ): void {
     const resolved = this.loader.getFrames(ref);
     if (!resolved) return;
     const burst = this.pool.pop() ?? new SkillBurst();
-    burst.reset(
-      resolved.frames,
-      resolved.durationMs,
-      x,
-      y,
-      resolved.additive,
-      resolved.scale,
-    );
+    burst.reset(resolved, x, y, targetZIndex);
     burst.mount(this.client.worldContainer);
     this.active.push(burst);
   }

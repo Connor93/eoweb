@@ -2360,4 +2360,36 @@ export class MapRenderer {
       y: iso.y - this._lastPlayerScreen.y + this._halfGameHeight,
     };
   }
+
+  /**
+   * The target's own world-sprite zIndex from the most recently rendered
+   * frame, keyed the same way as getEntityIsoScreenPosition (`"npc:42"` /
+   * `"char:1024"`). Lets a one-shot effect (skill burst) sandwich its
+   * behind/tint/front layers around the target's paint order instead of
+   * hard-coding a flat z constant — see SkillBurst.reset().
+   *
+   * Returns null when the target has no registered world sprite this frame:
+   * despawned, not yet rendered, or on the character-ghost render pass
+   * (`addCharacterSprites`'s `justCharacter` branch), which paints into a
+   * separate ghost container rather than `ensureWorldSprite`. Callers should
+   * fall back to a sane default zIndex rather than dropping the effect.
+   */
+  public getEntityZIndex(key: string): number | null {
+    const colon = key.indexOf(':');
+    if (colon < 0) return null;
+    const kind = key.slice(0, colon);
+    const id = key.slice(colon + 1);
+    // Sprite-cache keys differ from the overlay key format handled above:
+    // characters are stored as `character:<id>:main` (see the main-pass
+    // branch in addCharacterSprites), NPCs as `npc:<index>` (see
+    // addNpcSprites).
+    const spriteKey =
+      kind === 'char'
+        ? `character:${id}:main`
+        : kind === 'npc'
+          ? `npc:${id}`
+          : null;
+    if (!spriteKey) return null;
+    return this._worldSprites.get(spriteKey)?.zIndex ?? null;
+  }
 }

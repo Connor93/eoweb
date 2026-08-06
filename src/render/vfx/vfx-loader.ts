@@ -8,8 +8,19 @@ import {
 import { SHEETS, type VfxDef } from './vfx-manifest';
 
 export interface ResolvedVfx {
-  frames: Texture[];
+  behind: Texture[]; // empty array when the effect has no such layer
+  tint: Texture[]; // empty array when the effect has no such layer
+  front: Texture[]; // always non-empty — every kind supplies a front layer
   durationMs: number;
+  // Hold time (ms) for ONE discrete step of playback. Each layer array above
+  // holds only ONE cycle's worth of textures (Task 3 deliberately rasterizes
+  // a single cycle — see renderFrameCanvas's doc comment), so SkillBurst
+  // repeats it to fill `durationMs` via
+  // `floor(elapsedMs / frameMs) % <layer>.length`. Not derivable from
+  // durationMs and frame count alone: frameMs varies per-def (60-100ms; see
+  // vfx-engine/registry.ts) and durationMs = frames * loops * frameMs, so
+  // without frameMs the loop count is unrecoverable.
+  frameMs: number;
   additive: boolean;
   scale: number;
 }
@@ -104,27 +115,33 @@ export class VfxLoader {
   // would pin the source HTMLCanvasElement for the session on top of the
   // GPU texture — double retention for zero reuse.
   private buildProcedural(def: EngineVfxDef): ResolvedVfx {
-    const frames: Texture[] = [];
+    const behind: Texture[] = [];
+    const tint: Texture[] = [];
+    const front: Texture[] = [];
     for (let i = 0; i < def.frames; i++) {
-      // STOPGAP (Task 4): renderFrameCanvas now returns a three-layer
-      // { behind?, tint?, front } object instead of a single canvas — this
-      // consumes only `.front` (always present) and drops `.behind`/`.tint`
-      // on the floor, preserving today's single-decal-layer look. Wiring
-      // all three into an actual behind/tint/front sprite stack is the
-      // eoweb 3-sprite renderer task; this call site is exactly what it
-      // replaces.
-      frames.push(Texture.from(renderFrameCanvas(def, i).front, true));
+      // renderFrameCanvas returns a three-layer { behind?, tint?, front }
+      // object — front is always present; behind/tint are present only when
+      // the kind (or its combo) actually paints something there, and that
+      // presence is constant across every frame of a given def (it's decided
+      // by KINDS[def.kind].draw, not by frameIndex), so behind/tint end up
+      // either empty or exactly `def.frames` long, same as front.
+      const layers = renderFrameCanvas(def, i);
+      front.push(Texture.from(layers.front, true));
+      if (layers.behind) behind.push(Texture.from(layers.behind, true));
+      if (layers.tint) tint.push(Texture.from(layers.tint, true));
     }
     return {
-      frames,
+      behind,
+      tint,
+      front,
       // NOTE: this is the effect's TOTAL playback time across all `loops`,
-      // but `frames` above holds only ONE cycle's worth of textures — Task 3
-      // deliberately rasterizes a single cycle and lets playback repeat it
+      // but each array above holds only ONE cycle's worth of textures — Task
+      // 3 deliberately rasterizes a single cycle and lets playback repeat it
       // (see renderFrameCanvas's doc comment in vfx-engine/render.ts).
-      // SkillBurst does not yet loop the cycle to fill that duration (it
-      // steps linearly through `frames` once); wiring the repeat is left to
-      // the eoweb 3-sprite renderer task, which replaces this consumer.
+      // SkillBurst.step() loops the cycle via frameMs below to fill this
+      // duration: floor(elapsedMs / frameMs) % <layer>.length.
       durationMs: effectDurationMs(def),
+      frameMs: def.frameMs,
       additive: def.additive,
       // NOT def.sizeScale. The engine has already baked sizeScale into every
       // radius/length while rasterizing these frames (drawEffectAt ->
@@ -150,9 +167,9 @@ export class VfxLoader {
     ) {
       try {
         const base = await Assets.load<Texture>(`/vfx/${def.sheet}`);
-        const frames: Texture[] = [];
+        const front: Texture[] = [];
         for (let i = 0; i < def.frames; i++) {
-          frames.push(
+          front.push(
             new Texture({
               source: base.source,
               frame: new Rectangle(
@@ -164,9 +181,15 @@ export class VfxLoader {
             }),
           );
         }
+        // Sheets play through once (no separate loop count), so `frames` IS
+        // the total step count and frameMs is just the per-frame hold time
+        // implied by fps.
         return {
-          frames,
+          behind: [],
+          tint: [],
+          front,
           durationMs: (def.frames / def.fps) * 1000,
+          frameMs: 1000 / def.fps,
           additive,
           scale,
         };
@@ -174,9 +197,14 @@ export class VfxLoader {
         // fall through to placeholder
       }
     }
+    const front = this.placeholderFrames(def.tint ?? 0xffffff);
+    const durationMs = def.durationMs ?? 450;
     return {
-      frames: this.placeholderFrames(def.tint ?? 0xffffff),
-      durationMs: def.durationMs ?? 450,
+      behind: [],
+      tint: [],
+      front,
+      durationMs,
+      frameMs: durationMs / front.length,
       additive,
       scale,
     };

@@ -50,14 +50,14 @@ function handleSkillReply(client: Client, reader: EoReader): void {
 
   if (ok) {
     const entry = client.skillController.entryOf(skillId);
-    const pos = client.mapRenderer?.getEntityWorldSpritePosition(
-      `char:${client.playerId}`,
-    );
+    const casterKey = `char:${client.playerId}`;
+    const pos = client.mapRenderer?.getEntityWorldSpritePosition(casterKey);
     if (entry?.castVfx && pos) {
       client.skillVfxController.playBurst(
         entry.castVfx,
         pos.x,
         pos.y - BURST_UP,
+        client.mapRenderer?.getEntityZIndex(casterKey) ?? null,
       );
     }
   } else {
@@ -110,14 +110,14 @@ function handleSkillDamage(client: Client, reader: EoReader): void {
 
   if (casterId === client.playerId) {
     const entry = client.skillController.takePendingImpact(npcIndex);
-    const pos = client.mapRenderer?.getEntityWorldSpritePosition(
-      `npc:${npcIndex}`,
-    );
+    const targetKey = `npc:${npcIndex}`;
+    const pos = client.mapRenderer?.getEntityWorldSpritePosition(targetKey);
     if (entry?.impactVfx && pos) {
       client.skillVfxController.playBurst(
         entry.impactVfx,
         pos.x,
         pos.y - BURST_UP,
+        client.mapRenderer?.getEntityZIndex(targetKey) ?? null,
       );
     }
   }
