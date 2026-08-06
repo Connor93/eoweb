@@ -103,13 +103,15 @@ frames with `drawImage` rather than drawing procedurally. They deliberately
 are **not** in the generated registry, so the code must resolve sheet names
 *first* and only then fall through to it.
 
-**Failure looks like:** the preview shows the muted **"no preview (unknown
-effect)"** placeholder — that means the PNGs didn't reach `public/vfx/`
-(re-run `eoweb/scripts/sync-vfx-engine.sh`) or the sheet lookup isn't
-short-circuiting ahead of the registry. Also block if the swatch/size rows
-are *enabled* for a sheet, if the animation is visibly chopped or shows
-several frames side by side at once (a frame-slicing error), or if the
-first frame flashes at the wrong size.
+**Failure looks like:** the preview shows an amber **"sheet image failed to
+load / re-run sync-vfx-engine.sh"** message — the PNGs didn't reach
+`public/vfx/`, so do exactly that and reload. If instead you get the muted
+**"no preview (unknown effect)"** placeholder, the sheet lookup isn't
+short-circuiting ahead of the generated registry, which is a code bug.
+
+Also block if the swatch/size rows are *enabled* for a sheet, if the
+animation is visibly chopped or shows several frames side by side at once
+(a frame-slicing error), or if the first frame flashes at the wrong size.
 
 ## Step 3: Matrix
 
