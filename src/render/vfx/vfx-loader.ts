@@ -134,12 +134,9 @@ export class VfxLoader {
       behind,
       tint,
       front,
-      // NOTE: this is the effect's TOTAL playback time across all `loops`,
-      // but each array above holds only ONE cycle's worth of textures — Task
-      // 3 deliberately rasterizes a single cycle and lets playback repeat it
-      // (see renderFrameCanvas's doc comment in vfx-engine/render.ts).
-      // SkillBurst.step() loops the cycle via frameMs below to fill this
-      // duration: floor(elapsedMs / frameMs) % <layer>.length.
+      // See the `frameMs` field doc on the ResolvedVfx interface above for
+      // how this (total playback time across all `loops`) relates to the
+      // per-cycle texture arrays above and frameMs below.
       durationMs: effectDurationMs(def),
       frameMs: def.frameMs,
       additive: def.additive,
