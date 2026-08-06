@@ -93,9 +93,9 @@ export class SkillBurst extends TimedAnimation {
     this.targetKey = targetKey;
 
     // All three depth sprites are the same frame, so they share one anchor.
-    // 0.5 for every effect today (SQUARE_FRAME); a tall descent frame will
-    // carry resolved.anchorY = 0.75 so the frame's ground point — not its
-    // centre — lands on (x, y). See ResolvedVfx.anchorY's doc comment.
+    // 0.5 for a centred effect (SQUARE_FRAME); a tall descent frame carries
+    // resolved.anchorY = 0.75 so the frame's ground point — not its centre —
+    // lands on (x, y). See ResolvedVfx.anchorY's doc comment.
     for (const layer of this.layers) {
       layer.sprite.anchor.set(0.5, resolved.anchorY);
     }

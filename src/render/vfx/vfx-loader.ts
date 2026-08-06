@@ -24,14 +24,14 @@ export interface ResolvedVfx {
   additive: boolean;
   scale: number;
   // Vertical anchor (0..1) sprites should use so the frame's ground point —
-  // not its centre — lands on the target. 0.5 for every effect today
-  // (SQUARE_FRAME); a tall descent frame (TALL_FRAME) will carry 0.75 so its
+  // not its centre — lands on the target. 0.5 for a centred effect
+  // (SQUARE_FRAME); a tall descent frame (TALL_FRAME) carries 0.75 so its
   // extra headroom rises above the target instead of pushing the whole
   // sprite down. See FrameGeometry.anchorY in vfx-engine/types.ts.
   anchorY: number;
 }
 
-// buildRegistry() allocates all 379 generated defs on every call. They're
+// buildRegistry() allocates all 407 generated defs on every call. They're
 // cheap plain objects individually, but getFrames sits on a hot per-cast
 // path — build the registry once (module-level, shared across any VfxLoader
 // instance) rather than churning it per lookup.
@@ -59,7 +59,7 @@ export class VfxLoader {
   }
 
   // Preload only the curated CC0 sheets (SHEETS) so their first playBurst is
-  // synchronous. The other 379 vfx-engine effects are NOT preloaded here —
+  // synchronous. The other 407 vfx-engine effects are NOT preloaded here —
   // rasterizing all of them up front would stall startup for effects most
   // players never trigger. They're built lazily, on demand, in getFrames.
   async preload(): Promise<void> {
