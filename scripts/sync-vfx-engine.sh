@@ -65,6 +65,14 @@ fi
 AIO_EDITOR_DIR="$(cd "$AIO_EDITOR_DIR" && pwd)"
 DEST_DIR="$AIO_EDITOR_DIR/packages/frontend/src/vfx-engine"
 
+# The curated CC0 sprite sheets. The engine is procedural and needs no assets,
+# but the two sheet-backed effects are real PNGs — and the editor can only
+# preview them if it has the files. Copied VERBATIM (binary: no header line,
+# compared with `cmp`, not a header-stripping `diff`). ATTRIBUTION.md travels
+# with them so the CC0 credit is never separated from the art.
+ASSET_SRC_DIR="$EOWEB_DIR/public/vfx"
+ASSET_DEST_DIR="$AIO_EDITOR_DIR/packages/frontend/public/vfx"
+
 if [[ ! -d "$SRC_DIR" ]]; then
   echo "vfx-engine source not found: $SRC_DIR" >&2
   exit 1
@@ -114,6 +122,37 @@ if [[ "$CHECK_MODE" -eq 1 ]]; then
     done
   fi
 
+  # Assets: byte-for-byte, no header to strip (binary).
+  for src in "$ASSET_SRC_DIR"/*; do
+    [[ -e "$src" ]] || continue
+    name="$(basename "$src")"
+    src_count=$((src_count + 1))
+    dest="$ASSET_DEST_DIR/$name"
+    if [[ ! -f "$dest" ]]; then
+      echo "  MISSING (never synced to aio-editor): vfx/$name"
+      missing_list="$missing_list vfx/$name"
+      fail=1
+    elif cmp -s "$src" "$dest"; then
+      echo "  ok:      vfx/$name"
+    else
+      echo "  DRIFTED: vfx/$name (vendored asset no longer matches canonical)"
+      drifted_list="$drifted_list vfx/$name"
+      fail=1
+    fi
+  done
+
+  if [[ -d "$ASSET_DEST_DIR" ]]; then
+    for dest in "$ASSET_DEST_DIR"/*; do
+      [[ -e "$dest" ]] || continue
+      name="$(basename "$dest")"
+      if [[ ! -f "$ASSET_SRC_DIR/$name" ]]; then
+        echo "  ORPHAN (no canonical source in eoweb): vfx/$name"
+        orphan_list="$orphan_list vfx/$name"
+        fail=1
+      fi
+    done
+  fi
+
   echo
   if [[ "$fail" -eq 0 ]]; then
     echo "vfx-engine parity: OK ($src_count file(s) match between eoweb and aio-editor)"
@@ -139,6 +178,16 @@ for src in "$SRC_DIR"/*.ts; do
   echo "  synced:  $name"
 done
 
+# Assets: copied verbatim, no header (they're binary).
+mkdir -p "$ASSET_DEST_DIR"
+for src in "$ASSET_SRC_DIR"/*; do
+  [[ -e "$src" ]] || continue
+  name="$(basename "$src")"
+  cp "$src" "$ASSET_DEST_DIR/$name"
+  copied=$((copied + 1))
+  echo "  synced:  vfx/$name"
+done
+
 # Mirror deletions: drop any destination file whose source no longer exists.
 removed=0
 if [[ -d "$DEST_DIR" ]]; then
@@ -149,6 +198,18 @@ if [[ -d "$DEST_DIR" ]]; then
       rm "$dest"
       removed=$((removed + 1))
       echo "  removed: $name (no longer in source)"
+    fi
+  done
+fi
+
+if [[ -d "$ASSET_DEST_DIR" ]]; then
+  for dest in "$ASSET_DEST_DIR"/*; do
+    [[ -e "$dest" ]] || continue
+    name="$(basename "$dest")"
+    if [[ ! -f "$ASSET_SRC_DIR/$name" ]]; then
+      rm "$dest"
+      removed=$((removed + 1))
+      echo "  removed: vfx/$name (no longer in source)"
     fi
   done
 fi

@@ -33,9 +33,13 @@ throwaway git-ignored script — not part of the repo). Output:
 ```
 
 `cast-burst` / `fire-impact` are the two curated sprite-sheet effects —
-they resolve through eoweb's VFX **manifest**, a separate hand-authored
-system, not through this procedural registry, so their absence here is
-correct and expected, not a gap. `nova-sparkle-fire-lg` is absent because
+real PNG frame-strips, not procedurally drawn — so their absence from the
+generated registry is correct and expected, not a gap. Their frame geometry
+lives in the engine's `sheets.ts` (`SHEET_DEFS`), which eoweb's VFX manifest
+derives from and this editor reads directly, and the PNGs themselves are
+vendored into `packages/frontend/public/vfx/` by the same sync script. They
+**do** preview here — every consumer just has to resolve sheet names before
+falling through to the registry. `nova-sparkle-fire-lg` is absent because
 **combos are generated at base size only** — `buildShapes()` sets
 `hasSize: false` on every combo shape, and `composeVfxName` ignores any
 `size` argument passed for a combo `shapeId`. That's not an edge case the
@@ -87,16 +91,25 @@ With `strike` open in Form view, find the `cast_vfx` field.
 
 **Expect:** the select shows `cast-burst (sheet)`; the element swatch row
 (7 circles) and the size row (S/M/L) are both greyed out
-(`disabled`/`opacity-25`); no `→ ...` composed-name line appears (it's
-suppressed for sheets); the preview box shows the muted text **"no preview
-(sheet/unknown)"** — a checkered background, no canvas, no ▶/⏸ button.
-Check `impact_vfx` too: identical story, `fire-impact (sheet)`.
+(`disabled`/`opacity-25`) — sheets are fixed art with no element or size
+axis; no `→ ...` composed-name line appears (it's suppressed for sheets).
+The **preview animates**: an expanding blue-white ring burst, looping about
+once a second, with a working ▶/⏸ button. Check `impact_vfx` too:
+`fire-impact (sheet)`, an orange flicker, noticeably shorter (0.4s vs 0.9s).
 
-**Failure looks like:** either field shows enabled swatches/size buttons,
-or the preview renders *something* (an animating canvas, an error, a blank
-white box) instead of the muted placeholder text. Any of those means a
-sheet name is being looked up in the procedural registry instead of being
-short-circuited — block on this.
+The two sheets are real PNG strips vendored from eoweb into this app's
+`public/vfx/` by `sync-vfx-engine.sh`; the preview steps through their
+frames with `drawImage` rather than drawing procedurally. They deliberately
+are **not** in the generated registry, so the code must resolve sheet names
+*first* and only then fall through to it.
+
+**Failure looks like:** the preview shows the muted **"no preview (unknown
+effect)"** placeholder — that means the PNGs didn't reach `public/vfx/`
+(re-run `eoweb/scripts/sync-vfx-engine.sh`) or the sheet lookup isn't
+short-circuiting ahead of the registry. Also block if the swatch/size rows
+are *enabled* for a sheet, if the animation is visibly chopped or shows
+several frames side by side at once (a frame-slicing error), or if the
+first frame flashes at the wrong size.
 
 ## Step 3: Matrix
 
@@ -202,7 +215,8 @@ Switch back to **Form** view.
 **`⚠ Custom: zzz-nonsense`**, selected, with the select's border tinted
 amber; directly below it, the text **"not a known effect — kept as-is"** in
 amber; both axis rows greyed out; no `→` line (suppressed for custom, same
-as sheet/none); the preview shows the muted "no preview" state. Now click
+as sheet/none); the preview shows the muted **"no preview (unknown effect)"**
+state — unlike a sheet, a custom value really has nothing to draw. Now click
 **Save to staging** and confirm the "unsaved" badge clears and the status
 line reads "saved to staging". Switch away to another field and back (or
 reselect `strike` from the file list) to force a re-read of the saved
@@ -270,8 +284,8 @@ original values:
 "impact_vfx": "fire-impact"
 ```
 Confirm the Form view shows both fields back in their step-2 state
-(`cast-burst (sheet)` / `fire-impact (sheet)`, both greyed out, muted "no
-preview").
+(`cast-burst (sheet)` / `fire-impact (sheet)`, axis rows greyed out, each
+animating its sheet again).
 
 You do **not** need to click Save — you were told in step 1 not to click
 **Push to live**, and everything up to now only ever touched the in-memory
