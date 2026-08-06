@@ -87,7 +87,7 @@ assert(
 const registry = buildRegistry();
 const names = Object.keys(registry);
 
-assert(names.length >= 150, `expected >= 150 effects, got ${names.length}`);
+assert(names.length === 407, `expected 407 effects, got ${names.length}`);
 assert(names.length === new Set(names).size, 'effect names must be unique');
 
 for (const name of names) {
@@ -152,6 +152,26 @@ for (const special of SPECIALS) {
 
 const index = buildIndex();
 const shapes = buildShapes();
+
+// Set pieces must NOT have leaked into the matrix (the trap MATRIX_KINDS
+// exists to avoid — see registry.ts). If Object.keys(KINDS) ever crept back
+// into a matrix-generating loop, each set piece would silently gain 21
+// matrix names (7 elements x 3 sizes) and these would fail.
+for (const sp of ['bolt', 'smite', 'rockfall', 'ring-of-fire']) {
+  for (const element of Object.keys(ELEMENTS)) {
+    for (const suffix of ['sm', 'lg']) {
+      const leaked = `${sp}-${element}-${suffix}`;
+      assert(
+        registry[leaked] === undefined,
+        `set piece leaked into the matrix: ${leaked}`,
+      );
+    }
+  }
+  const shape = shapes.find((s) => s.id === `setpiece:${sp}`);
+  assert(shape !== undefined, `missing set-piece shape: ${sp}`);
+  assert(shape.hasElement === true, `${sp}: hasElement must be true`);
+  assert(shape.hasSize === false, `${sp}: hasSize must be false`);
+}
 const indexNames = Object.keys(index);
 
 // Identical KEY SETS, not just equal counts — a rename must fail loudly.
@@ -184,7 +204,7 @@ for (const name of names) {
 // Shapes: unique ids, correct axis flags, and a 1:1 relationship with the index.
 const shapeIds = shapes.map((s) => s.id);
 assert(shapeIds.length === new Set(shapeIds).size, 'shape ids must be unique');
-assert(shapes.length === 31, `expected 31 shapes, got ${shapes.length}`);
+assert(shapes.length === 35, `expected 35 shapes, got ${shapes.length}`);
 
 const shapeById = new Map(shapes.map((s) => [s.id, s]));
 for (const name of indexNames) {
@@ -231,8 +251,31 @@ assert(
   'prototype special must not compose',
 );
 assert(
+  composeVfxName('setpiece:constructor', 'fire') === null,
+  'prototype setpiece must not compose',
+);
+assert(
   composeVfxName('nope:whatever') === null,
   'unknown shape prefix must not compose',
+);
+
+// A malformed/near-miss setpiece shapeId must not compose something
+// plausible — same principle as the malformed combo checks below.
+assert(
+  composeVfxName('setpiece:bolt-extra', 'fire') === null,
+  'malformed setpiece shapeId must not compose',
+);
+assert(
+  composeVfxName('setpiece:bol', 'fire') === null,
+  'truncated setpiece name must not compose',
+);
+assert(
+  composeVfxName('setpiece:bolt') === null,
+  'setpiece shapeId without an element must not compose',
+);
+assert(
+  composeVfxName('setpiece:bolt', 'fire', 'lg') === 'bolt-fire',
+  'setpiece composition must ignore a size argument',
 );
 
 // A malformed combo shapeId (wrong part count after `split('+')`) must not
