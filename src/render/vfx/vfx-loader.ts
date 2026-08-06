@@ -2,6 +2,7 @@ import { Assets, Graphics, Rectangle, type Renderer, Texture } from 'pixi.js';
 import {
   buildRegistry,
   type VfxDef as EngineVfxDef,
+  effectDurationMs,
   renderFrameCanvas,
 } from '@/vfx-engine';
 import { SHEETS, type VfxDef } from './vfx-manifest';
@@ -109,7 +110,14 @@ export class VfxLoader {
     }
     return {
       frames,
-      durationMs: def.durationMs,
+      // NOTE: this is the effect's TOTAL playback time across all `loops`,
+      // but `frames` above holds only ONE cycle's worth of textures — Task 3
+      // deliberately rasterizes a single cycle and lets playback repeat it
+      // (see renderFrameCanvas's doc comment in vfx-engine/render.ts).
+      // SkillBurst does not yet loop the cycle to fill that duration (it
+      // steps linearly through `frames` once); wiring the repeat is left to
+      // the eoweb 3-sprite renderer task, which replaces this consumer.
+      durationMs: effectDurationMs(def),
       additive: def.additive,
       // NOT def.sizeScale. The engine has already baked sizeScale into every
       // radius/length while rasterizing these frames (drawEffectAt ->

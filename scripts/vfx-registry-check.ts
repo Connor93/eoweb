@@ -9,7 +9,9 @@ import {
   DESIGN_SIZE,
   ELEMENTS,
   type ElementKey,
+  effectDurationMs,
   FRAME_SIZE,
+  frameProgress,
   INTERNAL_SIZE,
   KINDS,
   PIXEL_SCALE,
@@ -63,6 +65,38 @@ for (const name of names) {
     assert(
       KIND_NAMES.has(def.combo),
       `${name}: unknown combo kind "${def.combo}"`,
+    );
+  }
+
+  // Cadence: frames/loops/frameMs must be positive integers, so a repeating
+  // cycle is well-defined and effectDurationMs() never divides/yields 0 or a
+  // fractional frame boundary.
+  assert(
+    Number.isInteger(def.frames) && def.frames > 0,
+    `${name}: frames must be a positive integer, got ${def.frames}`,
+  );
+  assert(
+    Number.isInteger(def.loops) && def.loops > 0,
+    `${name}: loops must be a positive integer, got ${def.loops}`,
+  );
+  assert(
+    Number.isInteger(def.frameMs) && def.frameMs > 0,
+    `${name}: frameMs must be a positive integer, got ${def.frameMs}`,
+  );
+  assert(
+    effectDurationMs(def) > 0,
+    `${name}: effectDurationMs() must be > 0, got ${effectDurationMs(def)}`,
+  );
+
+  // Midpoint sampling: frameProgress() must never land exactly on 0 or 1 for
+  // any in-cycle frame index — several kinds are geometrically degenerate
+  // (zero radius/length/height) at those exact endpoints and would render
+  // blank. See frameProgress()'s doc comment in render.ts.
+  for (let i = 0; i < def.frames; i++) {
+    const p = frameProgress(def, i);
+    assert(
+      p > 0 && p < 1,
+      `${name}: frameProgress(def, ${i}) = ${p}, must lie strictly in (0, 1)`,
     );
   }
 }
