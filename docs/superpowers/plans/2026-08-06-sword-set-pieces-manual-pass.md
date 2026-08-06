@@ -206,14 +206,21 @@ so a per-element split verdict is plausible, not just pass/fail as a whole.
 Set `cast_vfx` to `swordfall-<any element>` and step to (or watch) the very
 first frame.
 
-**Expect:** the top of the hilt (grip/pommel) is clipped at the top edge of
-the preview frame — this should read as "the sword is still entering from
-off-screen above," not as a rendering glitch. (`SWORDFALL_START_ABOVE` is
-150px, deliberately taller than the frame's headroom on the first frame.)
+**Expect:** frame 0 samples `progress = 0.125`, so `above = 140.625` — the
+sword's top (the pommel) sits 257.6 design-px above the ground point against
+only 192px of headroom, so 65.6px is clipped. The hilt (grip and pommel) is
+entirely off-frame; what's actually visible is roughly 51.4px of the 84px
+blade, cut flat at about 61% up the blade — **a hard flat cut through the
+blade itself is the correct rendering for this frame**, not a failure. This
+should read as "the sword is still entering from off-screen above," not as a
+rendering glitch. (`SWORDFALL_START_ABOVE` is 150px, deliberately taller than
+the frame's headroom on the first frame.)
 
-**Failure looks like:** the clipping looks like a broken/truncated sprite
-rather than a deliberate off-screen entry — e.g. a hard flat cut through the
-middle of the blade itself rather than through the hilt near the top.
+**Failure looks like:** the visible blade stub reads as an ambiguous
+bright shape with no sense of a tapered blade continuing upward out of
+frame — e.g. the quantiser collapses it into a blob with no visible taper or
+edge direction, so there's nothing to suggest "more sword above" rather than
+"a broken sprite."
 
 - [ ] Checked
 

@@ -38,7 +38,7 @@ export interface ResolvedVfx {
   bodyLift: boolean;
 }
 
-// buildRegistry() allocates all 449 generated defs on every call. They're
+// buildRegistry() allocates all 491 generated defs on every call. They're
 // cheap plain objects individually, but getFrames sits on a hot per-cast
 // path — build the registry once (module-level, shared across any VfxLoader
 // instance) rather than churning it per lookup.
@@ -66,7 +66,7 @@ export class VfxLoader {
   }
 
   // Preload only the curated CC0 sheets (SHEETS) so their first playBurst is
-  // synchronous. The other 449 vfx-engine effects are NOT preloaded here —
+  // synchronous. The other 491 vfx-engine effects are NOT preloaded here —
   // rasterizing all of them up front would stall startup for effects most
   // players never trigger. They're built lazily, on demand, in getFrames.
   async preload(): Promise<void> {

@@ -21,6 +21,7 @@ import {
   PIXEL_SCALE,
   RAMP_BASE,
   SQUARE_FRAME,
+  SWORDFALL_START_ABOVE,
   SWORDFALL_TOTAL_HEIGHT,
   TALL_FRAME,
 } from '@/vfx-engine';
@@ -210,6 +211,23 @@ for (const [name, def] of Object.entries(registry)) {
       `${name}: loop-mode set piece must have loops ${cycles}, got ${def.loops}`,
     );
   }
+}
+
+// Set pieces' cadence is load-bearing beyond "constant within one shape"
+// (which the per-name frames/loops/frameMs check far above already proves):
+// SET_PIECES' own doc comment in registry.ts makes "a cycle is
+// 4 * 100ms = 400ms" the reason a descent's first cycle finishes landing in
+// sync with the damage number (skills have no cast time, so damage and
+// impact_vfx resolve together). Nothing before this asserted the literal
+// 100 — only that it didn't vary — so a future SET_PIECES entry authored
+// with a different frameMs would silently desync its impact from the
+// damage number with every other gate still green.
+for (const [name, def] of Object.entries(registry)) {
+  if (index[name]?.layer !== 'setpiece') continue;
+  assert(
+    def.frameMs === 100,
+    `${name}: set-piece frameMs must be 100 (see SET_PIECES' doc comment in registry.ts for why the cadence is load-bearing), got ${def.frameMs}`,
+  );
 }
 
 // Set pieces must NOT have leaked into the matrix (the trap MATRIX_KINDS
@@ -560,6 +578,26 @@ assert(TALL_FRAME.bodyLift === false, 'TALL_FRAME must not be lifted');
 assert(
   SWORDFALL_TOTAL_HEIGHT <= TALL_FRAME.groundY,
   `planted swordfall is ${SWORDFALL_TOTAL_HEIGHT} design-px tall but the tall frame only has ${TALL_FRAME.groundY}px above its ground point`,
+);
+
+// swordfall's frame 1 — the worst DESCENT frame — must also be fully
+// on-screen. The assertion above only proves the PLANTED silhouette fits;
+// it says nothing about frames still falling, so raising
+// SWORDFALL_START_ABOVE past ~171.4 would silently clip frame 1 with every
+// other gate still green.
+//
+// Frame-1 derivation: frameProgress samples frame midpoints (see its doc
+// comment in render.ts), so for a 4-frame cycle frame 1 samples
+// progress = (1 + 0.5) / 4 = 0.375. swordfallTip's fall fraction is
+// progress / SWORDFALL_LAND_PROGRESS (0.5) = 0.75, and its offset is
+// SWORDFALL_START_ABOVE * (1 - fall ** 2) — the same accelerating-descent
+// formula as swordfallTip in kinds.ts.
+const SWORDFALL_FRAME1_FALL = 0.75;
+const swordfallFrame1Above =
+  SWORDFALL_START_ABOVE * (1 - SWORDFALL_FRAME1_FALL ** 2);
+assert(
+  swordfallFrame1Above + SWORDFALL_TOTAL_HEIGHT <= TALL_FRAME.groundY,
+  `swordfall frame 1 (the worst descent frame) would clip: offset ${swordfallFrame1Above} + height ${SWORDFALL_TOTAL_HEIGHT} > ${TALL_FRAME.groundY}px of headroom`,
 );
 
 console.log(
