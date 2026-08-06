@@ -65,6 +65,15 @@ export class SkillVfxController {
       : null;
     const burst = this.pool.pop() ?? new SkillBurst();
     burst.reset(resolved, x, yy, targetZIndex, targetKey);
+    // Seed the camera-independent anchor from the target's live iso point so
+    // tracking is in effect from the very first frame — and, more importantly,
+    // so a burst whose target dies almost immediately (a killing blow's impact
+    // effect, the common case) still has an anchor to hold the tile with.
+    if (targetKey) {
+      const iso =
+        this.client.mapRenderer?.getEntityIsoScreenPosition(targetKey);
+      if (iso) burst.setIsoAnchor(iso.x, iso.y);
+    }
     burst.mount(this.client.worldContainer);
     this.active.push(burst);
   }
@@ -78,20 +87,27 @@ export class SkillVfxController {
       // target despawned mid-effect) is left alone: the sprites keep
       // whatever zIndex they last had rather than snapping to 0 and sinking
       // to the bottom of the world.
+      const mapRenderer = this.client.mapRenderer;
       if (b.targetKey) {
-        const z = this.client.mapRenderer?.getEntityZIndex(b.targetKey);
+        const z = mapRenderer?.getEntityZIndex(b.targetKey);
         if (z !== null && z !== undefined) b.updateZIndex(z);
-        // Re-derive position for the same reason, and with the same null
-        // handling — but where a stale zIndex is merely a paint-order glitch, a
-        // stale position is a visible bug: worldContainer coordinates are
-        // camera-baked, so a burst left at its cast-time position drifts across
-        // the screen with the camera instead of staying on its target. See
-        // SkillBurst.updatePosition. A null result (target despawned mid-effect,
-        // e.g. an NPC whose death animation has already cleared its sprite)
-        // leaves the burst where it last was, so an impact effect still plays
-        // out over the corpse rather than snapping to the viewport origin.
-        const pos = this.client.mapRenderer?.getEntityWorldSpritePosition(
-          b.targetKey,
+        // Refresh the anchor from the target's live RAW iso point while the
+        // target still exists. Once it doesn't — an NPC dying under its own
+        // impact effect — the last anchor stands, which is the tile it died
+        // on, and the rest of the effect plays out there.
+        const iso = mapRenderer?.getEntityIsoScreenPosition(b.targetKey);
+        if (iso) b.setIsoAnchor(iso.x, iso.y);
+      }
+      // Bake every frame, alive or dead. This is the whole point: the anchor is
+      // a fixed WORLD point, but worldContainer coords are camera-relative, so
+      // the same anchor bakes to a different sprite position on every frame the
+      // camera moves. Skipping the bake once the target is gone would leave the
+      // sprites on their last baked coords — pinned to the screen, drifting
+      // with the camera, i.e. straight back to the original bug.
+      if (b.hasIsoAnchor) {
+        const pos = mapRenderer?.bakeIsoToWorldSprite(
+          b.isoAnchorX,
+          b.isoAnchorY,
         );
         if (pos) b.updatePosition(pos.x, liftY(pos.y, b.bodyLift));
       }

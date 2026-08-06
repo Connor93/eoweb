@@ -66,6 +66,23 @@ export class SkillBurst extends TimedAnimation {
   // applied at cast time. Without it the burst would jump down by BURST_UP on
   // its second frame. Public for the same reason as targetKey.
   bodyLift = false;
+  // The target's last known RAW iso-screen point — camera-INDEPENDENT, unlike
+  // the baked coords the sprites actually sit at. Refreshed every frame while
+  // the target exists, and it is what the burst falls back to once the target
+  // is gone (an NPC dying under its own impact effect), which plants the rest
+  // of the effect on the tile the target was standing on.
+  //
+  // Storing the BAKED point instead would be the bug this whole mechanism
+  // exists to avoid: it would re-pin the burst to the screen and it would drift
+  // with the camera again, exactly as it did before any of this tracking
+  // existed. Only ever store iso here; bake at the point of use.
+  //
+  // `hasIsoAnchor` stays false when the burst has no entity to seed from (a
+  // ground-targeted effect, targetKey null), in which case the cast-time
+  // position stands and the burst does not track.
+  isoAnchorX = 0;
+  isoAnchorY = 0;
+  hasIsoAnchor = false;
 
   constructor() {
     super(1);
@@ -97,6 +114,9 @@ export class SkillBurst extends TimedAnimation {
     // fallback z below holds for the burst's whole life.
     this.targetKey = targetKey;
     this.bodyLift = resolved.bodyLift;
+    // Cleared per reset so a pooled burst can't inherit the previous effect's
+    // anchor and snap to wherever that one was cast.
+    this.hasIsoAnchor = false;
 
     // All three depth sprites are the same frame, so they share one anchor.
     // 0.5 for a centred effect (SQUARE_FRAME); a tall descent frame carries
@@ -163,6 +183,15 @@ export class SkillBurst extends TimedAnimation {
     this.behind.sprite.zIndex = z - 1;
     this.tint.sprite.zIndex = z + 1;
     this.front.sprite.zIndex = z + 2;
+  }
+
+  // Records the target's live RAW iso point. Called at cast time to seed the
+  // anchor, and again every frame the target still resolves — so the value left
+  // behind when it despawns is the last place it actually stood.
+  setIsoAnchor(isoX: number, isoY: number): void {
+    this.isoAnchorX = isoX;
+    this.isoAnchorY = isoY;
+    this.hasIsoAnchor = true;
   }
 
   // Moves all three layers to a freshly-read position — called every frame by

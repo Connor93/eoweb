@@ -2354,10 +2354,33 @@ export class MapRenderer {
     key: string,
   ): { x: number; y: number } | null {
     const iso = this.getEntityIsoScreenPosition(key);
-    if (!iso || !this._lastPlayerScreen) return null;
+    if (!iso) return null;
+    return this.bakeIsoToWorldSprite(iso.x, iso.y);
+  }
+
+  /**
+   * The camera bake on its own, for a RAW iso-screen point that has no live
+   * entity behind it — the world position stays fixed while the camera moves,
+   * so it must be re-baked every frame just like `getEntityWorldSpritePosition`
+   * must be re-called every frame.
+   *
+   * Exists for effects that outlive their target: a skill burst tracks its
+   * entity while that entity exists, but once the entity despawns mid-effect
+   * there is nothing left to query. Remembering the entity's last RAW iso point
+   * and re-baking it here keeps the remainder of the effect planted on the tile
+   * the target died on. Remembering the *baked* point instead would pin it to
+   * the screen and make it drift with the camera — see SkillBurst.
+   *
+   * Returns null before the first rendered frame (no camera state yet).
+   */
+  public bakeIsoToWorldSprite(
+    isoX: number,
+    isoY: number,
+  ): { x: number; y: number } | null {
+    if (!this._lastPlayerScreen) return null;
     return {
-      x: iso.x - this._lastPlayerScreen.x + this._halfGameWidth,
-      y: iso.y - this._lastPlayerScreen.y + this._halfGameHeight,
+      x: isoX - this._lastPlayerScreen.x + this._halfGameWidth,
+      y: isoY - this._lastPlayerScreen.y + this._halfGameHeight,
     };
   }
 
