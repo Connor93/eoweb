@@ -92,6 +92,14 @@ export class SkillBurst extends TimedAnimation {
     // fallback z below holds for the burst's whole life.
     this.targetKey = targetKey;
 
+    // All three depth sprites are the same frame, so they share one anchor.
+    // 0.5 for every effect today (SQUARE_FRAME); a tall descent frame will
+    // carry resolved.anchorY = 0.75 so the frame's ground point — not its
+    // centre — lands on (x, y). See ResolvedVfx.anchorY's doc comment.
+    for (const layer of this.layers) {
+      layer.sprite.anchor.set(0.5, resolved.anchorY);
+    }
+
     const z = targetZIndex ?? BURST_Z_INDEX_FALLBACK;
     const blendMode = resolved.additive ? 'add' : 'normal';
     this.armLayer(

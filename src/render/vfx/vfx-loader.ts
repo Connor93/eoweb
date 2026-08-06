@@ -23,6 +23,12 @@ export interface ResolvedVfx {
   frameMs: number;
   additive: boolean;
   scale: number;
+  // Vertical anchor (0..1) sprites should use so the frame's ground point —
+  // not its centre — lands on the target. 0.5 for every effect today
+  // (SQUARE_FRAME); a tall descent frame (TALL_FRAME) will carry 0.75 so its
+  // extra headroom rises above the target instead of pushing the whole
+  // sprite down. See FrameGeometry.anchorY in vfx-engine/types.ts.
+  anchorY: number;
 }
 
 // buildRegistry() allocates all 379 generated defs on every call. They're
@@ -149,6 +155,7 @@ export class VfxLoader {
       // `ResolvedVfx.scale` is the *sprite-sheet* multiplier — see the sheet
       // path below, where it comes from the manifest.
       scale: 1,
+      anchorY: def.frame.anchorY,
     };
   }
 
@@ -189,6 +196,11 @@ export class VfxLoader {
           frameMs: 1000 / def.fps,
           additive,
           scale,
+          // Sheets bypass the procedural pipeline entirely — no VfxDef, no
+          // frame, so no def.frame.anchorY to reach for. They're square and
+          // centred by construction; hardcode the value the sprites already
+          // used before ResolvedVfx.anchorY existed.
+          anchorY: 0.5,
         };
       } catch {
         // fall through to placeholder
@@ -204,6 +216,7 @@ export class VfxLoader {
       frameMs: durationMs / front.length,
       additive,
       scale,
+      anchorY: 0.5,
     };
   }
 
