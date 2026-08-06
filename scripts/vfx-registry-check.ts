@@ -157,6 +157,47 @@ for (const special of SPECIALS) {
 const index = buildIndex();
 const shapes = buildShapes();
 
+// cycleMode invariant. Asserted for shapes WITH the cycles axis only:
+// ring-of-fire declares loops: 3 and no axis, so an unrestricted
+// `loops === cycles` would fail on it.
+//
+// The mode a shape SHOULD use is restated here, not read from SET_PIECES —
+// reading it back would make this tautological, and both modes yield the
+// same total duration, so a mis-wired multiplier is otherwise invisible.
+const FRAME_MODE_SHAPES = new Set<string>([]);
+const CYCLE_BASE_FRAMES = 4;
+
+const CYCLE_SHAPE_IDS = new Set(
+  shapes.filter((s) => s.layer === 'setpiece' && s.hasCycles).map((s) => s.id),
+);
+
+for (const [name, def] of Object.entries(registry)) {
+  const axes = index[name];
+  if (axes?.layer !== 'setpiece') continue;
+  if (!CYCLE_SHAPE_IDS.has(axes.shapeId)) continue;
+  const cycles = axes.cycles ?? 1;
+
+  if (FRAME_MODE_SHAPES.has(axes.kind)) {
+    assert(
+      def.loops === 1,
+      `${name}: frames-mode set piece must have loops 1, got ${def.loops}`,
+    );
+    assert(
+      def.frames === CYCLE_BASE_FRAMES * cycles,
+      `${name}: frames-mode set piece must have frames ${CYCLE_BASE_FRAMES * cycles}, got ${def.frames}`,
+    );
+  } else {
+    assert(
+      def.frames === CYCLE_BASE_FRAMES,
+      `${name}: loop-mode set piece must have frames ${CYCLE_BASE_FRAMES}, got ${def.frames}`,
+    );
+    assert(
+      def.loops === cycles,
+      `${name}: loop-mode set piece must have loops ${cycles}, got ${def.loops}`,
+    );
+  }
+}
+
 // Set pieces must NOT have leaked into the matrix (the trap MATRIX_KINDS
 // exists to avoid — see registry.ts). If Object.keys(KINDS) ever crept back
 // into a matrix-generating loop, each set piece would silently gain 21
