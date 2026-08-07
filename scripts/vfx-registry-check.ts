@@ -26,6 +26,7 @@ import {
   SWORDFALL_START_ABOVE,
   SWORDFALL_TOTAL_HEIGHT,
   TALL_FRAME,
+  WHIRLWIND_BAND_FLATTEN,
   WHIRLWIND_HEIGHT,
   WHIRLWIND_SWAY,
   WHIRLWIND_TOP_HALF_W,
@@ -633,13 +634,33 @@ assert(
   `swordfall frame 1 (the worst descent frame) would clip: offset ${swordfallFrame1Above} + height ${SWORDFALL_TOTAL_HEIGHT} > ${TALL_FRAME.groundY}px of headroom`,
 );
 
+// The documented headroom BUDGET for TALL_FRAME (types.ts's TALL_FRAME doc,
+// ~line 185-188: "above cy (headroom): 192 available -> budget <= 190")
+// is 2px tighter than TALL_FRAME.groundY (192) itself. Guards below compare
+// against the budget, not the raw groundY, so they still fail if a shape's
+// full painted silhouette eats into that 2px margin.
+const TALL_FRAME_HEADROOM_BUDGET = 190;
+
 // The funnel must fit the tall frame's headroom above its ground point, and
 // its widest band must fit the frame's half-width. Arithmetic rather than
 // measured: there is no node-side canvas, and a value computed from the same
 // constants the draw function uses cannot drift from the art.
+//
+// The vertical check covers the FULL painted silhouette, not just
+// WHIRLWIND_HEIGHT: the top band is a flattened ellipse centred at that
+// height, so it extends a further half-height above it
+// (WHIRLWIND_TOP_HALF_W * WHIRLWIND_BAND_FLATTEN), and whirlwindBands'
+// 2px stroke extends half its width beyond the path again. Omitting either
+// would let this guard pass a WHIRLWIND_HEIGHT that actually clips the top
+// band off-frame.
+const WHIRLWIND_STROKE_HALF_WIDTH = 1; // half of whirlwindBands' 2px lineWidth
+const whirlwindTopBandHalfHeight =
+  WHIRLWIND_TOP_HALF_W * WHIRLWIND_BAND_FLATTEN;
+const whirlwindFullHeight =
+  WHIRLWIND_HEIGHT + whirlwindTopBandHalfHeight + WHIRLWIND_STROKE_HALF_WIDTH;
 assert(
-  WHIRLWIND_HEIGHT <= TALL_FRAME.groundY,
-  `whirlwind is ${WHIRLWIND_HEIGHT} design-px tall but the tall frame has only ${TALL_FRAME.groundY}px above its ground point`,
+  whirlwindFullHeight <= TALL_FRAME_HEADROOM_BUDGET,
+  `whirlwind's full silhouette is ${whirlwindFullHeight} design-px tall (height ${WHIRLWIND_HEIGHT} + top band half-height ${whirlwindTopBandHalfHeight} + stroke half-width ${WHIRLWIND_STROKE_HALF_WIDTH}) but the tall frame's headroom budget is only ${TALL_FRAME_HEADROOM_BUDGET}px`,
 );
 assert(
   WHIRLWIND_TOP_HALF_W + WHIRLWIND_SWAY <= DESIGN_SIZE / 2,
@@ -651,10 +672,11 @@ assert(
 // ARCANE_STREAK_LEN-px motion streak trailing further above that — the same
 // "arithmetic, not measured" guard as swordfall/whirlwind above, mirrored so
 // a later tweak to either constant fails this gate instead of silently
-// clipping the streak off the top of the tall frame.
+// clipping the streak off the top of the tall frame. Compared against the
+// same TALL_FRAME_HEADROOM_BUDGET as whirlwind above, not the raw groundY.
 assert(
-  ARCANE_START_ABOVE + ARCANE_STREAK_LEN <= TALL_FRAME.groundY,
-  `arcane-rain's motes start ${ARCANE_START_ABOVE} design-px above the ground point plus a ${ARCANE_STREAK_LEN}px streak, but the tall frame has only ${TALL_FRAME.groundY}px above its ground point`,
+  ARCANE_START_ABOVE + ARCANE_STREAK_LEN <= TALL_FRAME_HEADROOM_BUDGET,
+  `arcane-rain's motes start ${ARCANE_START_ABOVE} design-px above the ground point plus a ${ARCANE_STREAK_LEN}px streak, but the tall frame's headroom budget is only ${TALL_FRAME_HEADROOM_BUDGET}px`,
 );
 
 console.log(
