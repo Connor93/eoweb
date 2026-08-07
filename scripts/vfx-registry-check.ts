@@ -2,6 +2,8 @@
 // `pnpm vfx:check` (tsx, no build step). Must NOT touch the DOM — it never
 // calls draw()/renderFrameCanvas(), only inspects the registry's data.
 import {
+  ARCANE_START_ABOVE,
+  ARCANE_STREAK_LEN,
   buildIndex,
   buildRegistry,
   buildShapes,
@@ -619,6 +621,17 @@ assert(
 assert(
   WHIRLWIND_TOP_HALF_W + WHIRLWIND_SWAY <= DESIGN_SIZE / 2,
   `whirlwind's widest band reaches ${WHIRLWIND_TOP_HALF_W + WHIRLWIND_SWAY} design-px, past the frame's ${DESIGN_SIZE / 2}px half-width`,
+);
+
+// arcane-rain's motes start ARCANE_START_ABOVE design-px above the ground
+// point (at the instant they launch, before any fall) with a
+// ARCANE_STREAK_LEN-px motion streak trailing further above that — the same
+// "arithmetic, not measured" guard as swordfall/whirlwind above, mirrored so
+// a later tweak to either constant fails this gate instead of silently
+// clipping the streak off the top of the tall frame.
+assert(
+  ARCANE_START_ABOVE + ARCANE_STREAK_LEN <= TALL_FRAME.groundY,
+  `arcane-rain's motes start ${ARCANE_START_ABOVE} design-px above the ground point plus a ${ARCANE_STREAK_LEN}px streak, but the tall frame has only ${TALL_FRAME.groundY}px above its ground point`,
 );
 
 console.log(
