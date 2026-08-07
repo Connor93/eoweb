@@ -99,7 +99,7 @@ assert(
 const registry = buildRegistry();
 const names = Object.keys(registry);
 
-assert(names.length === 519, `expected 519 effects, got ${names.length}`);
+assert(names.length === 526, `expected 526 effects, got ${names.length}`);
 assert(names.length === new Set(names).size, 'effect names must be unique');
 
 for (const name of names) {
@@ -235,6 +235,19 @@ for (const [name, def] of Object.entries(registry)) {
   );
 }
 
+// poison's 400ms is a CONTRACT, not a style choice. It is intended to fire on
+// every DoT tick, and the authored poison status ticks at 1000ms — a longer
+// effect would overlap itself and read as a smear. Asserted directly so a
+// later "make it prettier" edit that adds loops fails here rather than
+// silently breaking the thing the shape exists for.
+for (const [name, def] of Object.entries(registry)) {
+  if (index[name]?.kind !== 'poison') continue;
+  assert(
+    effectDurationMs(def) === 400,
+    `${name}: poison must last 400ms to fit inside a 1000ms DoT tick, got ${effectDurationMs(def)}`,
+  );
+}
+
 // Set pieces must NOT have leaked into the matrix (the trap MATRIX_KINDS
 // exists to avoid — see registry.ts). If Object.keys(KINDS) ever crept back
 // into a matrix-generating loop, each set piece would silently gain 21
@@ -248,6 +261,7 @@ for (const sp of [
   'swordfall',
   'whirlwind',
   'arcane-rain',
+  'poison',
 ]) {
   for (const element of Object.keys(ELEMENTS)) {
     for (const suffix of ['sm', 'lg']) {
@@ -282,14 +296,22 @@ for (const s of shapes) {
   );
 }
 
-// No cycles leak onto ring-of-fire, and no size leaks onto any set piece
-// (including with a cycles suffix already applied).
+// No cycles leak onto a no-cycles-axis set piece, and no size leaks onto any
+// set piece (including with a cycles suffix already applied).
+//
+// NO_CYCLES_AXIS_SHAPES: every set piece with `hasCycles: false` in
+// SET_PIECES — ring-of-fire, whirlwind, and poison. This used to hardcode
+// only 'ring-of-fire'; whirlwind (Task 1) and poison (Task 3) share the same
+// no-axis property and were unguarded until this list grew to cover them.
+const NO_CYCLES_AXIS_SHAPES = ['ring-of-fire', 'whirlwind', 'poison'];
 for (const element of Object.keys(ELEMENTS)) {
   for (const suffix of ['x2', 'x3']) {
-    assert(
-      registry[`ring-of-fire-${element}-${suffix}`] === undefined,
-      `cycles leaked onto ring-of-fire: ${element}-${suffix}`,
-    );
+    for (const sp of NO_CYCLES_AXIS_SHAPES) {
+      assert(
+        registry[`${sp}-${element}-${suffix}`] === undefined,
+        `cycles leaked onto ${sp}: ${element}-${suffix}`,
+      );
+    }
   }
   for (const sp of [
     'bolt',
@@ -300,6 +322,7 @@ for (const element of Object.keys(ELEMENTS)) {
     'swordfall',
     'whirlwind',
     'arcane-rain',
+    'poison',
   ]) {
     for (const suffix of ['sm', 'lg']) {
       assert(
@@ -380,7 +403,7 @@ for (const name of names) {
 // Shapes: unique ids, correct axis flags, and a 1:1 relationship with the index.
 const shapeIds = shapes.map((s) => s.id);
 assert(shapeIds.length === new Set(shapeIds).size, 'shape ids must be unique');
-assert(shapes.length === 39, `expected 39 shapes, got ${shapes.length}`);
+assert(shapes.length === 40, `expected 40 shapes, got ${shapes.length}`);
 
 const shapeById = new Map(shapes.map((s) => [s.id, s]));
 for (const name of indexNames) {
