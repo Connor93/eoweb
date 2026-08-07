@@ -24,6 +24,9 @@ import {
   SWORDFALL_START_ABOVE,
   SWORDFALL_TOTAL_HEIGHT,
   TALL_FRAME,
+  WHIRLWIND_HEIGHT,
+  WHIRLWIND_SWAY,
+  WHIRLWIND_TOP_HALF_W,
 } from '@/vfx-engine';
 
 const KIND_NAMES = new Set(Object.keys(KINDS));
@@ -94,7 +97,7 @@ assert(
 const registry = buildRegistry();
 const names = Object.keys(registry);
 
-assert(names.length === 491, `expected 491 effects, got ${names.length}`);
+assert(names.length === 498, `expected 498 effects, got ${names.length}`);
 assert(names.length === new Set(names).size, 'effect names must be unique');
 
 for (const name of names) {
@@ -241,6 +244,7 @@ for (const sp of [
   'ring-of-fire',
   'cleave',
   'swordfall',
+  'whirlwind',
 ]) {
   for (const element of Object.keys(ELEMENTS)) {
     for (const suffix of ['sm', 'lg']) {
@@ -290,6 +294,7 @@ for (const element of Object.keys(ELEMENTS)) {
     'ring-of-fire',
     'cleave',
     'swordfall',
+    'whirlwind',
   ]) {
     for (const suffix of ['sm', 'lg']) {
       assert(
@@ -370,7 +375,7 @@ for (const name of names) {
 // Shapes: unique ids, correct axis flags, and a 1:1 relationship with the index.
 const shapeIds = shapes.map((s) => s.id);
 assert(shapeIds.length === new Set(shapeIds).size, 'shape ids must be unique');
-assert(shapes.length === 37, `expected 37 shapes, got ${shapes.length}`);
+assert(shapes.length === 38, `expected 38 shapes, got ${shapes.length}`);
 
 const shapeById = new Map(shapes.map((s) => [s.id, s]));
 for (const name of indexNames) {
@@ -598,6 +603,19 @@ const swordfallFrame1Above =
 assert(
   swordfallFrame1Above + SWORDFALL_TOTAL_HEIGHT <= TALL_FRAME.groundY,
   `swordfall frame 1 (the worst descent frame) would clip: offset ${swordfallFrame1Above} + height ${SWORDFALL_TOTAL_HEIGHT} > ${TALL_FRAME.groundY}px of headroom`,
+);
+
+// The funnel must fit the tall frame's headroom above its ground point, and
+// its widest band must fit the frame's half-width. Arithmetic rather than
+// measured: there is no node-side canvas, and a value computed from the same
+// constants the draw function uses cannot drift from the art.
+assert(
+  WHIRLWIND_HEIGHT <= TALL_FRAME.groundY,
+  `whirlwind is ${WHIRLWIND_HEIGHT} design-px tall but the tall frame has only ${TALL_FRAME.groundY}px above its ground point`,
+);
+assert(
+  WHIRLWIND_TOP_HALF_W + WHIRLWIND_SWAY <= DESIGN_SIZE / 2,
+  `whirlwind's widest band reaches ${WHIRLWIND_TOP_HALF_W + WHIRLWIND_SWAY} design-px, past the frame's ${DESIGN_SIZE / 2}px half-width`,
 );
 
 console.log(
