@@ -97,7 +97,7 @@ assert(
 const registry = buildRegistry();
 const names = Object.keys(registry);
 
-assert(names.length === 498, `expected 498 effects, got ${names.length}`);
+assert(names.length === 519, `expected 519 effects, got ${names.length}`);
 assert(names.length === new Set(names).size, 'effect names must be unique');
 
 for (const name of names) {
@@ -245,6 +245,7 @@ for (const sp of [
   'cleave',
   'swordfall',
   'whirlwind',
+  'arcane-rain',
 ]) {
   for (const element of Object.keys(ELEMENTS)) {
     for (const suffix of ['sm', 'lg']) {
@@ -271,6 +272,7 @@ for (const s of shapes) {
     'setpiece:rockfall',
     'setpiece:cleave',
     'setpiece:swordfall',
+    'setpiece:arcane-rain',
   ].includes(s.id);
   assert(
     s.hasCycles === expected,
@@ -295,6 +297,7 @@ for (const element of Object.keys(ELEMENTS)) {
     'cleave',
     'swordfall',
     'whirlwind',
+    'arcane-rain',
   ]) {
     for (const suffix of ['sm', 'lg']) {
       assert(
@@ -375,7 +378,7 @@ for (const name of names) {
 // Shapes: unique ids, correct axis flags, and a 1:1 relationship with the index.
 const shapeIds = shapes.map((s) => s.id);
 assert(shapeIds.length === new Set(shapeIds).size, 'shape ids must be unique');
-assert(shapes.length === 38, `expected 38 shapes, got ${shapes.length}`);
+assert(shapes.length === 39, `expected 39 shapes, got ${shapes.length}`);
 
 const shapeById = new Map(shapes.map((s) => [s.id, s]));
 for (const name of indexNames) {
