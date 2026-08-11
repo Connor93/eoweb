@@ -33,9 +33,30 @@ function handleSkillList(client: Client, reader: EoReader): void {
       range: reader.getChar(),
       castVfx: readStr(reader),
       impactVfx: readStr(reader),
+      classRequirement: reader.getShort(),
+      minLevel: reader.getChar(),
+      skillPointCost: reader.getShort(),
     });
   }
   client.skillController.setCatalog(entries);
+}
+
+function handleSkillKnown(client: Client, reader: EoReader): void {
+  const count = reader.getShort();
+  const ids: string[] = [];
+  for (let i = 0; i < count; i++) ids.push(readStr(reader));
+  const points = reader.getInt();
+  client.skillController.setKnown(ids, points);
+}
+
+function handleSkillLearnReply(client: Client, reader: EoReader): void {
+  // Wire order deliberately differs from the server struct's field order:
+  // skill_id, ok, reason, skill_points_remaining.
+  const skillId = readStr(reader);
+  const ok = reader.getChar() !== 0;
+  const reason = reader.getChar();
+  const remaining = reader.getInt();
+  client.skillController.applyLearnReply(ok, reason, skillId, remaining);
 }
 
 function handleSkillReply(client: Client, reader: EoReader): void {
@@ -145,5 +166,15 @@ export function registerSkillHandlers(client: Client): void {
     FAMILY_SKILL as PacketFamily,
     PacketAction.Agree,
     (reader) => handleSkillAugment(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_SKILL as PacketFamily,
+    PacketAction.Player,
+    (reader) => handleSkillKnown(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_SKILL as PacketFamily,
+    PacketAction.Accept,
+    (reader) => handleSkillLearnReply(client, reader),
   );
 }

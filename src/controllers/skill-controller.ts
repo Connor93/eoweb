@@ -10,6 +10,31 @@ const REJECT_UNKNOWN = 3;
 const REJECT_INVALID_TARGET = 4;
 const REJECT_OUT_OF_RANGE = 5;
 
+// Learn reject reason codes (mirror the server's LearnReject codes). A
+// SEPARATE numbering from the cast-time SKILL_REJECT_* codes above.
+const LEARN_REJECT_ALREADY_KNOWN = 1;
+const LEARN_REJECT_WRONG_CLASS = 2;
+const LEARN_REJECT_LEVEL_TOO_LOW = 3;
+const LEARN_REJECT_NOT_ENOUGH_POINTS = 4;
+const LEARN_REJECT_NO_SUCH_SKILL = 5;
+
+function learnRejectMessage(reason: number): string | null {
+  switch (reason) {
+    case LEARN_REJECT_ALREADY_KNOWN:
+      return 'You already know that skill.';
+    case LEARN_REJECT_WRONG_CLASS:
+      return 'Your class cannot learn that skill.';
+    case LEARN_REJECT_LEVEL_TOO_LOW:
+      return 'You are not a high enough level to learn that skill.';
+    case LEARN_REJECT_NOT_ENOUGH_POINTS:
+      return 'You do not have enough skill points.';
+    case LEARN_REJECT_NO_SUCH_SKILL:
+      return 'Unknown skill.';
+    default:
+      return null;
+  }
+}
+
 export interface SkillCatalogEntry {
   skillId: string;
   name: string;
@@ -24,6 +49,10 @@ export interface SkillCatalogEntry {
   castVfx: string;
   /** VFX ref to burst at the target on impact. Empty = none. */
   impactVfx: string;
+  /** Class allowed to learn this. 0 = any. */
+  classRequirement: number;
+  minLevel: number;
+  skillPointCost: number;
 }
 
 interface CooldownState {
@@ -34,6 +63,8 @@ interface CooldownState {
 export class SkillController {
   private client: Client;
   catalog = new Map<string, SkillCatalogEntry>();
+  knownSkills = new Set<string>();
+  skillPoints = 0;
   selectedSkillId: string | null = null;
   private cooldowns = new Map<string, CooldownState>();
   private subscribers: (() => void)[] = [];
@@ -62,6 +93,34 @@ export class SkillController {
   setCatalog(entries: SkillCatalogEntry[]): void {
     this.catalog = new Map(entries.map((e) => [e.skillId, e]));
     this.notify();
+  }
+
+  /** Authoritative learned set + current skill points, from `SkillKnownServerPacket`. */
+  setKnown(skillIds: string[], skillPoints: number): void {
+    this.knownSkills = new Set(skillIds);
+    this.skillPoints = skillPoints;
+    this.notify();
+  }
+
+  /** Outcome of one `requestLearn`, from `SkillLearnReplyServerPacket`. */
+  applyLearnReply(
+    ok: boolean,
+    reason: number,
+    skillId: string,
+    skillPointsRemaining: number,
+  ): void {
+    this.skillPoints = skillPointsRemaining;
+    if (ok) {
+      this.knownSkills.add(skillId);
+    } else {
+      const message = learnRejectMessage(reason);
+      if (message) this.client.toastController.showWarning(message);
+    }
+    this.notify();
+  }
+
+  isKnown(skillId: string): boolean {
+    return this.knownSkills.has(skillId);
   }
 
   handleReply(
@@ -129,6 +188,19 @@ export class SkillController {
     this.client.bus?.sendBuf(
       FAMILY_SKILL as PacketFamily,
       PacketAction.Use,
+      writer.toByteArray(),
+    );
+  }
+
+  /** Fire-and-forget; the server is authoritative and answers on `Accept`. */
+  requestLearn(skillId: string): void {
+    const writer = new EoWriter();
+    const idBytes = new TextEncoder().encode(skillId);
+    writer.addChar(idBytes.length);
+    writer.addBytes(idBytes);
+    this.client.bus?.sendBuf(
+      FAMILY_SKILL as PacketFamily,
+      PacketAction.Add,
       writer.toByteArray(),
     );
   }
