@@ -220,19 +220,31 @@ export function SkillsDialog() {
   const [known, setKnown] = useState<Set<string>>(
     () => new Set(client.skillController.knownSkills),
   );
-  const [points, setPoints] = useState(
-    () => client.skillController.skillPoints,
-  );
+  const [points, setPoints] = useState(() => client.skillPoints);
 
   useEffect(
     () =>
       client.skillController.subscribe(() => {
         setEntries([...client.skillController.catalog.values()]);
         setKnown(new Set(client.skillController.knownSkills));
-        setPoints(client.skillController.skillPoints);
+        setPoints(client.skillPoints);
       }),
     [client],
   );
+
+  // client.skillPoints is a shared currency also mutated by level-up,
+  // recover, item and (legacy ESF) stat-skill flows outside the skill
+  // controller — those notify via statsController/statSkillController, not
+  // skillController.subscribe(). Mirrors spells-dialog.tsx's subscriptions.
+  useEffect(() => {
+    const onPointsChanged = () => setPoints(client.skillPoints);
+    client.statsController.subscribeStatsUpdated(onPointsChanged);
+    client.statSkillController.subscribeSkillsChanged(onPointsChanged);
+    return () => {
+      client.statsController.unsubscribeStatsUpdated(onPointsChanged);
+      client.statSkillController.unsubscribeSkillsChanged(onPointsChanged);
+    };
+  }, [client]);
 
   const tiers = useMemo(
     () => tiersFor(entries, client.classId),

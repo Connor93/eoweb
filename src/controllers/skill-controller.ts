@@ -9,6 +9,7 @@ const REJECT_ON_COOLDOWN = 2;
 const REJECT_UNKNOWN = 3;
 const REJECT_INVALID_TARGET = 4;
 const REJECT_OUT_OF_RANGE = 5;
+const REJECT_NOT_LEARNED = 6;
 
 // Learn reject reason codes (mirror the server's LearnReject codes). A
 // SEPARATE numbering from the cast-time SKILL_REJECT_* codes above.
@@ -64,7 +65,6 @@ export class SkillController {
   private client: Client;
   catalog = new Map<string, SkillCatalogEntry>();
   knownSkills = new Set<string>();
-  skillPoints = 0;
   selectedSkillId: string | null = null;
   private cooldowns = new Map<string, CooldownState>();
   private subscribers: (() => void)[] = [];
@@ -95,10 +95,15 @@ export class SkillController {
     this.notify();
   }
 
-  /** Authoritative learned set + current skill points, from `SkillKnownServerPacket`. */
+  /**
+   * Authoritative learned set + current skill points, from
+   * `SkillKnownServerPacket`. Skill points have a single owner —
+   * `client.skillPoints` — shared with level-up/recover/item/stat-skill
+   * flows, so we write through rather than keeping a local copy.
+   */
   setKnown(skillIds: string[], skillPoints: number): void {
     this.knownSkills = new Set(skillIds);
-    this.skillPoints = skillPoints;
+    this.client.skillPoints = skillPoints;
     this.notify();
   }
 
@@ -109,7 +114,7 @@ export class SkillController {
     skillId: string,
     skillPointsRemaining: number,
   ): void {
-    this.skillPoints = skillPointsRemaining;
+    this.client.skillPoints = skillPointsRemaining;
     if (ok) {
       this.knownSkills.add(skillId);
     } else {
@@ -147,6 +152,10 @@ export class SkillController {
     } else if (reason === REJECT_OUT_OF_RANGE) {
       this.client.toastController.showWarning(
         this.client.locale.skills.outOfRange,
+      );
+    } else if (reason === REJECT_NOT_LEARNED) {
+      this.client.toastController.showWarning(
+        this.client.locale.skills.notLearned,
       );
     }
     this.notify();
