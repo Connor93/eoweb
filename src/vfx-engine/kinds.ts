@@ -1950,6 +1950,47 @@ function drawSwordfallFront(
   cy: number,
 ): void {
   const { above, planted } = swordfallTip(progress);
+
+  // Motion trail across the distance covered since the previous sampled frame.
+  //
+  // The fall accelerates, so even at 8 frames the last airborne step crosses
+  // ~48 design px in 75ms. Adding frames to cover that gets expensive fast
+  // (textures scale linearly), whereas a trail spanning the actual travel is
+  // the standard way to make a large per-frame step read as speed rather than
+  // as a jump. The previous position is derived analytically from
+  // `def.frames`, so the trail always matches the real sampling cadence
+  // instead of assuming one.
+  if (!planted) {
+    const prev = swordfallTip(Math.max(0, progress - 1 / def.frames));
+    // Clamped to the frame's own headroom. The trail extends ABOVE the blade,
+    // so on the earliest frames — where the sword is already near the top —
+    // an unclamped trail would overrun the frame edge (196 and 194 design px
+    // against 192 of headroom). Deriving the cap from `def.frame.groundY`
+    // makes the trail self-limiting rather than something a separate extent
+    // assertion has to chase.
+    const headroom = Math.max(
+      0,
+      def.frame.groundY - above - SWORDFALL_BLADE_LEN,
+    );
+    const travel = Math.min(prev.above - above, headroom);
+    if (travel > 1) {
+      const tipY = cy - above;
+      const w = SWORDFALL_BLADE_HALF_W;
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = base(def);
+      ctx.beginPath();
+      // Tapers to nothing at the trailing end, so it reads as a smear behind
+      // the blade rather than a second blade.
+      ctx.moveTo(cx - w, tipY - SWORDFALL_BLADE_LEN);
+      ctx.lineTo(cx + w, tipY - SWORDFALL_BLADE_LEN);
+      ctx.lineTo(cx + w * 0.25, tipY - SWORDFALL_BLADE_LEN - travel);
+      ctx.lineTo(cx - w * 0.25, tipY - SWORDFALL_BLADE_LEN - travel);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
   swordfallBlade(
     ctx,
     cx,

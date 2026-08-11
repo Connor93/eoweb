@@ -175,6 +175,15 @@ const shapes = buildShapes();
 // same total duration, so a mis-wired multiplier is otherwise invisible.
 const FRAME_MODE_SHAPES = new Set<string>(['cleave']);
 const CYCLE_BASE_FRAMES = 4;
+/** Per-shape base frame count, for shapes that deliberately differ from
+ *  CYCLE_BASE_FRAMES. `swordfall` uses 8 (at half the frameMs, so the same
+ *  600ms cycle) because 4 samples across a descent read as choppy — only two
+ *  of them were airborne. Restated here rather than read from SET_PIECES, for
+ *  the same reason as the mode and the frameMs expectations: reading it back
+ *  would make the assertion tautological. */
+const SET_PIECE_BASE_FRAMES = new Map<string, number>([['swordfall', 8]]);
+const baseFramesFor = (kind: string): number =>
+  SET_PIECE_BASE_FRAMES.get(kind) ?? CYCLE_BASE_FRAMES;
 
 // drawCleave recovers "how many cleaves am I part of" as
 // def.frames / CLEAVE_FRAMES_PER_CYCLE, so the registry's base frame count
@@ -198,19 +207,21 @@ for (const [name, def] of Object.entries(registry)) {
   if (!CYCLE_SHAPE_IDS.has(axes.shapeId)) continue;
   const cycles = axes.cycles ?? 1;
 
+  const baseFrames = baseFramesFor(axes.kind);
+
   if (FRAME_MODE_SHAPES.has(axes.kind)) {
     assert(
       def.loops === 1,
       `${name}: frames-mode set piece must have loops 1, got ${def.loops}`,
     );
     assert(
-      def.frames === CYCLE_BASE_FRAMES * cycles,
-      `${name}: frames-mode set piece must have frames ${CYCLE_BASE_FRAMES * cycles}, got ${def.frames}`,
+      def.frames === baseFrames * cycles,
+      `${name}: frames-mode set piece must have frames ${baseFrames * cycles}, got ${def.frames}`,
     );
   } else {
     assert(
-      def.frames === CYCLE_BASE_FRAMES,
-      `${name}: loop-mode set piece must have frames ${CYCLE_BASE_FRAMES}, got ${def.frames}`,
+      def.frames === baseFrames,
+      `${name}: loop-mode set piece must have frames ${baseFrames}, got ${def.frames}`,
     );
     assert(
       def.loops === cycles,
@@ -241,7 +252,7 @@ const SET_PIECE_FRAME_MS = new Map<string, number>([
   ['rockfall', 100],
   ['ring-of-fire', 100],
   ['cleave', 100],
-  ['swordfall', 150],
+  ['swordfall', 75],
   ['whirlwind', 100],
   ['arcane-rain', 100],
   ['poison', 100],
