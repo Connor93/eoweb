@@ -1,4 +1,3 @@
-import type { SkillLearn } from 'eolib';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { CombatOverlay } from '@/combat-overlay';
 import { TradeState } from '@/game-state';
@@ -54,7 +53,6 @@ import {
   ReputationBadge,
   SettingsDialog,
   ShopDialog,
-  SkillMasterDialog,
   SkillsDialog,
   SocialDialog,
   SpellsDialog,
@@ -87,7 +85,6 @@ const ALL_DIALOG_IDS: DialogId[] = [
   'social',
   'chest',
   'locker',
-  'skillMaster',
   'innKeeper',
   'law',
   'packet-log',
@@ -135,8 +132,6 @@ function DialogById({ id }: { id: DialogId }) {
       return <ChestDialog />;
     case 'locker':
       return <LockerDialog />;
-    case 'skillMaster':
-      return <SkillMasterDialog />;
     case 'innKeeper':
       return <InnKeeperDialog />;
     case 'law':
@@ -222,11 +217,6 @@ function InGameContent() {
     };
     client.shopController.subscribeOpened(handleShopOpened);
 
-    const handleSkillMasterOpened = (_name: string, _skills: SkillLearn[]) => {
-      openDialog('skillMaster');
-    };
-    client.statSkillController.subscribeOpened(handleSkillMasterOpened);
-
     const handleInnKeeperOpened = () => {
       openDialog('innKeeper');
     };
@@ -274,7 +264,6 @@ function InGameContent() {
       closeDialog('shop');
       closeDialog('chest');
       closeDialog('locker');
-      closeDialog('skillMaster');
       closeDialog('innKeeper');
       closeDialog('law');
       closeDialog('questNpc');
@@ -310,7 +299,6 @@ function InGameContent() {
       client.barberController.unsubscribeOpened(handleBarberOpened);
       client.barberController.unsubscribePurchased(handleBarberPurchased);
       client.shopController.unsubscribeOpened(handleShopOpened);
-      client.statSkillController.unsubscribeOpened(handleSkillMasterOpened);
       client.innController.unsubscribeOpened(handleInnKeeperOpened);
       client.marriageController.unsubscribeLawyerOpen(handleLawyerOpened);
       client.boardController.unsubscribeBoardOpened(handleBoardOpened);

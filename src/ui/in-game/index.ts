@@ -29,7 +29,6 @@ export { QuestNpcDialog } from './dialogs/quest-npc-dialog';
 export { QuestsDialog } from './dialogs/quests-dialog';
 export { SettingsDialog } from './dialogs/settings-dialog';
 export { ShopDialog } from './dialogs/shop-dialog';
-export { SkillMasterDialog } from './dialogs/skill-master-dialog';
 export { SkillsDialog } from './dialogs/skills-dialog';
 export { SocialDialog } from './dialogs/social-dialog';
 export { SpellsDialog } from './dialogs/spells-dialog';

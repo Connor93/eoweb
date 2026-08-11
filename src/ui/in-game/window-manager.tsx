@@ -27,7 +27,6 @@ export type DialogId =
   | 'social'
   | 'chest'
   | 'locker'
-  | 'skillMaster'
   | 'innKeeper'
   | 'barber'
   | 'board'
