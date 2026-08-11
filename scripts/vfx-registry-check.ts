@@ -228,11 +228,35 @@ for (const [name, def] of Object.entries(registry)) {
 // 100 — only that it didn't vary — so a future SET_PIECES entry authored
 // with a different frameMs would silently desync its impact from the
 // damage number with every other gate still green.
+//
+// Now per-shape rather than a flat 100, because `swordfall` deliberately runs
+// slower (150ms) for legibility. The expectation is still RESTATED here rather
+// than read back from SET_PIECES — reading it would make this tautological and
+// the whole point is to catch an unintended cadence change. A new set piece
+// must be added here consciously, which is the prompt to think about whether
+// its impact still lands with the damage number.
+const SET_PIECE_FRAME_MS = new Map<string, number>([
+  ['bolt', 100],
+  ['smite', 100],
+  ['rockfall', 100],
+  ['ring-of-fire', 100],
+  ['cleave', 100],
+  ['swordfall', 150],
+  ['whirlwind', 100],
+  ['arcane-rain', 100],
+  ['poison', 100],
+]);
 for (const [name, def] of Object.entries(registry)) {
-  if (index[name]?.layer !== 'setpiece') continue;
+  const axes = index[name];
+  if (axes?.layer !== 'setpiece') continue;
+  const expected = SET_PIECE_FRAME_MS.get(axes.kind);
   assert(
-    def.frameMs === 100,
-    `${name}: set-piece frameMs must be 100 (see SET_PIECES' doc comment in registry.ts for why the cadence is load-bearing), got ${def.frameMs}`,
+    expected !== undefined,
+    `${name}: set-piece kind "${axes.kind}" has no expected frameMs — add it to SET_PIECE_FRAME_MS and decide deliberately whether its impact still lands with the damage number`,
+  );
+  assert(
+    def.frameMs === expected,
+    `${name}: set-piece frameMs must be ${expected} (see SET_PIECES' doc comment in registry.ts for why the cadence is load-bearing), got ${def.frameMs}`,
   );
 }
 
