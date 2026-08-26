@@ -1,3 +1,4 @@
+import { createPortal } from 'preact/compat';
 import {
   useCallback,
   useEffect,
@@ -6,8 +7,8 @@ import {
   useState,
 } from 'preact/hooks';
 import type { SkillCatalogEntry } from '@/controllers';
-import type { LocaleStrings } from '@/locale';
 import { playSfxById, SfxId } from '@/sfx';
+import { Button, Confirm, PortalTooltip } from '@/ui/components';
 import { UI_ITEM_BG, UI_PANEL_BORDER, UI_STICKY_BG } from '@/ui/consts';
 import { useClient, useLocale } from '@/ui/context';
 import { SlotType } from '@/ui/enums';
@@ -83,16 +84,62 @@ function SkillCard({ entry }: { entry: SkillCatalogEntry }) {
       style={{ touchAction: 'none' }}
       onPointerDown={handlePointerDown}
     >
-      <SkillIcon
-        iconId={entry.iconId}
-        label={entry.name}
-        tone='neutral'
-        sizeClass='h-12 w-12'
-      />
-      <p class='wrap-break-word line-clamp-2 w-full text-center font-semibold text-xs leading-tight'>
-        {entry.name}
-      </p>
+      {/* Whole card is the hover region — no action button to avoid here. */}
+      <SkillDescriptionRegion
+        entry={entry}
+        class='flex w-full flex-col items-center gap-1'
+      >
+        <SkillIcon
+          iconId={entry.iconId}
+          label={entry.name}
+          tone='neutral'
+          sizeClass='h-12 w-12'
+        />
+        <p class='wrap-break-word line-clamp-2 w-full text-center font-semibold text-xs leading-tight'>
+          {entry.name}
+        </p>
+      </SkillDescriptionRegion>
     </div>
+  );
+}
+
+/**
+ * Wraps a skill's icon in its description tooltip. A skill with no authored
+ * description gets the bare icon back — an empty tooltip box is worse than
+ * none, and 10 of the 14 authored skills have no description yet.
+ */
+function SkillDescriptionRegion({
+  entry,
+  class: layoutClass,
+  children,
+}: {
+  entry: SkillCatalogEntry;
+  /**
+   * Layout classes for the hoverable region. Applied identically whether or
+   * not a tooltip is attached, so the two branches lay out the same — and it
+   * must establish a flex container, because SkillIcon is an empty span sized
+   * only by height/width utilities, which a plain inline wrapper would ignore,
+   * collapsing the icon to nothing.
+   */
+  class: string;
+  children: preact.ComponentChildren;
+}) {
+  if (!entry.description) {
+    return <div class={layoutClass}>{children}</div>;
+  }
+
+  return (
+    <PortalTooltip
+      wrapperClass={layoutClass}
+      tooltip={
+        <>
+          <p class='font-semibold'>{entry.name}</p>
+          <p class='opacity-80'>{entry.description}</p>
+        </>
+      }
+    >
+      {children}
+    </PortalTooltip>
   );
 }
 
@@ -133,74 +180,90 @@ function tiersFor(
   return [...byTier.entries()].sort((a, b) => a[0] - b[0]);
 }
 
-function reasonFor(
-  state: SkillState,
-  entry: SkillCatalogEntry,
-  locale: LocaleStrings,
-): string | null {
-  switch (state) {
-    case 'level-locked':
-      return locale.skills.requiresLevel.replace(
-        '{level}',
-        String(entry.minLevel),
-      );
-    case 'unaffordable':
-      return locale.skills.requiresPoints.replace(
-        '{cost}',
-        String(entry.skillPointCost),
-      );
-    case 'learned':
-      return locale.skills.learnedBadge;
-    default:
-      return null;
-  }
-}
-
-function TreeSkillCard({
+/**
+ * One tree entry as a row: icon left, name + cost centre, action right.
+ *
+ * Deliberately a <div>, not a <button>. The whole card used to be clickable,
+ * which learned a skill in one unconfirmed click; the Learn button now owns
+ * that action, and a button cannot be nested inside another button.
+ */
+function TreeSkillRow({
   entry,
   state,
-  reason,
   onLearn,
 }: {
   entry: SkillCatalogEntry;
   state: SkillState;
-  reason: string | null;
   onLearn: () => void;
 }) {
-  const clickable = state === 'learnable';
+  const { locale } = useLocale();
+  const learned = state === 'learned';
+  const costText = locale.skills.cost.replace(
+    '{cost}',
+    String(entry.skillPointCost),
+  );
+
   return (
-    <button
-      type='button'
-      disabled={!clickable}
-      onClick={clickable ? onLearn : undefined}
-      class={`flex flex-col items-center gap-1 rounded border p-2 text-left transition-colors ${UI_ITEM_BG} ${
-        state === 'learned'
-          ? 'border-success/40'
-          : clickable
-            ? `${UI_PANEL_BORDER} cursor-pointer hover:border-success/60 hover:bg-success/10`
-            : `${UI_PANEL_BORDER} cursor-not-allowed opacity-60`
-      }`}
+    <div
+      class={`flex items-center gap-2 rounded border p-2 ${UI_ITEM_BG} ${
+        learned ? 'border-success/40' : UI_PANEL_BORDER
+      } ${state === 'level-locked' ? 'opacity-60' : ''}`}
     >
-      <SkillIcon
-        iconId={entry.iconId}
-        label={entry.name}
-        tone='neutral'
-        sizeClass='h-10 w-10'
-        active={state === 'learned'}
-      />
-      <p class='wrap-break-word line-clamp-2 w-full text-center font-semibold text-xs leading-tight'>
-        {entry.name}
-      </p>
-      {reason && (
-        <p
-          class={`text-center text-[10px] leading-tight ${
-            state === 'learned' ? 'text-success' : 'text-base-content/50'
-          }`}
+      {/* Hover region = icon + name + cost, i.e. the whole row up to but not
+          including the action, so hovering never fights the Learn button. */}
+      <SkillDescriptionRegion
+        entry={entry}
+        class='flex min-w-0 flex-1 items-center gap-2'
+      >
+        <SkillIcon
+          iconId={entry.iconId}
+          label={entry.name}
+          tone='neutral'
+          sizeClass='h-10 w-10 shrink-0'
+          active={learned}
+        />
+
+        <div class='min-w-0 flex-1'>
+          <p class='wrap-break-word font-semibold text-xs leading-tight'>
+            {entry.name}
+          </p>
+          {/* Cost shows in every state — knowing the price of a skill you
+              can't afford yet is the whole point of a tree. */}
+          <p
+            class={`text-[10px] leading-tight ${
+              state === 'unaffordable' ? 'text-warning' : 'text-base-content/50'
+            }`}
+          >
+            {costText}
+          </p>
+        </div>
+      </SkillDescriptionRegion>
+
+      {learned ? (
+        <span class='shrink-0 font-semibold text-success text-xs'>
+          {locale.skills.learnedBadge}
+        </span>
+      ) : (
+        <Button
+          variant={state === 'learnable' ? ['primary', 'xs'] : ['ghost', 'xs']}
+          disabled={state !== 'learnable'}
+          onClick={onLearn}
+          class='shrink-0'
+          label={
+            state === 'level-locked'
+              ? locale.skills.requiresLevel.replace(
+                  '{level}',
+                  String(entry.minLevel),
+                )
+              : undefined
+          }
         >
-          {reason}
-        </p>
+          {state === 'level-locked'
+            ? locale.skills.tierLabel.replace('{level}', String(entry.minLevel))
+            : locale.skills.learnBtn}
+        </Button>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -256,15 +319,45 @@ export function SkillsDialog() {
     [entries, known],
   );
 
-  const handleLearn = useCallback(
-    (entry: SkillCatalogEntry) => {
-      client.skillController.requestLearn(entry.skillId);
-    },
-    [client],
+  // Learning is permanent (there is no unlearn or respec), so the Learn button
+  // only stages the entry here — the request goes out on confirmation.
+  const [pendingLearn, setPendingLearn] = useState<SkillCatalogEntry | null>(
+    null,
   );
 
+  const confirmLearn = useCallback(() => {
+    if (pendingLearn) {
+      client.skillController.requestLearn(pendingLearn.skillId);
+    }
+    setPendingLearn(null);
+  }, [client, pendingLearn]);
+
   return (
-    <DialogBase id='skills' title={locale.skills.title} size='xl' avoidBottom>
+    <DialogBase
+      id='skills'
+      title={locale.skills.title}
+      size='xl'
+      avoidBottom
+      maxHeight='520px'
+    >
+      {/* Portalled out: DialogBase's optional backdrop-blur makes it a
+          containing block for position:fixed children, and it also clips with
+          overflow-hidden — together those would trap the modal inside the
+          dialog whenever the blur setting is on. Same escape hatch the chest,
+          shop, social and character dialogs already use. */}
+      {pendingLearn &&
+        createPortal(
+          <Confirm
+            title={locale.skills.confirmLearnTitle}
+            message={locale.skills.confirmLearnMessage
+              .replace('{skill}', pendingLearn.name)
+              .replace('{cost}', String(pendingLearn.skillPointCost))}
+            onYes={confirmLearn}
+            onNo={() => setPendingLearn(null)}
+          />,
+          document.getElementById('ui') ?? document.body,
+        )}
+
       <div
         class={`sticky top-0 z-10 flex items-center justify-between border-b ${UI_PANEL_BORDER} ${UI_STICKY_BG} px-2 py-1.5 ${blur}`}
       >
@@ -292,24 +385,20 @@ export function SkillsDialog() {
                     String(tierLevel),
                   )}
                 </p>
-                <div class='grid grid-cols-2 gap-2 sm:grid-cols-3'>
-                  {tierEntries.map((entry) => {
-                    const state = skillState(
-                      entry,
-                      known.has(entry.skillId),
-                      level,
-                      points,
-                    );
-                    return (
-                      <TreeSkillCard
-                        key={entry.skillId}
-                        entry={entry}
-                        state={state}
-                        reason={reasonFor(state, entry, locale)}
-                        onLearn={() => handleLearn(entry)}
-                      />
-                    );
-                  })}
+                <div class='flex flex-col gap-1.5'>
+                  {tierEntries.map((entry) => (
+                    <TreeSkillRow
+                      key={entry.skillId}
+                      entry={entry}
+                      state={skillState(
+                        entry,
+                        known.has(entry.skillId),
+                        level,
+                        points,
+                      )}
+                      onLearn={() => setPendingLearn(entry)}
+                    />
+                  ))}
                 </div>
               </div>
             ))

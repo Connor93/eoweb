@@ -29,6 +29,12 @@ type DialogBaseProps = {
   noDrag?: boolean;
   /** When true, limits dialog height so it doesn't overlap the hotbar. */
   avoidBottom?: boolean;
+  /**
+   * Tighter height cap for dialogs whose content would otherwise grow to fill
+   * the viewport (e.g. a long skill tree). Composed with — never replaces —
+   * the default cap, so a short screen still wins and the hotbar stays clear.
+   */
+  maxHeight?: string;
   /** When true, children are rendered without the default px-1 pb-1 padding wrapper. */
   noPadding?: boolean;
   /** Optional override for the close button action. Defaults to closeDialog(id). */
@@ -48,6 +54,7 @@ export function DialogBase({
   noDrag = false,
   noPadding = false,
   avoidBottom = false,
+  maxHeight,
   onClose,
 }: DialogBaseProps) {
   const { locale } = useLocale();
@@ -126,11 +133,17 @@ export function DialogBase({
       : SIZE_WIDTH[size];
 
   const topPx = isManual ? (manualPos?.y ?? 0) : 0;
-  const maxHeightValue = avoidBottom
+  const defaultMaxHeight = avoidBottom
     ? isManual
       ? `calc(100vh - ${topPx}px - var(--hotbar-h, 64px) - 8px)`
       : 'calc(100vh - var(--hotbar-h, 64px) - 8px)'
     : '80vh';
+  // min() rather than an override: whichever cap is smaller wins, so a tight
+  // maxHeight can shrink a tall dialog but can never let it outgrow the
+  // viewport or cover the hotbar on a short screen.
+  const maxHeightValue = maxHeight
+    ? `min(${maxHeight}, ${defaultMaxHeight})`
+    : defaultMaxHeight;
 
   const posStyle = isManual
     ? {

@@ -54,6 +54,8 @@ export interface SkillCatalogEntry {
   classRequirement: number;
   minLevel: number;
   skillPointCost: number;
+  /** Flavour text for the hover tooltip. Empty = no tooltip. */
+  description: string;
 }
 
 interface CooldownState {

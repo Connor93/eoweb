@@ -36,6 +36,9 @@ function handleSkillList(client: Client, reader: EoReader): void {
       classRequirement: reader.getShort(),
       minLevel: reader.getChar(),
       skillPointCost: reader.getShort(),
+      // Trailing field — must stay last, mirroring the server's serialize
+      // order in deep/skill_list_server_packet.rs.
+      description: readStr(reader),
     });
   }
   client.skillController.setCatalog(entries);

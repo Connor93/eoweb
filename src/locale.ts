@@ -442,8 +442,12 @@ export const locales = {
       noSkillsForClass: 'No skills available for your class.',
       tierLabel: 'Level {level}',
       requiresLevel: 'Requires level {level}',
-      requiresPoints: 'Costs {cost} points',
+      cost: 'Cost: {cost} SP',
+      learnBtn: 'Learn',
       learnedBadge: 'Learned',
+      confirmLearnTitle: 'Learn Skill',
+      confirmLearnMessage:
+        'Learn {skill} for {cost} SP? Skills cannot be unlearned.',
     },
     trade: {
       title: 'Trade',
@@ -1118,8 +1122,12 @@ export const locales = {
       noSkillsForClass: 'Geen vaardigheden beschikbaar voor jouw klasse.',
       tierLabel: 'Niveau {level}',
       requiresLevel: 'Vereist niveau {level}',
-      requiresPoints: 'Kost {cost} punten',
+      cost: 'Kosten: {cost} VP',
+      learnBtn: 'Leren',
       learnedBadge: 'Geleerd',
+      confirmLearnTitle: 'Vaardigheid leren',
+      confirmLearnMessage:
+        '{skill} leren voor {cost} VP? Vaardigheden kunnen niet worden afgeleerd.',
     },
     trade: {
       title: 'Ruilen',
@@ -1795,8 +1803,12 @@ export const locales = {
       noSkillsForClass: 'Inga färdigheter tillgängliga för din klass.',
       tierLabel: 'Nivå {level}',
       requiresLevel: 'Kräver nivå {level}',
-      requiresPoints: 'Kostar {cost} poäng',
+      cost: 'Kostnad: {cost} FP',
+      learnBtn: 'Lär dig',
       learnedBadge: 'Inlärd',
+      confirmLearnTitle: 'Lär dig färdighet',
+      confirmLearnMessage:
+        'Lär dig {skill} för {cost} FP? Färdigheter kan inte glömmas bort.',
     },
     trade: {
       title: 'Byta',
@@ -2472,8 +2484,12 @@ export const locales = {
       noSkillsForClass: 'Nenhuma habilidade disponível para sua classe.',
       tierLabel: 'Nível {level}',
       requiresLevel: 'Requer nível {level}',
-      requiresPoints: 'Custa {cost} pontos',
+      cost: 'Custo: {cost} PH',
+      learnBtn: 'Aprender',
       learnedBadge: 'Aprendida',
+      confirmLearnTitle: 'Aprender habilidade',
+      confirmLearnMessage:
+        'Aprender {skill} por {cost} PH? Habilidades não podem ser esquecidas.',
     },
     trade: {
       title: 'Troca',
