@@ -61,3 +61,4 @@ export {
   type StatBreakdown,
   type StatRowKey,
 } from './stat-breakdown';
+export { buildStatEffectLines, type StatEffectEntry } from './stat-effects';

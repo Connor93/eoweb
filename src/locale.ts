@@ -133,6 +133,28 @@ export const locales = {
       statPoints: 'Stat Points: {count}',
       unspentPointsNudge:
         'You have {count} stat points to assign — open Character.',
+      descStr: 'Raw physical power.',
+      descInt: 'Governs your magical force.',
+      descWis: 'Sharpens your focus and magical reserves.',
+      descAgi: 'Speed and precision of movement.',
+      descCon: 'Toughness and staying power.',
+      descCha: 'Force of personality.',
+      descDmg: 'The hit you land, before enemy armor.',
+      descAccuracy: 'How reliably your attacks connect.',
+      descEvade: 'How often attackers miss you.',
+      descArmor: 'Blunts incoming hits.',
+      descHp: 'How much damage you can take before you fall.',
+      descTp: 'Fuels your skills and spells.',
+      effectMarginalHeader: '+1 {stat} would give you:',
+      effectMaxWeight: 'Max weight',
+      effectNoneForClass: 'Has no effect for your class.',
+      effectEffectiveInCombat: 'Effective in combat: {value}',
+      effectArmorThreshold:
+        'Attacks under {threshold} are reduced; a {in}-damage hit lands for {out}.',
+      effectEvadeNeeds:
+        'An attacker needs {accuracy} accuracy to hit you 90% of the time.',
+      effectAccuracyBeats:
+        'You hit targets up to {evade} evade at least 90% of the time.',
       trainBtn: '+',
     },
     equipment: {
@@ -811,6 +833,28 @@ export const locales = {
       statPoints: 'Statistiekpunten: {count}',
       unspentPointsNudge:
         'Je hebt {count} statistiekpunten om toe te wijzen — open Personage.',
+      descStr: 'Ruwe fysieke kracht.',
+      descInt: 'Bepaalt je magische kracht.',
+      descWis: 'Scherpt je focus en magische reserves.',
+      descAgi: 'Snelheid en precisie van beweging.',
+      descCon: 'Weerbaarheid en uithoudingsvermogen.',
+      descCha: 'Kracht van persoonlijkheid.',
+      descDmg: 'De klap die je uitdeelt, voor vijandelijk pantser.',
+      descAccuracy: 'Hoe betrouwbaar je aanvallen raken.',
+      descEvade: 'Hoe vaak aanvallers je missen.',
+      descArmor: 'Dempt binnenkomende klappen.',
+      descHp: 'Hoeveel schade je kunt incasseren voordat je valt.',
+      descTp: 'Voedt je vaardigheden en spreuken.',
+      effectMarginalHeader: '+1 {stat} zou je geven:',
+      effectMaxWeight: 'Max gewicht',
+      effectNoneForClass: 'Heeft geen effect voor jouw klasse.',
+      effectEffectiveInCombat: 'Effectief in gevecht: {value}',
+      effectArmorThreshold:
+        'Aanvallen onder {threshold} worden verminderd; een klap van {in} schade komt aan voor {out}.',
+      effectEvadeNeeds:
+        'Een aanvaller heeft {accuracy} nauwkeurigheid nodig om je 90% van de tijd te raken.',
+      effectAccuracyBeats:
+        'Je raakt doelen tot {evade} ontwijken minstens 90% van de tijd.',
       trainBtn: '+',
     },
     equipment: {
@@ -1492,6 +1536,28 @@ export const locales = {
       statPoints: 'Statistikpoäng: {count}',
       unspentPointsNudge:
         'Du har {count} statistikpoäng att fördela — öppna Karaktär.',
+      descStr: 'Ren fysisk styrka.',
+      descInt: 'Styr din magiska kraft.',
+      descWis: 'Skärper ditt fokus och dina magiska reserver.',
+      descAgi: 'Snabbhet och precision i rörelse.',
+      descCon: 'Tålighet och uthållighet.',
+      descCha: 'Personlighetens styrka.',
+      descDmg: 'Slaget du landar, före fiendens rustning.',
+      descAccuracy: 'Hur tillförlitligt dina attacker träffar.',
+      descEvade: 'Hur ofta angripare missar dig.',
+      descArmor: 'Dämpar inkommande slag.',
+      descHp: 'Hur mycket skada du tål innan du faller.',
+      descTp: 'Driver dina färdigheter och besvärjelser.',
+      effectMarginalHeader: '+1 {stat} skulle ge dig:',
+      effectMaxWeight: 'Max vikt',
+      effectNoneForClass: 'Har ingen effekt för din klass.',
+      effectEffectiveInCombat: 'Effektiv i strid: {value}',
+      effectArmorThreshold:
+        'Attacker under {threshold} reduceras; ett slag på {in} skada landar för {out}.',
+      effectEvadeNeeds:
+        'En angripare behöver {accuracy} träffsäkerhet för att träffa dig 90% av gångerna.',
+      effectAccuracyBeats:
+        'Du träffar mål upp till {evade} undvika minst 90% av gångerna.',
       trainBtn: '+',
     },
     equipment: {
@@ -2173,6 +2239,28 @@ export const locales = {
       statPoints: 'Pontos de Atributo: {count}',
       unspentPointsNudge:
         'Você tem {count} pontos de atributo para atribuir — abra Personagem.',
+      descStr: 'Força física bruta.',
+      descInt: 'Rege a sua força mágica.',
+      descWis: 'Aguça o seu foco e as reservas mágicas.',
+      descAgi: 'Velocidade e precisão de movimento.',
+      descCon: 'Robustez e resistência.',
+      descCha: 'Força de personalidade.',
+      descDmg: 'O golpe que você acerta, antes da armadura inimiga.',
+      descAccuracy: 'Com que confiabilidade seus ataques acertam.',
+      descEvade: 'Com que frequência os atacantes erram você.',
+      descArmor: 'Amortece os golpes recebidos.',
+      descHp: 'Quanto dano você aguenta antes de cair.',
+      descTp: 'Alimenta suas habilidades e magias.',
+      effectMarginalHeader: '+1 {stat} lhe daria:',
+      effectMaxWeight: 'Peso máx.',
+      effectNoneForClass: 'Não tem efeito para a sua classe.',
+      effectEffectiveInCombat: 'Efetivo em combate: {value}',
+      effectArmorThreshold:
+        'Ataques abaixo de {threshold} são reduzidos; um golpe de {in} de dano acerta por {out}.',
+      effectEvadeNeeds:
+        'Um atacante precisa de {accuracy} de precisão para acertar você 90% das vezes.',
+      effectAccuracyBeats:
+        'Você acerta alvos com até {evade} de esquiva pelo menos 90% das vezes.',
       trainBtn: '+',
     },
     equipment: {
