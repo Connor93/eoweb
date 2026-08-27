@@ -198,6 +198,27 @@ export class Client {
   // Effective weapon attack range in tiles (item_id -> tiles), from the same
   // family-55 Reply packet. Sparse: only weapons whose reach exceeds 1 appear.
   itemAttackRanges: Map<number, number> = new Map();
+  // "What does this stat do" readouts from the server (StatEffects deep
+  // packet, family 64). Keyed by stat row ("str" … "armor"); each entry is a
+  // locale key plus its number. Values arrive as value_x100 and are divided
+  // back down at parse time. Unknown keys are the client's to ignore.
+  statEffects: Map<string, Array<{ key: string; value: number }>> = new Map();
+  private statEffectsSubscribers: Array<() => void> = [];
+
+  subscribeStatEffectsChanged(cb: () => void): void {
+    this.statEffectsSubscribers.push(cb);
+  }
+
+  unsubscribeStatEffectsChanged(cb: () => void): void {
+    this.statEffectsSubscribers = this.statEffectsSubscribers.filter(
+      (s) => s !== cb,
+    );
+  }
+
+  notifyStatEffectsChanged(): void {
+    for (const cb of this.statEffectsSubscribers) cb();
+  }
+
   // Class ids selectable at character creation (CreationConfig deep packet,
   // family 57). null = not yet received → the create screen falls back to all
   // ECF classes. Pushed after login and on pub reload.

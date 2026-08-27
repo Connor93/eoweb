@@ -47,6 +47,7 @@ import { registerShopHandlers } from './shop';
 import { registerSitHandlers } from './sit';
 import { registerSkillHandlers } from './skill';
 import { registerSpellHandlers } from './spell';
+import { registerStatEffectsHandlers } from './stat-effects';
 import { registerStatSkillHandlers } from './stat-skill';
 import { registerStatusHandlers } from './status';
 import { registerTalkHandlers } from './talk';
@@ -109,6 +110,7 @@ export function registerAllHandlers(client: Client): void {
   registerStatusHandlers(client);
   registerInstanceHandlers(client);
   registerRatesHandlers(client);
+  registerStatEffectsHandlers(client);
   registerLookupHandlers(client);
   registerCreationHandlers(client);
 }
