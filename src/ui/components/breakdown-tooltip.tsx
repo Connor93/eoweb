@@ -30,6 +30,12 @@ function formatAmount(s: GearSource): string {
 }
 
 interface Props {
+  /** Tooltip title — the stat's name. Omit for effects-line tooltips. */
+  title?: string;
+  /** One-line plain-English description of what the stat governs. */
+  description?: string;
+  /** Server-computed effect lines, already rendered to strings. */
+  effectLines?: string[];
   /** "Base (class & level)" line; omit for effects lines (sources only). */
   baseLabel?: string;
   baseValue?: string;
@@ -42,6 +48,9 @@ interface Props {
  *  target. Renders the tooltip via a portal into #ui so it escapes
  *  any overflow-hidden container. */
 export function BreakdownTooltip({
+  title,
+  description,
+  effectLines,
   baseLabel,
   baseValue,
   sources,
@@ -63,13 +72,27 @@ export function BreakdownTooltip({
     return () => window.removeEventListener('pointerdown', handler);
   }, []);
 
-  const hasContent = baseLabel !== undefined || sources.length > 0;
+  const hasEffect = !!title || !!description || (effectLines?.length ?? 0) > 0;
+  const hasBreakdown = baseLabel !== undefined || sources.length > 0;
+  const hasContent = hasBreakdown || hasEffect;
   if (!hasContent) {
     return <span>{children}</span>;
   }
 
   const tooltipContent = (
     <>
+      {title && <div class='font-semibold'>{title}</div>}
+      {description && <div class='opacity-70'>{description}</div>}
+      {(effectLines?.length ?? 0) > 0 && (
+        <div class='mt-1 flex flex-col'>
+          {effectLines?.map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
+        </div>
+      )}
+      {hasBreakdown && hasEffect && (
+        <div class='mt-1 border-current/20 border-t pt-1' />
+      )}
       {baseLabel !== undefined && (
         <div class='flex justify-between gap-3'>
           <span class='opacity-70'>{baseLabel}</span>

@@ -37,6 +37,7 @@ import { useCharacterInfo, useClient, useLocale } from '@/ui/context';
 import { useBackdropBlur, useItemDrag, usePlayerStats } from '@/ui/in-game';
 import {
   attackSpeedLine,
+  buildStatEffectLines,
   capitalize,
   classicEquipsFromPaperdoll,
   computeEffects,
@@ -673,6 +674,17 @@ function StatsTab() {
       client.inventoryController.unsubscribeEquipmentChanged(handler);
   }, [client, isOwnCharacter]);
 
+  // The server re-pushes stat effects on every calculate_stats()-affecting
+  // change; without this the tooltip would keep stale numbers while the
+  // dialog stays open (the trap equipRev was added to fix for gear sums).
+  const [statEffectsRev, setStatEffectsRev] = useState(0);
+  useEffect(() => {
+    if (!isOwnCharacter) return;
+    const handler = () => setStatEffectsRev((n) => n + 1);
+    client.subscribeStatEffectsChanged(handler);
+    return () => client.unsubscribeStatEffectsChanged(handler);
+  }, [client, isOwnCharacter]);
+
   const breakdown = useMemo(() => {
     if (!isOwnCharacter) return null;
     const equipped = client.instanceController
@@ -687,23 +699,60 @@ function StatsTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, isOwnCharacter, instanceRev, equipRev]);
 
+  const effectContent = useMemo(() => {
+    const out: Record<string, { description: string; lines: string[] }> = {};
+    for (const [row, entries] of client.statEffects) {
+      out[row] = buildStatEffectLines(row, entries, locale);
+    }
+    return out;
+    // statEffectsRev is the change signal
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, locale, statEffectsRev]);
+
+  // StatRowKey -> the row name the server uses. The server sends no entries
+  // for damage / max_hp / max_tp (prose-only rows), so those still resolve a
+  // description via buildStatEffectLines with an empty entry list.
+  const SERVER_ROW: Partial<Record<StatRowKey, string>> = {
+    maxHp: 'max_hp',
+    maxTp: 'max_tp',
+  };
+
+  const STAT_ROW_TITLE: Record<StatRowKey, string> = {
+    str: locale.stats.labelStr,
+    int: locale.stats.labelInt,
+    wis: locale.stats.labelWis,
+    agi: locale.stats.labelAgi,
+    con: locale.stats.labelCon,
+    cha: locale.stats.labelCha,
+    damage: locale.stats.labelDmg,
+    accuracy: locale.stats.labelAccuracy,
+    evade: locale.stats.labelEvade,
+    armor: locale.stats.labelArmor,
+    maxHp: locale.stats.labelHp,
+    maxTp: locale.stats.labelTp,
+  };
+
+  const effectFor = (row: string) =>
+    effectContent[row] ?? buildStatEffectLines(row, [], locale);
+
   const statRow = (key: StatRowKey, total: number, display?: string) => {
     if (!isOwnCharacter || !breakdown) {
       return <span>{display ?? total.toLocaleString()}</span>;
     }
     const b = breakdown[key];
     const base = total - b.gearTotal;
+    const effect = effectFor(SERVER_ROW[key] ?? key);
     return (
       <BreakdownTooltip
+        title={STAT_ROW_TITLE[key]}
+        description={effect.description}
+        effectLines={effect.lines}
         baseLabel={locale.stats.labelBaseClassLevel}
         baseValue={String(base)}
         sources={b.sources}
       >
-        <span
-          class={
-            b.sources.length ? 'border-b border-current/30 border-dotted' : ''
-          }
-        >
+        {/* Every row now has a hover, so the affordance is unconditional. */}
+        <span class='border-b border-current/30 border-dotted'>
           {display ?? total.toLocaleString()}
         </span>
       </BreakdownTooltip>
@@ -761,17 +810,14 @@ function StatsTab() {
             <span class='text-primary/60'>{locale.stats.labelDmg}</span>
             {isOwnCharacter && breakdown ? (
               <BreakdownTooltip
+                title={locale.stats.labelDmg}
+                description={effectFor('damage').description}
+                effectLines={effectFor('damage').lines}
                 baseLabel={locale.stats.labelBaseClassLevel}
                 baseValue={damageBase}
                 sources={breakdown.damage.sources}
               >
-                <span
-                  class={
-                    breakdown.damage.sources.length
-                      ? 'border-b border-current/30 border-dotted'
-                      : ''
-                  }
-                >
+                <span class='border-b border-current/30 border-dotted'>
                   {`${secondary.minDamage.toLocaleString()} - ${secondary.maxDamage.toLocaleString()}`}
                 </span>
               </BreakdownTooltip>
