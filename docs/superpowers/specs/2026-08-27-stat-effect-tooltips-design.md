@@ -1,7 +1,7 @@
 # Stat Effect Tooltips — Design Spec
 
 **Date:** 2026-08-27
-**Status:** Design approved 2026-08-27. Not yet implemented.
+**Status:** Code complete 2026-08-27 on branch `stat-effect-tooltips` in both repos (not merged, not deployed). reoserv suite 476/0; eoweb tsc/biome/build clean. **Manual browser pass still outstanding** — it is the only real gate. Deviations are recorded in the vault note.
 **Surfaces:** REOSERV (new computation + one new deep packet), eoweb (handler, data layer, tooltip, locale)
 **Vault:** `Web Client/Documentation/Planning/Stat effect tooltips.md` mirrors the intent; this file is the implementation-facing spec.
 **Sibling:** `2026-06-10-stats-panel-effective-view-design.md` — that feature answered *where a stat comes from*; this one answers *what it does*. They share one tooltip.
