@@ -12,7 +12,10 @@
     "knip": "knip",
     "vfx:check": "tsx scripts/vfx-registry-check.ts",
     "vfx:parity": "scripts/sync-vfx-engine.sh --check && tsx scripts/vfx-registry-parity-check.ts",
-    "vfx:parity:optional": "VFX_PARITY_OPTIONAL=1 scripts/sync-vfx-engine.sh --check && VFX_PARITY_OPTIONAL=1 tsx scripts/vfx-registry-parity-check.ts"
+    "vfx:parity:optional": "VFX_PARITY_OPTIONAL=1 scripts/sync-vfx-engine.sh --check && VFX_PARITY_OPTIONAL=1 tsx scripts/vfx-registry-parity-check.ts",
+    "music:sync": "node scripts/sync-editor-music.mjs",
+    "music:parity": "node scripts/sync-editor-music.mjs --check",
+    "music:parity:optional": "node scripts/sync-editor-music.mjs --check --optional"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",

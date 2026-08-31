@@ -64,7 +64,12 @@ import {
   NpcWalkAnimation,
   weaponAnchorScreen,
 } from '@/render';
-import { getItemGraphicId, isoToScreen, screenToIso } from '@/utils';
+import {
+  attackRayTiles,
+  getItemGraphicId,
+  isoToScreen,
+  screenToIso,
+} from '@/utils';
 import type { Vector2 } from '@/vector';
 
 enum EntityType {
@@ -794,6 +799,25 @@ export class MapRenderer {
     }
 
     const armedRange = this.client.skillController.armedEnemyRange();
+    if (
+      armedRange === null &&
+      inGame &&
+      this.client.configController.weaponRangeIndicator
+    ) {
+      // No skill armed: show how far the equipped weapon reaches as a ray in
+      // the facing direction, mirroring the server's attack targeting.
+      for (const tile of attackRayTiles(this.client)) {
+        dynamics.push({
+          x: tile.x,
+          y: tile.y,
+          type: EntityType.RangeHighlight,
+          typeId: 0,
+          layer: Layer.Cursor,
+          depth: this.calculateDepth(Layer.Cursor, tile.x, tile.y),
+        });
+      }
+    }
+
     if (armedRange !== null && inGame) {
       const p = this.client.getPlayerCoords();
       for (let dy = -armedRange; dy <= armedRange; dy++) {

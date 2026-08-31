@@ -72,6 +72,75 @@ function inputToDirection(input: Input): Direction | null {
   }
 }
 
+// Physical key code → game input. Tracking the physical code (rather than only
+// the logical input) matters because several codes share one input: Space and
+// both Control keys all attack, KeyW and ArrowUp both walk up. Keying held
+// state on the logical input alone meant releasing either one cleared it while
+// the other was still physically down.
+const CODE_TO_INPUT: Record<string, Input | undefined> = {
+  KeyW: Input.Up,
+  ArrowUp: Input.Up,
+  KeyA: Input.Left,
+  ArrowLeft: Input.Left,
+  KeyS: Input.Down,
+  ArrowDown: Input.Down,
+  KeyD: Input.Right,
+  ArrowRight: Input.Right,
+  KeyX: Input.SitStand,
+  Space: Input.Attack,
+  ControlLeft: Input.Attack,
+  ControlRight: Input.Attack,
+  NumpadDecimal: Input.EmoteEmbarassed,
+  Numpad0: Input.EmotePlayful,
+  Numpad1: Input.EmoteHappy,
+  Numpad2: Input.EmoteDepressed,
+  Numpad3: Input.EmoteSad,
+  Numpad4: Input.EmoteAngry,
+  Numpad5: Input.EmoteConfused,
+  Numpad6: Input.EmoteSurprised,
+  Numpad7: Input.EmoteHearts,
+  Numpad8: Input.EmoteMoon,
+  Numpad9: Input.EmoteSuicidal,
+  Digit1: Input.Hotbar1,
+  Digit2: Input.Hotbar2,
+  Digit3: Input.Hotbar3,
+  Digit4: Input.Hotbar4,
+  Digit5: Input.Hotbar5,
+  Digit6: Input.Hotbar6,
+  Tab: Input.Tab,
+  KeyR: Input.Refresh,
+  KeyC: Input.ViewCharacter,
+  KeyE: Input.ViewInventory,
+  KeyP: Input.ViewSpells,
+};
+
+// Reverse index, built once: input → every code bound to it.
+const INPUT_TO_CODES: Record<number, string[]> = (() => {
+  const out: Record<number, string[]> = {};
+  for (const [code, input] of Object.entries(CODE_TO_INPUT)) {
+    if (input === undefined) continue;
+    const codes = out[input] ?? [];
+    codes.push(code);
+    out[input] = codes;
+  }
+  return out;
+})();
+
+// The game keymap must not fire — and must not preventDefault — while the
+// player is typing. Chat's input stops propagation itself, but ~14 dialog
+// inputs (amount, trade, lookup, barber, settings sliders) do not, so typing
+// "1" into a quantity box used to trigger hotbar slot 1.
+function isTextEntryTarget(e: KeyboardEvent): boolean {
+  const el = (e.target as Element | null) ?? document.activeElement;
+  if (!(el instanceof HTMLElement)) return false;
+  if (el.isContentEditable) return true;
+  return (
+    el instanceof HTMLInputElement ||
+    el instanceof HTMLTextAreaElement ||
+    el instanceof HTMLSelectElement
+  );
+}
+
 const WALK_TICKS = WALK_ANIMATION_TICKS - 1;
 //const DRAG_THRESHOLD = 30;
 
@@ -113,6 +182,10 @@ export class KeyboardController {
 
   private held: boolean[] = [];
   private lastInputHeld: Input[] = [];
+  // Physical keys currently down, and the virtual inputs held by the on-screen
+  // touch controls. `held` is resolved from the union of the two.
+  private heldCodes = new Set<string>();
+  private touchHeld: boolean[] = [];
 
   private toggleDialogSubscribers: ((id: string) => void)[] = [];
   private toggleCommandPaletteSubscribers: (() => void)[] = [];
@@ -165,6 +238,8 @@ export class KeyboardController {
     );
 
     window.addEventListener('keydown', (e) => {
+      // Global chords are handled before the typing guard so they keep working
+      // from anywhere, exactly as they did before that guard existed.
       if ((e.ctrlKey || e.metaKey) && ['=', '+', '-', '_'].includes(e.key)) {
         e.preventDefault();
         if (e.key === '=' || e.key === '+') {
@@ -181,199 +256,56 @@ export class KeyboardController {
         return;
       }
 
-      switch (e.code) {
-        case 'KeyW':
-        case 'ArrowUp':
-          this.updateInputHeld(Input.Up, true);
-          break;
-        case 'KeyA':
-        case 'ArrowLeft':
-          this.updateInputHeld(Input.Left, true);
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-          this.updateInputHeld(Input.Down, true);
-          break;
-        case 'KeyD':
-        case 'ArrowRight':
-          this.updateInputHeld(Input.Right, true);
-          break;
-        case 'KeyX':
-          this.updateInputHeld(Input.SitStand, true);
-          break;
-        case 'Space':
-        case 'ControlLeft':
-        case 'ControlRight':
-          this.updateInputHeld(Input.Attack, true);
-          break;
-        case 'NumpadDecimal':
-          this.updateInputHeld(Input.EmoteEmbarassed, true);
-          break;
-        case 'Numpad0':
-          this.updateInputHeld(Input.EmotePlayful, true);
-          break;
-        case 'Numpad1':
-          this.updateInputHeld(Input.EmoteHappy, true);
-          break;
-        case 'Numpad2':
-          this.updateInputHeld(Input.EmoteDepressed, true);
-          break;
-        case 'Numpad3':
-          this.updateInputHeld(Input.EmoteSad, true);
-          break;
-        case 'Numpad4':
-          this.updateInputHeld(Input.EmoteAngry, true);
-          break;
-        case 'Numpad5':
-          this.updateInputHeld(Input.EmoteConfused, true);
-          break;
-        case 'Numpad6':
-          this.updateInputHeld(Input.EmoteSurprised, true);
-          break;
-        case 'Numpad7':
-          this.updateInputHeld(Input.EmoteHearts, true);
-          break;
-        case 'Numpad8':
-          this.updateInputHeld(Input.EmoteMoon, true);
-          break;
-        case 'Numpad9':
-          this.updateInputHeld(Input.EmoteSuicidal, true);
-          break;
-        case 'Digit1':
-          this.updateInputHeld(Input.Hotbar1, true);
-          break;
-        case 'Digit2':
-          this.updateInputHeld(Input.Hotbar2, true);
-          break;
-        case 'Digit3':
-          this.updateInputHeld(Input.Hotbar3, true);
-          break;
-        case 'Digit4':
-          this.updateInputHeld(Input.Hotbar4, true);
-          break;
-        case 'Digit5':
-          this.updateInputHeld(Input.Hotbar5, true);
-          break;
-        case 'Digit6':
-          this.updateInputHeld(Input.Hotbar6, true);
-          break;
-        case 'Tab': {
-          this.updateInputHeld(Input.Tab, true);
-          const target = e.target as Element;
-          const isTyping =
-            target instanceof HTMLInputElement ||
-            target instanceof HTMLTextAreaElement;
-          if (!isTyping) e.preventDefault();
-          break;
-        }
-        case 'KeyR':
-          this.updateInputHeld(Input.Refresh, true);
-          break;
-        case 'KeyC':
-          this.updateInputHeld(Input.ViewCharacter, true);
-          break;
-        case 'KeyE':
-          this.updateInputHeld(Input.ViewInventory, true);
-          break;
-        case 'KeyP':
-          this.updateInputHeld(Input.ViewSpells, true);
-          break;
+      // The movement/hotbar keymap below must not fire — and must not
+      // preventDefault — while the player is typing.
+      if (isTextEntryTarget(e) || this.client.typing) return;
+
+      const input = CODE_TO_INPUT[e.code];
+      if (input === undefined) return;
+
+      this.setKeyHeld(e.code, true);
+
+      // Attack is bound to Ctrl, so every movement/hotbar key doubles as a
+      // browser chord: Ctrl+1..6 switches tab, Ctrl+R reloads, Ctrl+D
+      // bookmarks, Ctrl+S saves, Ctrl+A selects all, and bare Space/arrows
+      // scroll the page. Claiming the key here suppresses all of that.
+      //
+      // metaKey is exempt: ⌘ is never a game modifier, so ⌘C/⌘V/⌘W keep
+      // working on macOS. Ctrl+W / Ctrl+T / Ctrl+Tab are reserved by the
+      // browser and cannot be suppressed at all — the beforeunload guard
+      // below is the only available mitigation for those.
+      if (!e.metaKey) e.preventDefault();
+    });
+
+    // Keyup deliberately has NO text-entry guard: if a key goes down in the
+    // game and focus then moves into a text field, the release must still be
+    // honoured or that key stays held forever.
+    window.addEventListener('keyup', (e) => {
+      if (CODE_TO_INPUT[e.code] !== undefined) {
+        this.setKeyHeld(e.code, false);
       }
     });
 
-    window.addEventListener('keyup', (e) => {
-      switch (e.code) {
-        case 'KeyW':
-        case 'ArrowUp':
-          this.updateInputHeld(Input.Up, false);
-          break;
-        case 'KeyA':
-        case 'ArrowLeft':
-          this.updateInputHeld(Input.Left, false);
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-          this.updateInputHeld(Input.Down, false);
-          break;
-        case 'KeyD':
-        case 'ArrowRight':
-          this.updateInputHeld(Input.Right, false);
-          break;
-        case 'KeyX':
-          this.updateInputHeld(Input.SitStand, false);
-          break;
-        case 'Space':
-        case 'ControlLeft':
-        case 'ControlRight':
-          this.updateInputHeld(Input.Attack, false);
-          break;
-        case 'NumpadDecimal':
-          this.updateInputHeld(Input.EmoteEmbarassed, false);
-          break;
-        case 'Numpad0':
-          this.updateInputHeld(Input.EmotePlayful, false);
-          break;
-        case 'Numpad1':
-          this.updateInputHeld(Input.EmoteHappy, false);
-          break;
-        case 'Numpad2':
-          this.updateInputHeld(Input.EmoteDepressed, false);
-          break;
-        case 'Numpad3':
-          this.updateInputHeld(Input.EmoteSad, false);
-          break;
-        case 'Numpad4':
-          this.updateInputHeld(Input.EmoteAngry, false);
-          break;
-        case 'Numpad5':
-          this.updateInputHeld(Input.EmoteConfused, false);
-          break;
-        case 'Numpad6':
-          this.updateInputHeld(Input.EmoteSurprised, false);
-          break;
-        case 'Numpad7':
-          this.updateInputHeld(Input.EmoteHearts, false);
-          break;
-        case 'Numpad8':
-          this.updateInputHeld(Input.EmoteMoon, false);
-          break;
-        case 'Numpad9':
-          this.updateInputHeld(Input.EmoteSuicidal, false);
-          break;
-        case 'Digit1':
-          this.updateInputHeld(Input.Hotbar1, false);
-          break;
-        case 'Digit2':
-          this.updateInputHeld(Input.Hotbar2, false);
-          break;
-        case 'Digit3':
-          this.updateInputHeld(Input.Hotbar3, false);
-          break;
-        case 'Digit4':
-          this.updateInputHeld(Input.Hotbar4, false);
-          break;
-        case 'Digit5':
-          this.updateInputHeld(Input.Hotbar5, false);
-          break;
-        case 'Digit6':
-          this.updateInputHeld(Input.Hotbar6, false);
-          break;
-        case 'Tab':
-          this.updateInputHeld(Input.Tab, false);
-          break;
-        case 'KeyR':
-          this.updateInputHeld(Input.Refresh, false);
-          break;
-        case 'KeyC':
-          this.updateInputHeld(Input.ViewCharacter, false);
-          break;
-        case 'KeyE':
-          this.updateInputHeld(Input.ViewInventory, false);
-          break;
-        case 'KeyP':
-          this.updateInputHeld(Input.ViewSpells, false);
-          break;
-      }
+    // Focus loss strands held keys: the OS delivers the keyup to whichever
+    // window took focus, never to us, and requestAnimationFrame keeps running
+    // at full rate when another *application* (rather than another tab) is in
+    // front — so update() would go on dispatching walk/attack packets off a
+    // stale held[]. Release everything instead.
+    const release = () => this.releaseAllInputs();
+    window.addEventListener('blur', release);
+    window.addEventListener('pagehide', release);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) release();
+    });
+
+    // Ctrl+W is the one collision preventDefault() cannot fix — browsers
+    // reserve it — and W is the primary movement key. Downgrade an accidental
+    // tab close to a "Leave site?" confirm, but only while actually in-game.
+    window.addEventListener('beforeunload', (e) => {
+      if (this.client.state !== GameState.InGame) return;
+      e.preventDefault();
+      // Legacy spelling — still required by some browsers to arm the prompt.
+      e.returnValue = '';
     });
 
     window.addEventListener(
@@ -390,18 +322,48 @@ export class KeyboardController {
   }
 
   setTouchDirection(direction: Direction | null): void {
-    this.updateInputHeld(Input.Up, direction === Direction.Up);
-    this.updateInputHeld(Input.Down, direction === Direction.Down);
-    this.updateInputHeld(Input.Left, direction === Direction.Left);
-    this.updateInputHeld(Input.Right, direction === Direction.Right);
+    this.setTouchHeld(Input.Up, direction === Direction.Up);
+    this.setTouchHeld(Input.Down, direction === Direction.Down);
+    this.setTouchHeld(Input.Left, direction === Direction.Left);
+    this.setTouchHeld(Input.Right, direction === Direction.Right);
   }
 
   setTouchAttack(held: boolean): void {
-    this.updateInputHeld(Input.Attack, held);
+    this.setTouchHeld(Input.Attack, held);
   }
 
   setTouchSitStand(held: boolean): void {
-    this.updateInputHeld(Input.SitStand, held);
+    this.setTouchHeld(Input.SitStand, held);
+  }
+
+  private setTouchHeld(input: Input, down: boolean): void {
+    this.touchHeld[input] = down;
+    this.resolveInput(input);
+  }
+
+  private setKeyHeld(code: string, down: boolean): void {
+    const input = CODE_TO_INPUT[code];
+    if (input === undefined) return;
+    if (down) this.heldCodes.add(code);
+    else this.heldCodes.delete(code);
+    this.resolveInput(input);
+  }
+
+  // An input stays held while any code bound to it is down, or while the
+  // touch button for it is pressed.
+  private resolveInput(input: Input): void {
+    const byKey = (INPUT_TO_CODES[input] ?? []).some((c) =>
+      this.heldCodes.has(c),
+    );
+    this.updateInputHeld(input, byKey || this.touchHeld[input] === true);
+  }
+
+  /** Drop every held input — used when the window loses focus. */
+  releaseAllInputs(): void {
+    this.heldCodes.clear();
+    this.touchHeld = [];
+    this.held = [];
+    this.lastInputHeld = [];
   }
 
   private updateInputHeld(input: Input, down: boolean) {

@@ -1,0 +1,21 @@
+# Build context hygiene. Without this, `COPY . .` ships the .git history, the
+# deploy secrets and any sibling backup dir into the image — and anything left
+# inside public/ is copied verbatim into dist/ by vite, so a stray directory
+# there gets served in production.
+.git
+.github
+.vscode
+.superpowers
+node_modules
+dist
+screenshots
+docs
+
+# Deploy credentials — must never reach an image layer.
+.env.deploy
+.env*
+
+# Backups / scratch that must never be served.
+public/gfx.backup*
+public/gfx-backup*
+public/**/*.zip

@@ -116,6 +116,16 @@
   },
   "overrides": [
     {
+      "includes": ["tools/**", "scripts/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["knip.json"],
       "json": {
         "parser": {

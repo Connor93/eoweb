@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { playSfxById, SfxId } from '@/sfx';
+import { PortalTooltip } from '@/ui/components';
 import {
   DRAG_HOTBAR_Z,
   HUD_TEXT_MUTED,
@@ -7,7 +8,7 @@ import {
   UI_GHOST_BG,
   UI_PANEL_BORDER,
 } from '@/ui/consts';
-import { useClient } from '@/ui/context';
+import { useClient, useLocale } from '@/ui/context';
 import { SlotType } from '@/ui/enums';
 import {
   useItemDrag,
@@ -15,7 +16,9 @@ import {
   usePillowGfxUrl,
   useSpellIconUrls,
 } from '@/ui/in-game';
+import { isMobile } from '@/utils';
 import { SkillIcon } from './skill-icon';
+import { skillStatLine } from './skill-stat-line';
 
 const SLOT_COUNT = 6;
 const SLOT_SIZE = '3rem';
@@ -32,8 +35,13 @@ type SlotProps = {
 
 function HotBarSlot({ index, pillow }: SlotProps) {
   const client = useClient();
+  const { locale } = useLocale();
   const [slots, setSlots] = useState(() => [...client.hotbarSlots]);
   const { currentDrag } = useItemDrag();
+  // Hover tooltips only where there is a real pointer. On touch, the emulated
+  // mouseenter fires on tap and never pairs with a mouseleave, which would
+  // strand the tooltip open over a slot the player just activated.
+  const [hoverCapable] = useState(() => !isMobile());
 
   useEffect(() => {
     return client.hotbarController.subscribe(() => {
@@ -143,7 +151,7 @@ function HotBarSlot({ index, pillow }: SlotProps) {
       currentDrag.source === 'spell' ||
       currentDrag.source === 'skill');
 
-  return (
+  const slotEl = (
     <div
       class={`relative flex items-center justify-center overflow-visible rounded border ${UI_PANEL_BORDER} ${UI_GHOST_BG} transition-colors ${
         isDropTarget
@@ -224,6 +232,31 @@ function HotBarSlot({ index, pillow }: SlotProps) {
         />
       )}
     </div>
+  );
+
+  // Only new-framework skills carry the catalog metadata a tooltip needs.
+  if (!hoverCapable || !skillEntry) return slotEl;
+
+  const statLine = skillStatLine(skillEntry, locale);
+
+  // `wrapperClass` must establish a flex container: PortalTooltip's wrapper is
+  // a plain <span>, and an inline wrapper would stop the fixed-size slot from
+  // laying out the way it does as a direct flex child of the bar.
+  return (
+    <PortalTooltip
+      wrapperClass='flex'
+      tooltip={
+        <>
+          <p class='font-semibold'>{skillEntry.name}</p>
+          {statLine && <p class='opacity-70'>{statLine}</p>}
+          {skillEntry.description && (
+            <p class='opacity-80'>{skillEntry.description}</p>
+          )}
+        </>
+      }
+    >
+      {slotEl}
+    </PortalTooltip>
   );
 }
 

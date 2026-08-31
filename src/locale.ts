@@ -233,6 +233,7 @@ export const locales = {
       fpsLimit: 'FPS Limit',
       fpsUnlimited: 'Unlimited',
       interpolation: 'Frame Interpolation',
+      weaponRangeIndicator: 'Weapon Range Indicator',
       zoom: 'Zoom',
       zoomReset: 'Reset',
       zoomOut: 'Zoom out',
@@ -446,7 +447,8 @@ export const locales = {
       rerollOne: 'Re-roll',
       rerollAll: 'Re-roll All',
       upgradeRoll: 'Upgrade Roll',
-      balanceLabel: 'Balance',
+      costTooltip: 'Costs {amount} {shards}',
+      maxRarity: 'Max rarity',
     },
     skills: {
       title: 'Skills',
@@ -470,6 +472,14 @@ export const locales = {
       confirmLearnTitle: 'Learn Skill',
       confirmLearnMessage:
         'Learn {skill} for {cost} SP? Skills cannot be unlearned.',
+      // Hotbar hover: a compact stat line above the description. Each part
+      // is dropped when it does not apply, so a self-target skill with no
+      // costs shows just its cooldown.
+      tooltipCostHp: '{cost} HP',
+      tooltipCostTp: '{cost} TP',
+      tooltipCooldown: '{seconds}s',
+      tooltipRangeOne: '{range} tile',
+      tooltipRangeMany: '{range} tiles',
     },
     trade: {
       title: 'Trade',
@@ -933,6 +943,7 @@ export const locales = {
       fpsLimit: 'FPS-limiet',
       fpsUnlimited: 'Onbeperkt',
       interpolation: 'Frame-interpolatie',
+      weaponRangeIndicator: 'Wapenbereikindicator',
       zoom: 'Zoom',
       zoomReset: 'Herstel',
       zoomOut: 'Uitzoomen',
@@ -1148,7 +1159,8 @@ export const locales = {
       rerollOne: 'Herrollen',
       rerollAll: 'Alles herrollen',
       upgradeRoll: 'Worp verbeteren',
-      balanceLabel: 'Saldo',
+      costTooltip: 'Kost {amount} {shards}',
+      maxRarity: 'Max. zeldzaamheid',
     },
     skills: {
       title: 'Vaardigheden',
@@ -1172,6 +1184,14 @@ export const locales = {
       confirmLearnTitle: 'Vaardigheid leren',
       confirmLearnMessage:
         '{skill} leren voor {cost} VP? Vaardigheden kunnen niet worden afgeleerd.',
+      // Hotbar hover: a compact stat line above the description. Each part
+      // is dropped when it does not apply, so a self-target skill with no
+      // costs shows just its cooldown.
+      tooltipCostHp: '{cost} HP',
+      tooltipCostTp: '{cost} TP',
+      tooltipCooldown: '{seconds}s',
+      tooltipRangeOne: '{range} tegel',
+      tooltipRangeMany: '{range} tegels',
     },
     trade: {
       title: 'Ruilen',
@@ -1636,6 +1656,7 @@ export const locales = {
       fpsLimit: 'FPS-gräns',
       fpsUnlimited: 'Obegränsad',
       interpolation: 'Bildinterpolering',
+      weaponRangeIndicator: 'Vapenräckviddsindikator',
       zoom: 'Zoom',
       zoomReset: 'Återställ',
       zoomOut: 'Zooma ut',
@@ -1851,7 +1872,8 @@ export const locales = {
       rerollOne: 'Slå om',
       rerollAll: 'Slå om allt',
       upgradeRoll: 'Uppgradera slag',
-      balanceLabel: 'Saldo',
+      costTooltip: 'Kostar {amount} {shards}',
+      maxRarity: 'Max sällsynthet',
     },
     skills: {
       title: 'Färdigheter',
@@ -1875,6 +1897,14 @@ export const locales = {
       confirmLearnTitle: 'Lär dig färdighet',
       confirmLearnMessage:
         'Lär dig {skill} för {cost} FP? Färdigheter kan inte glömmas bort.',
+      // Hotbar hover: a compact stat line above the description. Each part
+      // is dropped when it does not apply, so a self-target skill with no
+      // costs shows just its cooldown.
+      tooltipCostHp: '{cost} HP',
+      tooltipCostTp: '{cost} TP',
+      tooltipCooldown: '{seconds}s',
+      tooltipRangeOne: '{range} ruta',
+      tooltipRangeMany: '{range} rutor',
     },
     trade: {
       title: 'Byta',
@@ -2339,6 +2369,7 @@ export const locales = {
       fpsLimit: 'Limite de FPS',
       fpsUnlimited: 'Ilimitado',
       interpolation: 'Interpolação de Quadros',
+      weaponRangeIndicator: 'Indicador de Alcance da Arma',
       zoom: 'Zoom',
       zoomReset: 'Redefinir',
       zoomOut: 'Diminuir zoom',
@@ -2554,7 +2585,8 @@ export const locales = {
       rerollOne: 'Rerrolar',
       rerollAll: 'Rerrolar tudo',
       upgradeRoll: 'Melhorar rolagem',
-      balanceLabel: 'Saldo',
+      costTooltip: 'Custa {amount} {shards}',
+      maxRarity: 'Raridade máxima',
     },
     skills: {
       title: 'Habilidades',
@@ -2578,6 +2610,14 @@ export const locales = {
       confirmLearnTitle: 'Aprender habilidade',
       confirmLearnMessage:
         'Aprender {skill} por {cost} PH? Habilidades não podem ser esquecidas.',
+      // Hotbar hover: a compact stat line above the description. Each part
+      // is dropped when it does not apply, so a self-target skill with no
+      // costs shows just its cooldown.
+      tooltipCostHp: '{cost} HP',
+      tooltipCostTp: '{cost} TP',
+      tooltipCooldown: '{seconds}s',
+      tooltipRangeOne: '{range} quadrado',
+      tooltipRangeMany: '{range} quadrados',
     },
     trade: {
       title: 'Troca',

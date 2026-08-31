@@ -23,6 +23,12 @@ export function GraphicsTab() {
     (c, v) => c.setInterpolation(v),
   );
 
+  const [weaponRange, setWeaponRange] = useConfigSetting<boolean>(
+    'weaponRangeIndicator',
+    (c) => c.weaponRangeIndicator,
+    (c, v) => c.setWeaponRangeIndicator(v),
+  );
+
   const zoomIn = useCallback(() => {
     client.viewportController.zoomIn();
   }, [client]);
@@ -58,6 +64,17 @@ export function GraphicsTab() {
           checked={interpolation}
           onChange={(e) =>
             setInterpolation((e.target as HTMLInputElement).checked)
+          }
+        />
+      </SettingRow>
+      <div class='divider my-0' />
+      <SettingRow label={locale.settings.weaponRangeIndicator} asLabel>
+        <input
+          type='checkbox'
+          class='checkbox checkbox-sm'
+          checked={weaponRange}
+          onChange={(e) =>
+            setWeaponRange((e.target as HTMLInputElement).checked)
           }
         />
       </SettingRow>

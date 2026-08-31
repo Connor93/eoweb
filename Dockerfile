@@ -3,7 +3,10 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
-RUN npm install -g pnpm
+# Pin pnpm to package.json's packageManager. Unpinned installs drifted onto
+# 11.x, which aborts with "Cannot verify the identity of the
+# @pnpm/exe.linux-x64 native binary" against this lockfileVersion 9 file.
+RUN npm install -g pnpm@10.33.2
 RUN pnpm install --frozen-lockfile
 
 COPY . .

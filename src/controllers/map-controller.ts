@@ -11,6 +11,7 @@ import { Door } from '@/door';
 import { EOResourceID } from '@/edf';
 import { CharacterDeathAnimation, NpcDeathAnimation } from '@/render';
 import { SfxId } from '@/sfx';
+import { isTileSpecWalkable } from '@/utils';
 import type { Vector2 } from '@/vector';
 
 export class MapController {
@@ -334,31 +335,7 @@ export class MapController {
     }
 
     const spec = this.client.mapRenderer.getTileSpecAt(coords);
-    if (
-      spec !== undefined &&
-      [
-        MapTileSpec.Wall,
-        MapTileSpec.ChairDown,
-        MapTileSpec.ChairLeft,
-        MapTileSpec.ChairRight,
-        MapTileSpec.ChairUp,
-        MapTileSpec.ChairDownRight,
-        MapTileSpec.ChairUpLeft,
-        MapTileSpec.ChairAll,
-        MapTileSpec.Chest,
-        MapTileSpec.BankVault,
-        MapTileSpec.Edge,
-        MapTileSpec.Board1,
-        MapTileSpec.Board2,
-        MapTileSpec.Board3,
-        MapTileSpec.Board4,
-        MapTileSpec.Board5,
-        MapTileSpec.Board6,
-        MapTileSpec.Board7,
-        MapTileSpec.Board8,
-        MapTileSpec.Jukebox,
-      ].includes(spec)
-    ) {
+    if (!isTileSpecWalkable(spec)) {
       return false;
     }
 

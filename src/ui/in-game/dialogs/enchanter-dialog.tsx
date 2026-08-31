@@ -8,6 +8,7 @@ import {
   InstanceRarity,
   instanceRarityLabel,
 } from '@/controllers';
+import type { LocaleStrings } from '@/locale';
 import {
   Button,
   ItemIcon,
@@ -48,14 +49,114 @@ function ShardGlyph({ category }: { category: ShardCategory }) {
   }
 }
 
+/** Spelled-out name of a shard currency, e.g. "Weapon shards". Reuses the
+ *  inventory shard-bar tooltip strings so the enchanter names the currency
+ *  exactly the way the player's shard footer already does — and they're
+ *  translated in every locale. */
+function shardNameFor(locale: LocaleStrings, category: ShardCategory): string {
+  switch (category) {
+    case 'weapon':
+      return locale.inventory.shardsWeaponTooltip;
+    case 'armor':
+      return locale.inventory.shardsArmorTooltip;
+    case 'accessory':
+      return locale.inventory.shardsAccessoryTooltip;
+  }
+}
+
+/** Price tag: the category's crystal glyph welded to the amount. The glyph is
+ *  the whole point — a bare number in this window reads as gold, which the
+ *  enchanter never charges (costs are shards only, of the item's own
+ *  category). The glyph keeps its currency colour even when unaffordable
+ *  (the colour identifies the shard type); only the amount goes red. */
+function ShardCost({
+  category,
+  amount,
+  affordable,
+}: {
+  category: ShardCategory;
+  amount: number;
+  affordable: boolean;
+}) {
+  return (
+    <span class='ml-1 inline-flex items-center gap-0.5'>
+      <ShardGlyph category={category} />
+      <span class={`tabular-nums ${affordable ? '' : 'text-error'}`}>
+        {amount.toLocaleString()}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * An enchant operation button carrying its own price. `blockedLabel` replaces
+ * the cost when the op can never run on this item (Legendary can't upgrade
+ * rarity) — quoting a price you can't spend would read as "too expensive".
+ *
+ * The tooltip sits on the WRAPPER, not the button: `Button` sets the native
+ * `disabled` attribute and daisyUI zeroes pointer events on a disabled
+ * button, so a tooltip inside it would vanish exactly when the player most
+ * needs to read what the option costs.
+ */
+function CostButton({
+  label,
+  cost,
+  category,
+  balance,
+  size,
+  blockedLabel,
+  onClick,
+}: {
+  label: string;
+  cost: number;
+  category: ShardCategory;
+  balance: number;
+  size: 'sm' | 'xs';
+  blockedLabel?: string;
+  onClick: () => void;
+}) {
+  const { locale } = useLocale();
+  const affordable = balance >= cost;
+  const tip =
+    blockedLabel ??
+    locale.enchanter.costTooltip
+      .replace('{amount}', cost.toLocaleString())
+      .replace('{shards}', shardNameFor(locale, category));
+
+  return (
+    <span class='tooltip tooltip-top flex-1' data-tip={tip}>
+      <Button
+        variant={[size]}
+        class='h-full w-full flex-wrap'
+        disabled={!!blockedLabel || !affordable}
+        onClick={onClick}
+      >
+        {label}
+        {blockedLabel ? (
+          <span class='ml-1 text-base-content/50'>({blockedLabel})</span>
+        ) : (
+          <ShardCost
+            category={category}
+            amount={cost}
+            affordable={affordable}
+          />
+        )}
+      </Button>
+    </span>
+  );
+}
+
 /**
  * Enchanter dialog — drag-to-select (Task 8) plus the four spend operations
  * (Task 9): upgrade rarity, re-roll one mod, re-roll all mods, upgrade a
  * mod's roll. Costs come from `EnchanterController.costFor`, which mirrors
  * the server's pricing formula so the displayed number always matches what
- * gets charged. Affordability is checked against the item's shard category
- * balance (`SalvageController.shardCounts`) — buttons are disabled, not
- * hidden, so the player can see what a locked-out action would cost.
+ * gets charged. Every price is rendered as a `ShardCost` — glyph plus amount
+ * plus a tooltip naming the currency — because the enchanter spends shards
+ * and never gold, and an unlabelled number here reads as gold.
+ * Affordability is checked against the item's shard category balance
+ * (`SalvageController.shardCounts`) — buttons are disabled, not hidden, so
+ * the player can see what a locked-out action would cost.
  */
 export function EnchanterDialog() {
   const client = useClient();
@@ -161,21 +262,28 @@ export function EnchanterDialog() {
           >
             <span class='flex items-center gap-1.5'>
               <ShardGlyph category={category} />
-              <span class='tabular-nums'>
-                {locale.enchanter.balanceLabel}: {balance.toLocaleString()}
+              <span>
+                {shardNameFor(locale, category)}:{' '}
+                <span class='font-semibold tabular-nums'>
+                  {balance.toLocaleString()}
+                </span>
               </span>
             </span>
           </div>
         )}
 
-        {inst && (
-          <div class='flex gap-2'>
-            <Button
-              variant={['sm']}
-              class='flex-1'
-              disabled={
-                inst.rarity === InstanceRarity.Legendary ||
-                balance < upgradeRarityCost
+        {inst && category && (
+          <div class='flex items-stretch gap-2'>
+            <CostButton
+              label={locale.enchanter.upgradeRarity}
+              cost={upgradeRarityCost}
+              category={category}
+              balance={balance}
+              size='sm'
+              blockedLabel={
+                inst.rarity === InstanceRarity.Legendary
+                  ? locale.enchanter.maxRarity
+                  : undefined
               }
               onClick={() =>
                 client.enchanterController.sendAction(
@@ -184,14 +292,13 @@ export function EnchanterDialog() {
                   0,
                 )
               }
-            >
-              {locale.enchanter.upgradeRarity} (
-              {upgradeRarityCost.toLocaleString()})
-            </Button>
-            <Button
-              variant={['sm']}
-              class='flex-1'
-              disabled={balance < rerollAllCost}
+            />
+            <CostButton
+              label={locale.enchanter.rerollAll}
+              cost={rerollAllCost}
+              category={category}
+              balance={balance}
+              size='sm'
               onClick={() =>
                 client.enchanterController.sendAction(
                   inst.instanceId,
@@ -199,13 +306,11 @@ export function EnchanterDialog() {
                   0,
                 )
               }
-            >
-              {locale.enchanter.rerollAll} ({rerollAllCost.toLocaleString()})
-            </Button>
+            />
           </div>
         )}
 
-        {inst && inst.mods.length > 0 && (
+        {inst && category && inst.mods.length > 0 && (
           <ul class='flex flex-col gap-1'>
             {inst.mods.map((mod, i) => (
               <li
@@ -213,11 +318,13 @@ export function EnchanterDialog() {
                 class={`flex flex-col gap-1.5 rounded border ${UI_PANEL_BORDER} ${UI_ITEM_BG} px-2 py-1 text-xs`}
               >
                 <span>{formatInstanceMod(mod)}</span>
-                <div class='flex gap-1'>
-                  <Button
-                    variant={['xs']}
-                    class='flex-1'
-                    disabled={balance < rerollOneCost}
+                <div class='flex items-stretch gap-1'>
+                  <CostButton
+                    label={locale.enchanter.rerollOne}
+                    cost={rerollOneCost}
+                    category={category}
+                    balance={balance}
+                    size='xs'
                     onClick={() =>
                       client.enchanterController.sendAction(
                         inst.instanceId,
@@ -225,14 +332,13 @@ export function EnchanterDialog() {
                         i,
                       )
                     }
-                  >
-                    {locale.enchanter.rerollOne} (
-                    {rerollOneCost.toLocaleString()})
-                  </Button>
-                  <Button
-                    variant={['xs']}
-                    class='flex-1'
-                    disabled={balance < upgradeRollCost}
+                  />
+                  <CostButton
+                    label={locale.enchanter.upgradeRoll}
+                    cost={upgradeRollCost}
+                    category={category}
+                    balance={balance}
+                    size='xs'
                     onClick={() =>
                       client.enchanterController.sendAction(
                         inst.instanceId,
@@ -240,10 +346,7 @@ export function EnchanterDialog() {
                         i,
                       )
                     }
-                  >
-                    {locale.enchanter.upgradeRoll} (
-                    {upgradeRollCost.toLocaleString()})
-                  </Button>
+                  />
                 </div>
               </li>
             ))}

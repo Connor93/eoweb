@@ -14,6 +14,7 @@ import { useClient, useLocale } from '@/ui/context';
 import { SlotType } from '@/ui/enums';
 import {
   SkillIcon,
+  skillStatLine,
   useBackdropBlur,
   useItemDrag,
   usePlayerStats,
@@ -85,7 +86,7 @@ function SkillCard({ entry }: { entry: SkillCatalogEntry }) {
       onPointerDown={handlePointerDown}
     >
       {/* Whole card is the hover region — no action button to avoid here. */}
-      <SkillDescriptionRegion
+      <SkillTooltipRegion
         entry={entry}
         class='flex w-full flex-col items-center gap-1'
       >
@@ -98,17 +99,23 @@ function SkillCard({ entry }: { entry: SkillCatalogEntry }) {
         <p class='wrap-break-word line-clamp-2 w-full text-center font-semibold text-xs leading-tight'>
           {entry.name}
         </p>
-      </SkillDescriptionRegion>
+      </SkillTooltipRegion>
     </div>
   );
 }
 
 /**
- * Wraps a skill's icon in its description tooltip. A skill with no authored
- * description gets the bare icon back — an empty tooltip box is worse than
- * none, and 10 of the 14 authored skills have no description yet.
+ * Wraps a skill's icon in its hover tooltip: name, then the stat line
+ * (cost / cooldown / range), then the authored description.
+ *
+ * The tooltip attaches when either half has something to say. Keying it off
+ * the description alone — as this did originally — left most skills with no
+ * hover at all, because only 4 of the 14 authored skills carry a description
+ * while every one of them has a TP cost and a cooldown worth reading. The
+ * stat line comes from the same `skillStatLine` the hotbar slot uses, so the
+ * two surfaces cannot drift on formatting or on which parts they drop.
  */
-function SkillDescriptionRegion({
+function SkillTooltipRegion({
   entry,
   class: layoutClass,
   children,
@@ -124,7 +131,10 @@ function SkillDescriptionRegion({
   class: string;
   children: preact.ComponentChildren;
 }) {
-  if (!entry.description) {
+  const { locale } = useLocale();
+  const statLine = skillStatLine(entry, locale);
+
+  if (!statLine && !entry.description) {
     return <div class={layoutClass}>{children}</div>;
   }
 
@@ -134,7 +144,8 @@ function SkillDescriptionRegion({
       tooltip={
         <>
           <p class='font-semibold'>{entry.name}</p>
-          <p class='opacity-80'>{entry.description}</p>
+          {statLine && <p class='opacity-70'>{statLine}</p>}
+          {entry.description && <p class='opacity-80'>{entry.description}</p>}
         </>
       }
     >
@@ -211,7 +222,7 @@ function TreeSkillRow({
     >
       {/* Hover region = icon + name + cost, i.e. the whole row up to but not
           including the action, so hovering never fights the Learn button. */}
-      <SkillDescriptionRegion
+      <SkillTooltipRegion
         entry={entry}
         class='flex min-w-0 flex-1 items-center gap-2'
       >
@@ -237,7 +248,7 @@ function TreeSkillRow({
             {costText}
           </p>
         </div>
-      </SkillDescriptionRegion>
+      </SkillTooltipRegion>
 
       {learned ? (
         <span class='shrink-0 font-semibold text-success text-xs'>

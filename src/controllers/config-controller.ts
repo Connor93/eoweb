@@ -19,6 +19,7 @@ type GlobalConfig = {
   // Graphics
   fpsLimit: FpsLimit;
   interpolation: boolean;
+  weaponRangeIndicator: boolean;
   // Interface
   uiScaleIndex: number;
   theme: string;
@@ -64,6 +65,7 @@ const DEFAULT_LAYER_VISIBILITY: Record<number, boolean> = {
 const DEFAULTS: GlobalConfig = {
   fpsLimit: 60,
   interpolation: true,
+  weaponRangeIndicator: false,
   uiScaleIndex: 2, // 1x
   theme: 'dim',
   language: 'en',
@@ -172,6 +174,16 @@ export class ConfigController {
     this.global.interpolation = value;
     this.saveGlobal();
     this.emit('interpolation');
+  }
+
+  get weaponRangeIndicator(): boolean {
+    return this.global.weaponRangeIndicator;
+  }
+
+  setWeaponRangeIndicator(value: boolean): void {
+    this.global.weaponRangeIndicator = value;
+    this.saveGlobal();
+    this.emit('weaponRangeIndicator');
   }
 
   // ── Interface ───────────────────────────────────────────────────────────────

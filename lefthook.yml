@@ -21,6 +21,14 @@ pre-commit:
     vfx-parity:
       glob: "src/vfx-engine/*"
       run: pnpm vfx:parity:optional
+    # The map editor's Music dropdown is generated from these track files into
+    # the eomap-js fork (scripts/sync-editor-music.mjs). If they drift, the
+    # editor offers a stale list and someone points a live map at a track that
+    # is not in the deployed build — which just plays silence, with nothing to
+    # indicate why. :optional skips when the fork isn't on disk.
+    music-parity:
+      glob: "tools/musicgen/tracks/*"
+      run: pnpm music:parity:optional
 
 pre-push:
   commands:

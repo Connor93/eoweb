@@ -14,10 +14,34 @@ compression-static = true
 
 [advanced]
 
+# The entry point must never be cached. index.html names the content-hashed
+# JS/CSS bundles, so a stale copy pins the browser to an old build — and since
+# those bundles are served with a one-year max-age, the old code keeps being
+# served from cache too. SWS's default for text/html is max-age=86400, which
+# meant every deploy took up to a day to reach returning players.
+[[advanced.headers]]
+source = "/"
+[advanced.headers.headers]
+Cache-Control = "no-cache"
+
+[[advanced.headers]]
+source = "/index.html"
+[advanced.headers.headers]
+Cache-Control = "no-cache"
+
+# Runtime client config (WS host, title). Mounted at deploy time and not
+# content-hashed, so it has to revalidate or a host change can't propagate.
+[[advanced.headers]]
+source = "/config.json"
+[advanced.headers.headers]
+Cache-Control = "no-cache"
+
 # Cache the GFX for a day. Filenames are stable, so same-day/repeat loads come
-# straight from the browser cache; a future GFX change still propagates within
-# ~a day with no cache-busting needed. (config.json and hashed JS/CSS keep the
-# server defaults — only /gfx is overridden here.)
+# straight from the browser cache. The contents are NOT immutable, though — a
+# merged-in graphic pack changes existing .egf files in place — so the loader
+# appends a per-build `?v=` cache key (see gfx-loader.ts fetchEGF). Without it a
+# changed .egf stays invisible for up to a day, and not even a hard reload
+# clears it, because the fetch comes from a worker after navigation.
 [[advanced.headers]]
 source = "/gfx/**"
 [advanced.headers.headers]

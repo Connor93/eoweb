@@ -106,7 +106,14 @@ export class GfxLoader {
   }
 
   private async fetchEGF(fileID: number): Promise<ArrayBuffer> {
-    const url = `/gfx/gfx${String(fileID).padStart(3, '0')}.egf`;
+    // The `?v=` is a cache key, not a real parameter. GFX filenames are stable,
+    // so /gfx/** is cached for a day (sws.toml) — which means a content change
+    // to an existing .egf would otherwise stay invisible for up to 24h. Worse,
+    // a hard reload doesn't clear it: reload only bypasses the cache for the
+    // navigation and its direct subresources, and this fetch happens later from
+    // a worker, so it still reads the cached copy. Stamping the build id makes
+    // every deploy a fresh URL while unchanged builds keep the long cache.
+    const url = `/gfx/gfx${String(fileID).padStart(3, '0')}.egf?v=${__BUILD_ID__}`;
 
     const response = await fetch(url);
     if (!response.ok) {
