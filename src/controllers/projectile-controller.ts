@@ -1,0 +1,253 @@
+import { CanvasSource, Texture } from 'pixi.js';
+import type { Client } from '@/client';
+import { HALF_TILE_HEIGHT, HALF_TILE_WIDTH } from '@/consts';
+import { Projectile, type ProjectileVisual } from '@/render';
+import { attackRayTiles, isoToScreen } from '@/utils';
+
+// --- Tuning knobs. All three are settled in the browser, not on paper. ---
+
+/** Fraction of the attack animation that passes before the arrow leaves the
+ *  bow. The ranged pose is a SINGLE held frame for the whole attackMs
+ *  (map.ts, CharacterRangedAttackAnimation), so the release moment is ours to
+ *  pick: a short delay reads as "aimed, then loosed" instead of an instant
+ *  spit. This is also the deadline by which a shot must have found its
+ *  target — see attachOutcome. */
+const RELEASE_FRACTION = 0.25;
+/** Constant flight speed, so travel time scales with distance — a long shot
+ *  visibly takes longer, which is the entire point of drawing the arrow. */
+const ARROW_TILES_PER_SEC = 15;
+/** Floor so a 1-tile shot still reads as a shot rather than a pop. */
+const MIN_FLIGHT_MS = 80;
+/** Height above the tile centre that projectiles fly at, so they cross at
+ *  body level instead of skimming the floor. */
+const FLIGHT_LIFT = 18;
+
+/** One tile of travel, in iso-screen pixels. */
+const TILE_ISO_PX = Math.hypot(HALF_TILE_WIDTH, HALF_TILE_HEIGHT);
+
+/** A shot whose arrow has not left the bow yet. Held for RELEASE_FRACTION of
+ *  the attack animation so the damage packet — sent in the SAME server tick
+ *  as the swing — has arrived and named the target before launch. */
+interface PendingShot {
+  playerId: number;
+  releaseInMs: number;
+  targetKey: string | null;
+  onImpact: (() => void) | null;
+}
+
+/** Placeholder visual: a plain white dot. Task 3 replaces this with the
+ *  procedurally-drawn arrow. It exists so the flight mechanics can be
+ *  reviewed and seen working before any art judgement enters. */
+class DotVisual implements ProjectileVisual {
+  private texture: Texture | null = null;
+
+  textureFor(): Texture | null {
+    if (!this.texture) {
+      const canvas = new OffscreenCanvas(6, 6);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(1, 1, 4, 4);
+      this.texture = new Texture({
+        source: new CanvasSource({
+          resource: canvas,
+          scaleMode: 'nearest',
+          label: 'projectile-placeholder',
+        }),
+      });
+    }
+    return this.texture;
+  }
+}
+
+/** In-flight projectiles + the pending shots that will become them. Pooled
+ *  and mounted in worldContainer, modelled on SkillVfxController. */
+export class ProjectileController {
+  private client: Client;
+  private active: Projectile[] = [];
+  private pool: Projectile[] = [];
+  /** FIFO per shooter. A fast bow at long range can have several shots out,
+   *  and each outcome packet must attach to the shot that caused it, in
+   *  order — hence a queue, not a single slot. */
+  private pending = new Map<number, PendingShot[]>();
+  private visual: ProjectileVisual = new DotVisual();
+
+  constructor(client: Client) {
+    this.client = client;
+  }
+
+  /** A ranged swing was seen. Opens a pending shot; the arrow launches
+   *  RELEASE_FRACTION of the way through the animation. */
+  openShot(playerId: number, attackMs: number): void {
+    const queue = this.pending.get(playerId) ?? [];
+    queue.push({
+      playerId,
+      releaseInMs: Math.max(1, attackMs * RELEASE_FRACTION),
+      targetKey: null,
+      onImpact: null,
+    });
+    this.pending.set(playerId, queue);
+  }
+
+  /** Attach a target + its deferred impact bundle to this shooter's oldest
+   *  unattached pending shot.
+   *
+   *  Returns true when it attached — the caller must then NOT apply the
+   *  bundle itself; the projectile will release it on impact. Returns false
+   *  when there is no pending shot (a melee attack, or a shot opened before
+   *  this client was watching), and the caller applies immediately as before.
+   *
+   *  Not yet called by anyone — Task 4 is the first caller. */
+  attachOutcome(
+    playerId: number,
+    targetKey: string,
+    onImpact: () => void,
+  ): boolean {
+    const queue = this.pending.get(playerId);
+    if (!queue) return false;
+    const shot = queue.find((s) => s.targetKey === null);
+    if (!shot) return false;
+    shot.targetKey = targetKey;
+    shot.onImpact = onImpact;
+    return true;
+  }
+
+  advance(deltaMs: number): void {
+    this.advancePending(deltaMs);
+    this.advanceActive(deltaMs);
+  }
+
+  private advancePending(deltaMs: number): void {
+    for (const [playerId, queue] of this.pending) {
+      for (let i = queue.length - 1; i >= 0; i--) {
+        const shot = queue[i];
+        shot.releaseInMs -= deltaMs;
+        if (shot.releaseInMs > 0) continue;
+        queue.splice(i, 1);
+        this.launch(shot);
+      }
+      if (!queue.length) this.pending.delete(playerId);
+    }
+  }
+
+  private launch(shot: PendingShot): void {
+    const mapRenderer = this.client.mapRenderer;
+    const from = mapRenderer?.getEntityIsoScreenPosition(
+      `char:${shot.playerId}`,
+    );
+    if (!from) {
+      // The shooter is gone. Never drop the bundle on the floor — releasing
+      // it keeps HP bars and death state truthful even with no arrow.
+      shot.onImpact?.();
+      return;
+    }
+
+    const to = shot.targetKey
+      ? mapRenderer?.getEntityIsoScreenPosition(shot.targetKey)
+      : this.rayEndIso(shot.playerId);
+    const target = to ?? this.rayEndIso(shot.playerId);
+    if (!target) {
+      shot.onImpact?.();
+      return;
+    }
+
+    const fromY = from.y - FLIGHT_LIFT;
+    const toY = target.y - FLIGHT_LIFT;
+    const distance = Math.hypot(target.x - from.x, toY - fromY);
+    const tiles = distance / TILE_ISO_PX;
+    const durationMs = Math.max(
+      MIN_FLIGHT_MS,
+      (tiles / ARROW_TILES_PER_SEC) * 1000,
+    );
+
+    const projectile = this.pool.pop() ?? new Projectile();
+    projectile.reset(
+      this.visual,
+      from.x,
+      fromY,
+      target.x,
+      toY,
+      // A targetless shot has nothing to home on: it flies to the fixed ray
+      // end and fizzles.
+      to ? shot.targetKey : null,
+      durationMs,
+      shot.onImpact,
+    );
+    projectile.refreshTexture();
+    projectile.mount(this.client.worldContainer);
+    this.active.push(projectile);
+  }
+
+  /** Where a targetless shot fizzles: the far end of the same ray the server
+   *  walks, so the arrow stops where the server would have stopped it — at a
+   *  wall, or at the edge of reach. */
+  private rayEndIso(playerId: number): { x: number; y: number } | null {
+    const character = this.client.nearby.characters.find(
+      (c) => c.playerId === playerId,
+    );
+    if (!character) return null;
+    const range = this.client.itemAttackRanges.get(character.equipment.weapon);
+    if (!range) return null;
+    const tiles = attackRayTiles(this.client, character, range);
+    const last = tiles[tiles.length - 1];
+    if (!last) return null;
+    return isoToScreen(last);
+  }
+
+  private advanceActive(deltaMs: number): void {
+    const mapRenderer = this.client.mapRenderer;
+    for (let i = this.active.length - 1; i >= 0; i--) {
+      const p = this.active[i];
+
+      // Homing: re-read the target's live RAW iso point every frame so an NPC
+      // that walks mid-flight is still struck on its body.
+      if (p.targetKey) {
+        const iso = mapRenderer?.getEntityIsoScreenPosition(p.targetKey);
+        if (iso) {
+          p.toIsoX = iso.x;
+          p.toIsoY = iso.y - FLIGHT_LIFT;
+        }
+      }
+
+      p.step(deltaMs);
+
+      // Bake EVERY frame. The interpolated point is a fixed WORLD point, but
+      // worldContainer coords are camera-relative, so the same point bakes to
+      // a different sprite position whenever the camera moves.
+      const now = p.currentIso();
+      const baked = mapRenderer?.bakeIsoToWorldSprite(now.x, now.y);
+      if (baked) p.updatePosition(baked.x, baked.y);
+
+      // Sort by where the projectile IS, so it passes behind the scenery it
+      // flies past rather than sitting flat on top of the world.
+      if (p.targetKey) {
+        const z = mapRenderer?.getEntityZIndex(p.targetKey);
+        if (z !== null && z !== undefined) p.updateZIndex(z + 1);
+      }
+      p.refreshTexture();
+
+      if (p.finished) {
+        p.releaseImpact();
+        p.unmount();
+        this.active.splice(i, 1);
+        this.pool.push(p);
+      }
+    }
+  }
+
+  /** Scene rebuild / map change. Bundles are RELEASED, never dropped: losing
+   *  one would leave an HP bar or a death that the server already applied
+   *  permanently unshown on the client. */
+  clear(): void {
+    for (const queue of this.pending.values()) {
+      for (const shot of queue) shot.onImpact?.();
+    }
+    this.pending.clear();
+    for (const p of this.active) {
+      p.releaseImpact();
+      p.unmount();
+    }
+    this.pool.push(...this.active);
+    this.active = [];
+  }
+}

@@ -40,6 +40,10 @@ function handleAttackPlayer(client: Client, reader: EoReader) {
       : new CharacterAttackAnimation(attackMs),
   );
 
+  if (metadata.ranged) {
+    client.projectileController.openShot(packet.playerId, attackMs);
+  }
+
   const index = randomRange(0, metadata.sfx.length - 1);
   client.audioController.playAtPosition(metadata.sfx[index], character.coords);
 

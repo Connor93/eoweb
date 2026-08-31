@@ -70,6 +70,7 @@ import {
   NpcElementController,
   PartyController,
   PingController,
+  ProjectileController,
   QuakeController,
   QuestController,
   ReputationController,
@@ -282,6 +283,7 @@ export class Client {
   weaponElementController: WeaponElementController;
   vfxLoader!: VfxLoader;
   skillVfxController!: SkillVfxController;
+  projectileController!: ProjectileController;
   inventoryController: InventoryController;
   lockerController: LockerController;
   lookupController: LookupController;
@@ -519,6 +521,7 @@ export class Client {
     // failure placeholder), so it can only be built once Pixi is up.
     this.vfxLoader = new VfxLoader(this.app.renderer);
     this.skillVfxController = new SkillVfxController(this, this.vfxLoader);
+    this.projectileController = new ProjectileController(this);
     void this.vfxLoader.preload();
   }
 
@@ -782,6 +785,7 @@ export class Client {
     // finishing frame would block the next walk/attack for one extra frame.
     this.animationController.advanceTimed(deltaMs);
     this.skillVfxController.advance(deltaMs);
+    this.projectileController.advance(deltaMs);
     this.keyboardController.update(performance.now());
   }
 

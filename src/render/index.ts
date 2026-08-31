@@ -23,6 +23,7 @@ export { NpcAttackAnimation } from './npc-attack';
 export { NpcDeathAnimation } from './npc-death';
 export { NpcElementGlow } from './npc-element-vfx';
 export { NpcWalkAnimation } from './npc-walk';
+export { Projectile, type ProjectileVisual } from './projectile';
 export { SkillBurst } from './vfx/skill-burst';
 export { type ResolvedVfx, VfxLoader } from './vfx/vfx-loader';
 export {

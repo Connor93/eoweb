@@ -75,6 +75,7 @@ export { NpcController } from './npc-controller';
 export { NpcElementController } from './npc-element-controller';
 export { PartyController } from './party-controller';
 export { PingController } from './ping-controller';
+export { ProjectileController } from './projectile-controller';
 export { QuakeController } from './quake-controller';
 export type { QuestDialogState } from './quest-controller';
 export { QuestController } from './quest-controller';
