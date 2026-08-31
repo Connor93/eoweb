@@ -62,6 +62,7 @@ import {
   NpcAttackAnimation,
   NpcDeathAnimation,
   NpcWalkAnimation,
+  RANGED_BOW_UP_FRACTION,
   weaponAnchorScreen,
 } from '@/render';
 import {
@@ -1168,9 +1169,21 @@ export class MapRenderer {
           : CharacterFrame.MeleeAttackUpLeft1 + animation.animationFrame;
         break;
       case animation instanceof CharacterRangedAttackAnimation:
-        characterFrame = downRight
-          ? CharacterFrame.RangeAttackDownRight
-          : CharacterFrame.RangeAttackUpLeft;
+        // The ranged pose is one frame with no progression, so on repeat fire
+        // the bow just hung in the drawn position and arrows appeared out of a
+        // static figure. Drop to the standing pose for the tail of the cycle:
+        // the bow lowers between shots and is re-raised for the next one.
+        // See RANGED_BOW_UP_FRACTION — it must stay above the projectile's
+        // release point so the bow is still up when the arrow leaves it.
+        if (animation.progress < RANGED_BOW_UP_FRACTION) {
+          characterFrame = downRight
+            ? CharacterFrame.RangeAttackDownRight
+            : CharacterFrame.RangeAttackUpLeft;
+        } else {
+          characterFrame = downRight
+            ? CharacterFrame.StandingDownRight
+            : CharacterFrame.StandingUpLeft;
+        }
         break;
       case animation instanceof CharacterSpellChantAnimation:
         characterFrame = downRight

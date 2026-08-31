@@ -5,7 +5,10 @@
 export { Animation, TimedAnimation } from './animation';
 export { getArrowVisual } from './arrow-visual';
 export { CharacterAttackAnimation } from './character-attack';
-export { CharacterRangedAttackAnimation } from './character-attack-ranged';
+export {
+  CharacterRangedAttackAnimation,
+  RANGED_BOW_UP_FRACTION,
+} from './character-attack-ranged';
 export { CharacterDeathAnimation } from './character-death';
 export { CharacterSpellChantAnimation } from './character-spell-chant';
 export { CharacterWalkAnimation } from './character-walk';
