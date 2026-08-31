@@ -14,19 +14,42 @@ import type { ProjectileVisual } from './projectile';
 // the actual travel vector rather than the Direction enum, so it stays correct
 // however the caller derived its path.
 
+// Geometry, all in design px. Tuning knobs — safe to adjust by eye, but keep
+// SIZE comfortably above LENGTH: the arrow is drawn on the 2:1 iso diagonal
+// from the canvas centre, so at LENGTH 22 it spans roughly x 5..27, y 9..22
+// inside a 32px box. Raising LENGTH without raising SIZE will clip the head.
+
 /** Canvas size. Comfortably larger than the arrow so the head never clips. */
-const SIZE = 24;
-/** Arrow length in design px, tip to tail. */
-const LENGTH = 16;
-/** Half-width of the head, in design px. */
-const HEAD = 3;
-/** Length of the head, in design px. */
-const HEAD_LEN = 5;
+const SIZE = 32;
+/** Arrow length, tip to tail. */
+const LENGTH = 22;
+/** Half-width of the head. */
+const HEAD = 4;
+/** Length of the head. */
+const HEAD_LEN = 7;
+/** Shaft stroke width. */
+const SHAFT_WIDTH = 2;
+/** Fletching stroke width. Kept at shaft width so the barbs actually read. */
+const FLETCH_WIDTH = 2;
+/** How far the fletching barbs run forward from the tail. */
+const FLETCH_LEN = 6;
+/** How far the fletching barbs splay off the shaft. */
+const FLETCH_SPREAD = 3.5;
 
 /** Ramp indices, named. shadow -> mid -> base -> hot. */
-const SHADOW = 0;
-const MID = 1;
-const HOT = 3;
+// Ramp stops by ROLE, chosen for maximum VALUE separation so the three parts
+// stay legible at ~20px. The ramp is [shadow, mid, base, hot]; on the neutral
+// ramp those are roughly 35% / 66% / 96% / 100% lightness — `base` and `hot`
+// are nearly the same colour, so using both (as the first version did, shaft
+// on `mid` and head on `hot`) made the whole arrow read as one white shape.
+//
+// Spread across shadow -> mid -> base instead: a dark shaft so the longest
+// part does not dominate, a mid-value fletching, and the tip on `base`, which
+// the palette defines as the element's signature colour — so the brightest,
+// most eye-catching part is the one that says which element this is.
+const SHAFT_STOP = 0;
+const FLETCH_STOP = 1;
+const HEAD_STOP = 2;
 
 function hex(value: number): string {
   return `#${value.toString(16).padStart(6, '0')}`;
@@ -104,18 +127,19 @@ function drawArrow(ramp: Ramp, dx: number, dy: number): Texture | null {
   const px = -uy;
   const py = ux;
 
-  // Shaft.
-  ctx.strokeStyle = hex(ramp[MID]);
-  ctx.lineWidth = 2;
+  // Shaft: the darkest stop. It is the longest part, so keeping it dark stops
+  // it swamping the two smaller details.
+  ctx.strokeStyle = hex(ramp[SHAFT_STOP]);
+  ctx.lineWidth = SHAFT_WIDTH;
   ctx.lineCap = 'butt';
   ctx.beginPath();
   ctx.moveTo(tailX, tailY);
   ctx.lineTo(tipX, tipY);
   ctx.stroke();
 
-  // Head: a filled triangle at the tip, in the ramp's brightest stop so the
-  // arrow reads point-first at a glance.
-  ctx.fillStyle = hex(ramp[HOT]);
+  // Head: a filled triangle at the tip, in the element's signature colour, so
+  // the arrow reads point-first and carries its element at a glance.
+  ctx.fillStyle = hex(ramp[HEAD_STOP]);
   ctx.beginPath();
   ctx.moveTo(tipX, tipY);
   ctx.lineTo(
@@ -129,14 +153,23 @@ function drawArrow(ramp: Ramp, dx: number, dy: number): Texture | null {
   ctx.closePath();
   ctx.fill();
 
-  // Fletching: two short strokes at the tail, in the darkest stop.
-  ctx.strokeStyle = hex(ramp[SHADOW]);
-  ctx.lineWidth = 1;
+  // Fletching: two barbs swept back from the tail, at mid value. Drawn at
+  // SHAFT_WIDTH rather than 1px — a single-pixel antialiased stroke this
+  // short renders as a couple of faint pixels and effectively disappears,
+  // which is why the first version looked like it had no fletching at all.
+  ctx.strokeStyle = hex(ramp[FLETCH_STOP]);
+  ctx.lineWidth = FLETCH_WIDTH;
   ctx.beginPath();
   ctx.moveTo(tailX, tailY);
-  ctx.lineTo(tailX + ux * 4 + px * 3, tailY + uy * 4 + py * 3);
+  ctx.lineTo(
+    tailX + ux * FLETCH_LEN + px * FLETCH_SPREAD,
+    tailY + uy * FLETCH_LEN + py * FLETCH_SPREAD,
+  );
   ctx.moveTo(tailX, tailY);
-  ctx.lineTo(tailX + ux * 4 - px * 3, tailY + uy * 4 - py * 3);
+  ctx.lineTo(
+    tailX + ux * FLETCH_LEN - px * FLETCH_SPREAD,
+    tailY + uy * FLETCH_LEN - py * FLETCH_SPREAD,
+  );
   ctx.stroke();
 
   return new Texture({
