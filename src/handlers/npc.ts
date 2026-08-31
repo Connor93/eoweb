@@ -217,56 +217,68 @@ function playKillImpactVfx(
 function handleNpcSpec(client: Client, reader: EoReader) {
   const packet = NpcSpecServerPacket.deserialize(reader);
   const specNpc = client.getNpcByIndex(packet.npcKilledData.npcIndex);
-  if (specNpc) {
-    client.combatOverlayController.setHpBar({
-      key: `npc:${packet.npcKilledData.npcIndex}`,
-      percent: 0,
-      worldX: specNpc.coords.x,
-      worldY: specNpc.coords.y,
-    });
-    const killerId = packet.npcKilledData.killerId;
-    const element =
-      killerId === client.playerId
-        ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
-            ?.element ?? CombatElement.Plain)
-        : client.instanceController.weaponElement(killerId);
-    const specRecord = client.getEnfRecordById(specNpc.id);
-    client.combatOverlayController.pushDamage({
-      amount: packet.npcKilledData.damage,
-      element,
-      effectiveness: specRecord
-        ? npcElementEffectiveness(
-            element,
-            specRecord.element,
-            specRecord.elementWeakness,
-          )
-        : 'neutral',
-      targetKey: `npc:${packet.npcKilledData.npcIndex}`,
-      worldX: specNpc.coords.x,
-      worldY: specNpc.coords.y,
-    });
-  }
+  const bundle = () => {
+    if (specNpc) {
+      client.combatOverlayController.setHpBar({
+        key: `npc:${packet.npcKilledData.npcIndex}`,
+        percent: 0,
+        worldX: specNpc.coords.x,
+        worldY: specNpc.coords.y,
+      });
+      const killerId = packet.npcKilledData.killerId;
+      const element =
+        killerId === client.playerId
+          ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
+              ?.element ?? CombatElement.Plain)
+          : client.instanceController.weaponElement(killerId);
+      const specRecord = client.getEnfRecordById(specNpc.id);
+      client.combatOverlayController.pushDamage({
+        amount: packet.npcKilledData.damage,
+        element,
+        effectiveness: specRecord
+          ? npcElementEffectiveness(
+              element,
+              specRecord.element,
+              specRecord.elementWeakness,
+            )
+          : 'neutral',
+        targetKey: `npc:${packet.npcKilledData.npcIndex}`,
+        worldX: specNpc.coords.x,
+        worldY: specNpc.coords.y,
+      });
+    }
 
-  playKillImpactVfx(
-    client,
-    packet.npcKilledData.npcIndex,
-    packet.npcKilledData.killerId,
-  );
-
-  client.setNpcDeathAnimation(packet.npcKilledData.npcIndex);
-
-  if (packet.npcKilledData.dropIndex) {
-    const item = new ItemMapInfo();
-    item.uid = packet.npcKilledData.dropIndex;
-    item.id = packet.npcKilledData.dropId;
-    item.coords = packet.npcKilledData.dropCoords;
-    item.amount = packet.npcKilledData.dropAmount;
-    client.addItemDrop(
-      item,
-      ITEM_PROTECT_TICKS_NPC,
+    playKillImpactVfx(
+      client,
+      packet.npcKilledData.npcIndex,
       packet.npcKilledData.killerId,
     );
-    client.atlas.refresh();
+
+    client.setNpcDeathAnimation(packet.npcKilledData.npcIndex);
+
+    if (packet.npcKilledData.dropIndex) {
+      const item = new ItemMapInfo();
+      item.uid = packet.npcKilledData.dropIndex;
+      item.id = packet.npcKilledData.dropId;
+      item.coords = packet.npcKilledData.dropCoords;
+      item.amount = packet.npcKilledData.dropAmount;
+      client.addItemDrop(
+        item,
+        ITEM_PROTECT_TICKS_NPC,
+        packet.npcKilledData.killerId,
+      );
+      client.atlas.refresh();
+    }
+  };
+
+  if (
+    !client.projectileController.attachOutcome(
+      packet.npcKilledData.killerId,
+      `npc:${packet.npcKilledData.npcIndex}`,
+      bundle,
+    )
+  ) {
+    bundle();
   }
 
   const gain = packet.experience ? packet.experience - client.experience : 0;
@@ -291,58 +303,70 @@ function handleNpcSpec(client: Client, reader: EoReader) {
 function handleNpcAccept(client: Client, reader: EoReader) {
   const packet = NpcAcceptServerPacket.deserialize(reader);
   const acceptNpc = client.getNpcByIndex(packet.npcKilledData.npcIndex);
-  if (acceptNpc) {
-    client.combatOverlayController.setHpBar({
-      key: `npc:${packet.npcKilledData.npcIndex}`,
-      percent: 0,
-      worldX: acceptNpc.coords.x,
-      worldY: acceptNpc.coords.y,
-    });
-    const killerId = packet.npcKilledData.killerId;
-    const element =
-      killerId === client.playerId
-        ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
-            ?.element ?? CombatElement.Plain)
-        : client.instanceController.weaponElement(killerId);
-    const acceptRecord = client.getEnfRecordById(acceptNpc.id);
-    client.combatOverlayController.pushDamage({
-      amount: packet.npcKilledData.damage,
-      element,
-      effectiveness: acceptRecord
-        ? npcElementEffectiveness(
-            element,
-            acceptRecord.element,
-            acceptRecord.elementWeakness,
-          )
-        : 'neutral',
-      targetKey: `npc:${packet.npcKilledData.npcIndex}`,
-      worldX: acceptNpc.coords.x,
-      worldY: acceptNpc.coords.y,
-    });
-  }
+  const bundle = () => {
+    if (acceptNpc) {
+      client.combatOverlayController.setHpBar({
+        key: `npc:${packet.npcKilledData.npcIndex}`,
+        percent: 0,
+        worldX: acceptNpc.coords.x,
+        worldY: acceptNpc.coords.y,
+      });
+      const killerId = packet.npcKilledData.killerId;
+      const element =
+        killerId === client.playerId
+          ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
+              ?.element ?? CombatElement.Plain)
+          : client.instanceController.weaponElement(killerId);
+      const acceptRecord = client.getEnfRecordById(acceptNpc.id);
+      client.combatOverlayController.pushDamage({
+        amount: packet.npcKilledData.damage,
+        element,
+        effectiveness: acceptRecord
+          ? npcElementEffectiveness(
+              element,
+              acceptRecord.element,
+              acceptRecord.elementWeakness,
+            )
+          : 'neutral',
+        targetKey: `npc:${packet.npcKilledData.npcIndex}`,
+        worldX: acceptNpc.coords.x,
+        worldY: acceptNpc.coords.y,
+      });
+    }
 
-  // Same as handleNpcSpec — this is the kill-that-also-levels-you-up variant,
-  // and missing it here would drop the effect on exactly those kills.
-  playKillImpactVfx(
-    client,
-    packet.npcKilledData.npcIndex,
-    packet.npcKilledData.killerId,
-  );
-
-  client.setNpcDeathAnimation(packet.npcKilledData.npcIndex);
-
-  if (packet.npcKilledData.dropIndex) {
-    const item = new ItemMapInfo();
-    item.uid = packet.npcKilledData.dropIndex;
-    item.id = packet.npcKilledData.dropId;
-    item.coords = packet.npcKilledData.dropCoords;
-    item.amount = packet.npcKilledData.dropAmount;
-    client.addItemDrop(
-      item,
-      ITEM_PROTECT_TICKS_NPC,
+    // Same as handleNpcSpec — this is the kill-that-also-levels-you-up variant,
+    // and missing it here would drop the effect on exactly those kills.
+    playKillImpactVfx(
+      client,
+      packet.npcKilledData.npcIndex,
       packet.npcKilledData.killerId,
     );
-    client.atlas.refresh();
+
+    client.setNpcDeathAnimation(packet.npcKilledData.npcIndex);
+
+    if (packet.npcKilledData.dropIndex) {
+      const item = new ItemMapInfo();
+      item.uid = packet.npcKilledData.dropIndex;
+      item.id = packet.npcKilledData.dropId;
+      item.coords = packet.npcKilledData.dropCoords;
+      item.amount = packet.npcKilledData.dropAmount;
+      client.addItemDrop(
+        item,
+        ITEM_PROTECT_TICKS_NPC,
+        packet.npcKilledData.killerId,
+      );
+      client.atlas.refresh();
+    }
+  };
+
+  if (
+    !client.projectileController.attachOutcome(
+      packet.npcKilledData.killerId,
+      `npc:${packet.npcKilledData.npcIndex}`,
+      bundle,
+    )
+  ) {
+    bundle();
   }
 
   client.animationController.characterEmotes.set(
@@ -452,36 +476,48 @@ function handleNpcReply(client: Client, reader: EoReader) {
     return;
   }
 
-  client.combatOverlayController.setHpBar({
-    key: `npc:${npc.index}`,
-    percent: packet.hpPercentage,
-    worldX: npc.coords.x,
-    worldY: npc.coords.y,
-  });
-  if (packet.damage > 0) {
-    const element =
-      packet.playerId === client.playerId
-        ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
-            ?.element ?? CombatElement.Plain)
-        : client.instanceController.weaponElement(packet.playerId);
-    client.combatOverlayController.pushDamage({
-      amount: packet.damage,
-      element,
-      effectiveness: npcElementEffectiveness(
+  const bundle = () => {
+    client.combatOverlayController.setHpBar({
+      key: `npc:${npc.index}`,
+      percent: packet.hpPercentage,
+      worldX: npc.coords.x,
+      worldY: npc.coords.y,
+    });
+    if (packet.damage > 0) {
+      const element =
+        packet.playerId === client.playerId
+          ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
+              ?.element ?? CombatElement.Plain)
+          : client.instanceController.weaponElement(packet.playerId);
+      client.combatOverlayController.pushDamage({
+        amount: packet.damage,
         element,
-        record.element,
-        record.elementWeakness,
-      ),
-      targetKey: `npc:${npc.index}`,
-      worldX: npc.coords.x,
-      worldY: npc.coords.y,
-    });
-  } else {
-    client.combatOverlayController.pushMiss({
-      targetKey: `npc:${npc.index}`,
-      worldX: npc.coords.x,
-      worldY: npc.coords.y,
-    });
+        effectiveness: npcElementEffectiveness(
+          element,
+          record.element,
+          record.elementWeakness,
+        ),
+        targetKey: `npc:${npc.index}`,
+        worldX: npc.coords.x,
+        worldY: npc.coords.y,
+      });
+    } else {
+      client.combatOverlayController.pushMiss({
+        targetKey: `npc:${npc.index}`,
+        worldX: npc.coords.x,
+        worldY: npc.coords.y,
+      });
+    }
+  };
+
+  if (
+    !client.projectileController.attachOutcome(
+      packet.playerId,
+      `npc:${npc.index}`,
+      bundle,
+    )
+  ) {
+    bundle();
   }
 
   if (

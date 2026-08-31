@@ -34,6 +34,10 @@ export interface ProjectileVisual {
 export class Projectile {
   readonly sprite: Sprite;
   visual: ProjectileVisual | null = null;
+  /** The player who fired this shot. Lets the controller retarget an
+   *  in-flight, still-targetless projectile when a delayed outcome packet
+   *  arrives after launch — see ProjectileController.attachOutcome. */
+  shooterId = 0;
   /** Launch point in RAW iso-screen space. Fixed for the whole flight. */
   fromIsoX = 0;
   fromIsoY = 0;
@@ -57,6 +61,7 @@ export class Projectile {
 
   reset(
     visual: ProjectileVisual,
+    shooterId: number,
     fromIsoX: number,
     fromIsoY: number,
     toIsoX: number,
@@ -66,6 +71,7 @@ export class Projectile {
     onImpact: (() => void) | null,
   ): void {
     this.visual = visual;
+    this.shooterId = shooterId;
     this.fromIsoX = fromIsoX;
     this.fromIsoY = fromIsoY;
     this.toIsoX = toIsoX;

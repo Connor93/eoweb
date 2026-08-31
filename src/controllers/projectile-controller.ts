@@ -66,26 +66,58 @@ export class ProjectileController {
   }
 
   /** Attach a target + its deferred impact bundle to this shooter's oldest
-   *  unattached pending shot.
+   *  unattached pending shot — or, failing that, to their oldest in-flight
+   *  targetless projectile.
+   *
+   *  The fallback exists for the LOCAL player only. openShot for another
+   *  player fires from handlers/attack.ts when their Attack packet arrives,
+   *  in the same server tick as the outcome packet, so the pending-queue
+   *  match above always finds it. But the local player's shot is opened at
+   *  INPUT time (keyboard-controller.ts) and launches RELEASE_FRACTION into
+   *  the attack animation — well under a server round trip on any real
+   *  connection. So by the time the outcome packet lands, the shot has
+   *  usually already launched and left the pending queue. Without this
+   *  fallback the bundle would apply immediately here, right as a
+   *  still-targetless arrow is flying past the target — the exact bug this
+   *  whole feature exists to fix, reappearing under latency.
+   *
+   *  advanceActive re-reads the endpoint from targetKey every frame
+   *  (homing), so setting targetKey on an in-flight projectile is enough to
+   *  steer it onto the target for the rest of its flight — no need to touch
+   *  duration or endpoints here.
    *
    *  Returns true when it attached — the caller must then NOT apply the
    *  bundle itself; the projectile will release it on impact. Returns false
-   *  when there is no pending shot (a melee attack, or a shot opened before
-   *  this client was watching), and the caller applies immediately as before.
-   *
-   *  Not yet called by anyone — Task 4 is the first caller. */
+   *  when neither a pending nor an active shot matched (a melee attack, or a
+   *  shot opened before this client was watching), and the caller applies
+   *  immediately as before. */
   attachOutcome(
     playerId: number,
     targetKey: string,
     onImpact: () => void,
   ): boolean {
     const queue = this.pending.get(playerId);
-    if (!queue) return false;
-    const shot = queue.find((s) => s.targetKey === null);
-    if (!shot) return false;
-    shot.targetKey = targetKey;
-    shot.onImpact = onImpact;
-    return true;
+    const shot = queue?.find((s) => s.targetKey === null);
+    if (shot) {
+      shot.targetKey = targetKey;
+      shot.onImpact = onImpact;
+      return true;
+    }
+
+    const projectile = this.active.find(
+      (p) =>
+        p.shooterId === playerId &&
+        p.targetKey === null &&
+        p.onImpact === null &&
+        !p.finished,
+    );
+    if (projectile) {
+      projectile.targetKey = targetKey;
+      projectile.onImpact = onImpact;
+      return true;
+    }
+
+    return false;
   }
 
   advance(deltaMs: number): void {
@@ -139,6 +171,7 @@ export class ProjectileController {
     const projectile = this.pool.pop() ?? new Projectile();
     projectile.reset(
       getArrowVisual(shot.element),
+      shot.playerId,
       from.x,
       fromY,
       target.x,
