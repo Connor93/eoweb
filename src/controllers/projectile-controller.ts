@@ -21,6 +21,10 @@ const MIN_FLIGHT_MS = 80;
 /** Height above the tile centre that projectiles fly at, so they cross at
  *  body level instead of skimming the floor. */
 const FLIGHT_LIFT = 18;
+/** How far forward of the shooter the arrow starts, along the firing line, so
+ *  it leaves the bow instead of appearing inside the character sprite. About
+ *  40% of a tile — clear of the body without looking detached from it. */
+const MUZZLE_OFFSET = 14;
 
 /** One tile of travel, in iso-screen pixels. */
 const TILE_ISO_PX = Math.hypot(HALF_TILE_WIDTH, HALF_TILE_HEIGHT);
@@ -168,9 +172,27 @@ export class ProjectileController {
       return;
     }
 
-    const fromY = from.y - FLIGHT_LIFT;
+    const bodyY = from.y - FLIGHT_LIFT;
     const toY = target.y - FLIGHT_LIFT;
-    const distance = Math.hypot(target.x - from.x, toY - fromY);
+
+    // Push the launch point forward along the firing line so the arrow leaves
+    // the bow rather than materialising inside the character. Anchoring it at
+    // the shooter's own tile centre put it at centre mass, visibly inside the
+    // sprite for the first frames of every shot.
+    //
+    // Clamped to half the distance so a point-blank shot cannot start past the
+    // thing it is flying at, and guarded against a zero-length vector (target
+    // standing on the shooter) which would divide by zero.
+    const spanX = target.x - from.x;
+    const spanY = toY - bodyY;
+    const span = Math.hypot(spanX, spanY);
+    const muzzle = span > 0 ? Math.min(MUZZLE_OFFSET, span / 2) : 0;
+    const fromX = span > 0 ? from.x + (spanX / span) * muzzle : from.x;
+    const fromY = span > 0 ? bodyY + (spanY / span) * muzzle : bodyY;
+
+    // Duration is measured from the MUZZLE, not the body, so shortening the
+    // path does not leave the arrow crawling the remaining distance.
+    const distance = Math.hypot(target.x - fromX, toY - fromY);
     const tiles = distance / TILE_ISO_PX;
     const durationMs = Math.max(
       MIN_FLIGHT_MS,
@@ -181,7 +203,7 @@ export class ProjectileController {
     projectile.reset(
       getArrowVisual(shot.element),
       shot.playerId,
-      from.x,
+      fromX,
       fromY,
       target.x,
       toY,
