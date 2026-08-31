@@ -2,7 +2,7 @@ import type { Client } from '@/client';
 import type { CombatElement } from '@/combat-overlay/element-colors';
 import { HALF_TILE_HEIGHT, HALF_TILE_WIDTH } from '@/consts';
 import { getArrowVisual, Projectile } from '@/render';
-import { attackRayTiles, isoToScreen } from '@/utils';
+import { isoToScreen, localAttackRayTiles } from '@/utils';
 
 // --- Tuning knobs. The first three are settled in the browser, not on paper. ---
 
@@ -198,15 +198,28 @@ export class ProjectileController {
 
   /** Where a targetless shot fizzles: the far end of the same ray the server
    *  walks, so the arrow stops where the server would have stopped it — at a
-   *  wall, or at the edge of reach. */
+   *  wall, or at the edge of reach.
+   *
+   *  LOCAL PLAYER ONLY, and that limit is a data one, not an oversight.
+   *  `itemAttackRanges` (family 55) is keyed by ITEM id, but a nearby
+   *  character's `equipment.weapon` is the WORN GRAPHIC id — the same number
+   *  space `getWeaponMetadata` and the GFX loader use, not an item id. Only
+   *  our own paperdoll (`client.equipment`) carries the real item id, so only
+   *  our own reach can be resolved. Looking a graphic id up in that map is
+   *  what silently suppressed every missed shot's arrow.
+   *
+   *  Delegates to `localAttackRayTiles`, which already resolves this
+   *  correctly for the weapon-range indicator — one implementation, so the
+   *  arrow and the indicator cannot disagree about where reach ends.
+   *
+   *  Another player's MISSED shot therefore draws no arrow; their hits are
+   *  unaffected, since a hit gets its target from the damage packet and never
+   *  consults reach. Closing that gap needs a worn-graphic -> item reverse
+   *  lookup over the EIF (`spec1`), which is ambiguous when two weapons share
+   *  a graphic and would need re-building on every pub hot-reload. */
   private rayEndIso(playerId: number): { x: number; y: number } | null {
-    const character = this.client.nearby.characters.find(
-      (c) => c.playerId === playerId,
-    );
-    if (!character) return null;
-    const range = this.client.itemAttackRanges.get(character.equipment.weapon);
-    if (!range) return null;
-    const tiles = attackRayTiles(this.client, character, range);
+    if (playerId !== this.client.playerId) return null;
+    const tiles = localAttackRayTiles(this.client);
     const last = tiles[tiles.length - 1];
     if (!last) return null;
     return isoToScreen(last);

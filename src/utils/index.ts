@@ -1,4 +1,4 @@
-export { attackRayTiles, localAttackRayTiles } from './attack-ray';
+export { localAttackRayTiles } from './attack-ray';
 export { attackSpeedLine } from './attack-speed-line';
 export { bigCoordsToCoords } from './big-coords-to-coords';
 export { getExpForLevel } from './calculate-tnl';

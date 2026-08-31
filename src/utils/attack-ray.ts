@@ -18,7 +18,7 @@ import { isTileSpecWalkable } from './tile-spec-walkable';
  *
  *  Known gap: the server forces range 1 inside the arena, which the client has
  *  no state for, so the ray over-promises there. */
-export function attackRayTiles(
+function attackRayTiles(
   client: Client,
   character: CharacterMapInfo,
   range: number,
