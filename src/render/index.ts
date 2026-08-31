@@ -3,7 +3,7 @@
 // runtime "Cannot access 'TimedAnimation' before initialization" TDZ crash that tsc
 // does NOT catch. Keep animation first.
 export { Animation, TimedAnimation } from './animation';
-export { ArrowVisual, getArrowVisual } from './arrow-visual';
+export { getArrowVisual } from './arrow-visual';
 export { CharacterAttackAnimation } from './character-attack';
 export { CharacterRangedAttackAnimation } from './character-attack-ranged';
 export { CharacterDeathAnimation } from './character-death';
@@ -24,7 +24,7 @@ export { NpcAttackAnimation } from './npc-attack';
 export { NpcDeathAnimation } from './npc-death';
 export { NpcElementGlow } from './npc-element-vfx';
 export { NpcWalkAnimation } from './npc-walk';
-export { Projectile, type ProjectileVisual } from './projectile';
+export { Projectile } from './projectile';
 export { SkillBurst } from './vfx/skill-burst';
 export { type ResolvedVfx, VfxLoader } from './vfx/vfx-loader';
 export {
