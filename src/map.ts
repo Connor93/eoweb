@@ -493,7 +493,10 @@ export class MapRenderer {
     this.client = client;
   }
 
-  buildCaches() {
+  /** `projectileMode` is forwarded to ProjectileController.clear() — see
+   *  Client.setMap for which call sites need 'drop' vs the 'release'
+   *  default. */
+  buildCaches(projectileMode: 'release' | 'drop' = 'release') {
     const w = this.client.map!.width;
     const h = this.client.map!.height;
 
@@ -571,7 +574,7 @@ export class MapRenderer {
     this.client.weaponElementController.clear();
     this.client.npcElementController.clear();
     this.client.skillVfxController?.clear();
-    this.client.projectileController?.clear();
+    this.client.projectileController?.clear(projectileMode);
   }
 
   getTileSpecAt(position: Vector2): MapTileSpec | undefined {

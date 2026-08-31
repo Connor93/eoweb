@@ -76,7 +76,13 @@ function handleWarpAgree(client: Client, reader: EoReader) {
         });
       }
       client.mapId = client.warpMapId;
-      client.setMap(map);
+      // client.nearby was already overwritten with the NEW map's entities
+      // above (line ~50), before this async map load resolves. A queued
+      // projectile impact bundle still names an entity key from the OLD
+      // map, which by now may collide with a live, unrelated entity on the
+      // new one — so bundles must be dropped here, not released. See
+      // ProjectileController.clear.
+      client.setMap(map, 'drop');
       client.atlas.refresh();
       client.keyboardController.unfreeze();
     });

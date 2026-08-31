@@ -789,7 +789,14 @@ export class Client {
     this.keyboardController.update(performance.now());
   }
 
-  setMap(map: Emf) {
+  /** `projectileMode` controls what happens to queued/in-flight projectile
+   *  impact bundles (see ProjectileController.clear). Default 'release' is
+   *  correct for a same-map rebuild — the initial map load/bootstrap and a
+   *  map-mutation reload (handleInitMapMutation) both leave client.nearby's
+   *  entities as-is. Callers that replace client.nearby with a DIFFERENT
+   *  map's entities before calling this (handleWarpAgree's cross-map branch)
+   *  must pass 'drop'. */
+  setMap(map: Emf, projectileMode: 'release' | 'drop' = 'release') {
     if (
       this.map &&
       (this.map.rid[0] !== map.rid[0] ||
@@ -807,7 +814,7 @@ export class Client {
     this.jukeboxController.reset();
     if (this.map) {
       clearRectangles();
-      this.mapRenderer.buildCaches();
+      this.mapRenderer.buildCaches(projectileMode);
       this.mapController.loadDoors();
 
       if (this.map.type === MapType.Pk) {

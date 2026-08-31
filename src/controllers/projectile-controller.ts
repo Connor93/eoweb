@@ -153,6 +153,15 @@ export class ProjectileController {
     const to = shot.targetKey
       ? mapRenderer?.getEntityIsoScreenPosition(shot.targetKey)
       : this.rayEndIso(shot.playerId);
+    if (shot.targetKey && !to) {
+      // The attached target had already stopped resolving by release time
+      // (dead, despawned, warped away) — same situation as the
+      // missing-shooter check above. Release now instead of falling back to
+      // a targetless ray flight that would still carry the bundle, firing it
+      // at a wall well after the moment the target actually vanished.
+      shot.onImpact?.();
+      return;
+    }
     const target = to ?? this.rayEndIso(shot.playerId);
     if (!target) {
       shot.onImpact?.();
@@ -237,12 +246,16 @@ export class ProjectileController {
       const baked = mapRenderer?.bakeIsoToWorldSprite(now.x, now.y);
       if (baked) p.updatePosition(baked.x, baked.y);
 
-      // Sort by where the projectile IS, so it passes behind the scenery it
-      // flies past rather than sitting flat on top of the world.
-      if (p.targetKey) {
-        const z = mapRenderer?.getEntityZIndex(p.targetKey);
-        if (z !== null && z !== undefined) p.updateZIndex(z + 1);
-      }
+      // zIndex is NOT re-derived here. It used to follow the target's own
+      // paint order for the whole flight, but a target north of the shooter
+      // sorts LOWER than the shooter, which put every up-facing shot behind
+      // the scenery between them — half of all shots flying behind walls
+      // and trees they should cross. A targetless shot never had that
+      // problem (it always used the flat PROJECTILE_Z_INDEX_FALLBACK from
+      // Projectile.reset), which meant homing and fizzling flights looked
+      // different on the identical path. Both now use the same flat
+      // fallback for the whole flight: an arrow in flight is a foreground
+      // element, same precedent as SkillBurst's BURST_Z_INDEX_FALLBACK.
       p.refreshTexture();
 
       if (p.finished) {
@@ -254,16 +267,35 @@ export class ProjectileController {
     }
   }
 
-  /** Scene rebuild / map change. Bundles are RELEASED, never dropped: losing
-   *  one would leave an HP bar or a death that the server already applied
-   *  permanently unshown on the client. */
-  clear(): void {
+  /** Scene rebuild / map change.
+   *
+   *  'release' (the default): bundles fire where they stand. This is correct
+   *  for a SAME-map rebuild (handleInitMapMutation: the server pushes an
+   *  edited version of the CURRENT map's data and calls setMap again without
+   *  touching client.nearby) as well as for a first-ever setMap with no
+   *  entities loaded yet (main.tsx bootstrap, handleInitFileEmf at login) —
+   *  the entities a bundle references are still the ones it was captured
+   *  against, so losing the bundle would leave an HP bar or a death that the
+   *  server already applied permanently unshown on the client.
+   *
+   *  'drop': bundles are discarded unfired. This is required for a REAL map
+   *  change (handleWarpAgree's cross-map branch): client.nearby is replaced
+   *  with the NEW map's entities before Client.setMap runs, so by the time
+   *  this fires, a targetKey like "npc:5" captured on the OLD map may name a
+   *  live, unrelated NPC on the NEW one. Releasing there doesn't preserve
+   *  truth, it corrupts a healthy entity — playing a death animation on it,
+   *  dropping a phantom item at the old map's coordinates, painting HP/damage
+   *  onto the wrong target. There is no client state left after a map change
+   *  that a dropped bundle could have kept truthful. */
+  clear(mode: 'release' | 'drop' = 'release'): void {
     for (const queue of this.pending.values()) {
-      for (const shot of queue) shot.onImpact?.();
+      if (mode === 'release') {
+        for (const shot of queue) shot.onImpact?.();
+      }
     }
     this.pending.clear();
     for (const p of this.active) {
-      p.releaseImpact();
+      if (mode === 'release') p.releaseImpact();
       p.unmount();
     }
     this.pool.push(...this.active);
