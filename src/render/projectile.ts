@@ -1,5 +1,18 @@
 import { type Container, Sprite, type Texture } from 'pixi.js';
 
+// worldContainer is sortableChildren; every map/entity/effect sprite is
+// re-assigned zIndex 0..N from `_worldOrder` each frame (MapRenderer.
+// beginFrame resets it to 0). A projectile with no live targetKey — a
+// targetless shot fizzling at a fixed ray end, or one freshly pulled from
+// the pool before ProjectileController.advanceActive's first pass over it —
+// is never touched by that per-frame sweep and never gets a target-derived
+// zIndex from advanceActive's `if (p.targetKey)` branch either, so without
+// an explicit default it sits at Pixi's default zIndex 0 and renders BEHIND
+// the entire world — invisible. Mirrors SkillBurst's BURST_Z_INDEX_FALLBACK
+// (src/render/vfx/skill-burst.ts): parks the sprite well above the
+// per-frame world-sprite range so it draws on top rather than vanishing.
+const PROJECTILE_Z_INDEX_FALLBACK = 1_000_000;
+
 /** A projectile's appearance. The controller never knows what it is flying:
  *  the arrow supplies static per-facing textures, and a future spell
  *  projectile supplies animated vfx-engine frames through the same interface.
@@ -62,6 +75,12 @@ export class Projectile {
     this.elapsedMs = 0;
     this.onImpact = onImpact;
     this.sprite.visible = true;
+    // Every reset applies the fallback, so a projectile pulled from the pool
+    // can never inherit the previous flight's zIndex either. advanceActive's
+    // target-derived branch overwrites this every frame once (and only
+    // while) a live targetKey resolves; this is what stands otherwise — see
+    // PROJECTILE_Z_INDEX_FALLBACK above.
+    this.updateZIndex(PROJECTILE_Z_INDEX_FALLBACK);
   }
 
   get progress(): number {

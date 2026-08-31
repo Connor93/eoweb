@@ -13,7 +13,7 @@ import {
   Emote,
 } from '@/render';
 import { SfxId } from '@/sfx';
-import { randomRange } from '@/utils';
+import { isBowMetadata, randomRange } from '@/utils';
 
 function handleAttackPlayer(client: Client, reader: EoReader) {
   const packet = AttackPlayerServerPacket.deserialize(reader);
@@ -40,7 +40,7 @@ function handleAttackPlayer(client: Client, reader: EoReader) {
       : new CharacterAttackAnimation(attackMs),
   );
 
-  if (metadata.ranged) {
+  if (isBowMetadata(metadata)) {
     client.projectileController.openShot(packet.playerId, attackMs);
   }
 

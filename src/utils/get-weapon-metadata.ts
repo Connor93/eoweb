@@ -8,6 +8,22 @@ export class WeaponMetadata {
   ) {}
 }
 
+/** True for weapons whose ranged attack fires a physical projectile — a bow
+ *  or crossbow. `metadata.ranged` alone is not enough: it is also true for
+ *  the gun and the two ranged instruments (harp/guitar), none of which
+ *  should gate on carrying arrows or fly a projectile. Shared between the
+ *  local player's attack gate (keyboard-controller.ts) and the broadcast
+ *  attack handler for other players (handlers/attack.ts) so both draw the
+ *  "is this really a bow" line in exactly the same place. */
+export function isBowMetadata(metadata: WeaponMetadata): boolean {
+  return (
+    metadata.ranged &&
+    metadata.sfx[0] !== SfxId.Gun &&
+    metadata.sfx[0] !== SfxId.Harp1 &&
+    metadata.sfx[0] !== SfxId.Guitar1
+  );
+}
+
 export function getWeaponMetaData(): Map<number, WeaponMetadata> {
   return new Map([
     [0, new WeaponMetadata(null, [SfxId.PunchAttack], false)], // fist

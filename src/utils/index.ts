@@ -25,7 +25,11 @@ export { getNextCoords } from './get-next-coords';
 export { getNpcMetaData, NPCMetadata } from './get-npc-metadata';
 export { getPrevCoords } from './get-prev-coords';
 export { getShieldMetaData, ShieldMetadata } from './get-shield-metadata';
-export { getWeaponMetaData, WeaponMetadata } from './get-weapon-metadata';
+export {
+  getWeaponMetaData,
+  isBowMetadata,
+  WeaponMetadata,
+} from './get-weapon-metadata';
 export {
   INVENTORY_TAB_COUNT,
   InventoryTab,

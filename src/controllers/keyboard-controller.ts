@@ -14,7 +14,7 @@ import {
   TimedAnimation,
 } from '@/render';
 import { SfxId } from '@/sfx';
-import { bigCoordsToCoords, getNextCoords } from '@/utils';
+import { bigCoordsToCoords, getNextCoords, isBowMetadata } from '@/utils';
 import { getTimestamp } from './movement-controller';
 
 // Shim for the transition period (T9→T12): tick-based animations gate input
@@ -496,12 +496,7 @@ export class KeyboardController {
         character.equipment.weapon,
       );
 
-      if (
-        metadata.ranged &&
-        metadata.sfx[0] !== SfxId.Gun &&
-        metadata.sfx[0] !== SfxId.Harp1 &&
-        metadata.sfx[0] !== SfxId.Guitar1
-      ) {
+      if (isBowMetadata(metadata)) {
         const shield = this.client.equipment.shield;
         const record = this.client.getEifRecordById(shield);
         if (!record || record.subtype !== ItemSubtype.Arrows) {
@@ -532,6 +527,13 @@ export class KeyboardController {
           ? new CharacterRangedAttackAnimation(attackMs)
           : new CharacterAttackAnimation(attackMs),
       );
+
+      // reoserv excludes the attacker from its own Attack/Player broadcast,
+      // so handlers/attack.ts's openShot call never fires for the local
+      // player — this is the only place the local player's own shot opens.
+      if (isBowMetadata(metadata)) {
+        this.client.projectileController.openShot(character.playerId, attackMs);
+      }
 
       this.client.movementController.attack(
         character.direction,
