@@ -1,5 +1,6 @@
 import { CanvasSource, Texture } from 'pixi.js';
 import { CombatElement } from '@/combat-overlay/element-colors';
+import { HALF_TILE_HEIGHT, HALF_TILE_WIDTH } from '@/consts';
 import { ELEMENTS, type ElementKey, type Ramp } from '@/vfx-engine';
 import type { ProjectileVisual } from './projectile';
 
@@ -53,11 +54,24 @@ function elementKey(element: CombatElement): ElementKey {
 /** The four iso diagonals, as unit-ish vectors in SCREEN space. Derived from
  *  isoToScreen (sx = (x-y)*HW, sy = (x+y)*HH): Down => down-left,
  *  Right => down-right, Up => up-right, Left => up-left. */
+// The four iso diagonals, in SCREEN space, in the same order facingIndex
+// buckets them: down-right, down-left, up-right, up-left.
+//
+// These MUST carry the tile's 2:1 slope, not a 45-degree unit diagonal.
+// isoToScreen is `sx = (x - y) * HALF_TILE_WIDTH, sy = (x + y) *
+// HALF_TILE_HEIGHT`, so one tile of travel in any direction moves the sprite
+// by (+/-32, +/-16) — 26.57 degrees from horizontal, not 45. Drawing the
+// arrow along (+/-1, +/-1) pointed it 18.4 degrees off the line it actually
+// flew, which read as a subtly crooked arrow on every shot.
+//
+// Derived from the tile constants rather than written as literals so the art
+// cannot drift from the projection if tile size ever changes. Only the RATIO
+// matters — drawArrow normalises.
 const FACINGS = [
-  { dx: 1, dy: 1 },
-  { dx: -1, dy: 1 },
-  { dx: 1, dy: -1 },
-  { dx: -1, dy: -1 },
+  { dx: HALF_TILE_WIDTH, dy: HALF_TILE_HEIGHT },
+  { dx: -HALF_TILE_WIDTH, dy: HALF_TILE_HEIGHT },
+  { dx: HALF_TILE_WIDTH, dy: -HALF_TILE_HEIGHT },
+  { dx: -HALF_TILE_WIDTH, dy: -HALF_TILE_HEIGHT },
 ] as const;
 
 function facingIndex(dx: number, dy: number): number {
