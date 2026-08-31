@@ -21,10 +21,6 @@ const MIN_FLIGHT_MS = 80;
 /** Height above the tile centre that projectiles fly at, so they cross at
  *  body level instead of skimming the floor. */
 const FLIGHT_LIFT = 18;
-/** Backstop multiplier on durationMs: a flight that somehow outlives this
- *  much of its own expected duration is collapsed rather than left circling
- *  with an unreleased bundle. */
-const FLIGHT_TIMEOUT_FACTOR = 2;
 
 /** One tile of travel, in iso-screen pixels. */
 const TILE_ISO_PX = Math.hypot(HALF_TILE_WIDTH, HALF_TILE_HEIGHT);
@@ -230,12 +226,6 @@ export class ProjectileController {
         } else {
           p.collapse();
         }
-      }
-
-      // Backstop: a flight that somehow outlives its own expectation is ended
-      // rather than left circling with an unreleased bundle.
-      if (p.elapsedMs > p.durationMs * FLIGHT_TIMEOUT_FACTOR) {
-        p.collapse();
       }
 
       p.step(deltaMs);
