@@ -4,7 +4,7 @@ import { HALF_TILE_HEIGHT, HALF_TILE_WIDTH } from '@/consts';
 import { getArrowVisual, Projectile } from '@/render';
 import { attackRayTiles, isoToScreen } from '@/utils';
 
-// --- Tuning knobs. All three are settled in the browser, not on paper. ---
+// --- Tuning knobs. The first three are settled in the browser, not on paper. ---
 
 /** Fraction of the attack animation that passes before the arrow leaves the
  *  bow. The ranged pose is a SINGLE held frame for the whole attackMs

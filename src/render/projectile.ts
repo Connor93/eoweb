@@ -112,7 +112,7 @@ export class Projectile {
 
   /** End the flight here and now, wherever the projectile currently is. The
    *  next controller pass sees `finished` and releases the impact bundle at
-   *  this point. Used by the safety valves in Task 5. */
+   *  this point. Used by the safety valve in Task 5. */
   collapse(): void {
     const now = this.currentIso();
     this.toIsoX = now.x;
