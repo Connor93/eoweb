@@ -21,6 +21,10 @@ const MIN_FLIGHT_MS = 80;
 /** Height above the tile centre that projectiles fly at, so they cross at
  *  body level instead of skimming the floor. */
 const FLIGHT_LIFT = 18;
+/** Backstop multiplier on durationMs: a flight that somehow outlives this
+ *  much of its own expected duration is collapsed rather than left circling
+ *  with an unreleased bundle. */
+const FLIGHT_TIMEOUT_FACTOR = 2;
 
 /** One tile of travel, in iso-screen pixels. */
 const TILE_ISO_PX = Math.hypot(HALF_TILE_WIDTH, HALF_TILE_HEIGHT);
@@ -210,12 +214,28 @@ export class ProjectileController {
 
       // Homing: re-read the target's live RAW iso point every frame so an NPC
       // that walks mid-flight is still struck on its body.
+      //
+      // A null result means the target is GONE — removed after its death
+      // animation, cleaned up out of range, warped away. This one check
+      // stands in for hooking every removal site, and it is what stops an
+      // arrow landing on empty ground when someone else kills your target
+      // mid-flight: the flight ends where the arrow is and the bundle fires
+      // there. An NPC merely PLAYING its death animation still resolves, so
+      // the arrow lands on it normally, which is the look we want.
       if (p.targetKey) {
         const iso = mapRenderer?.getEntityIsoScreenPosition(p.targetKey);
         if (iso) {
           p.toIsoX = iso.x;
           p.toIsoY = iso.y - FLIGHT_LIFT;
+        } else {
+          p.collapse();
         }
+      }
+
+      // Backstop: a flight that somehow outlives its own expectation is ended
+      // rather than left circling with an unreleased bundle.
+      if (p.elapsedMs > p.durationMs * FLIGHT_TIMEOUT_FACTOR) {
+        p.collapse();
       }
 
       p.step(deltaMs);
