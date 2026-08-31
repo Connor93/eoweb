@@ -16,11 +16,14 @@ import type { ProjectileVisual } from './projectile';
 
 // Geometry, all in design px. Tuning knobs — safe to adjust by eye, but keep
 // SIZE comfortably above LENGTH: the arrow is drawn on the 2:1 iso diagonal
-// from the canvas centre, so at LENGTH 22 it spans roughly x 5..27, y 9..22
-// inside a 32px box. Raising LENGTH without raising SIZE will clip the head.
+// from the canvas centre, so with the outline included it spans roughly
+// x 1..28, y 5..23. Raising LENGTH or OUTLINE without raising SIZE will clip.
+// The sprite is centre-anchored, so surplus transparent padding costs nothing
+// but a few bytes of texture.
 
-/** Canvas size. Comfortably larger than the arrow so the head never clips. */
-const SIZE = 32;
+/** Canvas size. Deliberately roomier than the arrow needs, so the geometry
+ *  constants below can be nudged without hunting a clipped tip. */
+const SIZE = 36;
 /** Arrow length, tip to tail. */
 const LENGTH = 22;
 /** Half-width of the head. */
@@ -39,8 +42,17 @@ const FLETCH_SPREAD = 3.5;
 const FLETCH_OVERHANG = 1.5;
 /** Hair of shaft tucked under the head, so the join has no antialiased seam. */
 const SHAFT_HEAD_OVERLAP = 1;
+/** Outline thickness added on each side of every part. */
+const OUTLINE = 1;
 
-/** Ramp indices, named. shadow -> mid -> base -> hot. */
+/** Outline colour. Deliberately a FIXED near-black rather than an element ramp
+ *  stop: its job is separating the arrow from an arbitrary map background —
+ *  grass, stone, water, cave floor — not carrying element identity, which the
+ *  head already does. Derived from a ramp it would go pale on the light
+ *  elements and stop separating anything. Same neutral family as the ramps'
+ *  shadow stops, so it reads as part of the palette rather than pure black. */
+const OUTLINE_COLOR = '#1c1917';
+
 // Ramp stops by ROLE, chosen for maximum VALUE separation so the three parts
 // stay legible at ~20px. The ramp is [shadow, mid, base, hot]; on the neutral
 // ramp those are roughly 35% / 66% / 96% / 100% lightness — `base` and `hot`
@@ -78,9 +90,6 @@ function elementKey(element: CombatElement): ElementKey {
   }
 }
 
-/** The four iso diagonals, as unit-ish vectors in SCREEN space. Derived from
- *  isoToScreen (sx = (x-y)*HW, sy = (x+y)*HH): Down => down-left,
- *  Right => down-right, Up => up-right, Left => up-left. */
 // The four iso diagonals, in SCREEN space, in the same order facingIndex
 // buckets them: down-right, down-left, up-right, up-left.
 //
@@ -131,64 +140,97 @@ function drawArrow(ramp: Ramp, dx: number, dy: number): Texture | null {
   const px = -uy;
   const py = ux;
 
-  // Shaft: the darkest stop. It is the longest part, so keeping it dark stops
-  // it swamping the two smaller details.
+  // --- Geometry -----------------------------------------------------------
   //
-  // It STOPS where the head begins rather than running on to the tip. Drawing
-  // it full-length put the head triangle on top of the shaft's last stretch,
-  // so the head read as pasted over the shaft instead of fitted to the end of
-  // it. SHAFT_HEAD_OVERLAP keeps a hair of overlap so antialiasing cannot
-  // leave a seam at the join.
+  // The shaft STOPS where the head begins rather than running on to the tip.
+  // Drawing it full-length put the head triangle on top of the shaft's last
+  // stretch, so the head read as pasted over the shaft instead of fitted to
+  // the end of it. SHAFT_HEAD_OVERLAP keeps a hair of overlap so antialiasing
+  // cannot leave a seam at the join.
   const shaftEndX = tipX - ux * (HEAD_LEN - SHAFT_HEAD_OVERLAP);
   const shaftEndY = tipY - uy * (HEAD_LEN - SHAFT_HEAD_OVERLAP);
-  ctx.strokeStyle = hex(ramp[SHAFT_STOP]);
-  ctx.lineWidth = SHAFT_WIDTH;
-  ctx.lineCap = 'butt';
-  ctx.beginPath();
-  ctx.moveTo(tailX, tailY);
-  ctx.lineTo(shaftEndX, shaftEndY);
-  ctx.stroke();
 
-  // Head: a filled triangle at the tip, in the element's signature colour, so
-  // the arrow reads point-first and carries its element at a glance.
-  ctx.fillStyle = hex(ramp[HEAD_STOP]);
-  ctx.beginPath();
-  ctx.moveTo(tipX, tipY);
-  ctx.lineTo(
-    tipX - ux * HEAD_LEN + px * HEAD,
-    tipY - uy * HEAD_LEN + py * HEAD,
-  );
-  ctx.lineTo(
-    tipX - ux * HEAD_LEN - px * HEAD,
-    tipY - uy * HEAD_LEN - py * HEAD,
-  );
-  ctx.closePath();
-  ctx.fill();
-
-  // Fletching: two vanes forming a V that opens REARWARD, like real fletching
-  // sitting at the nock. Each vane runs from an apex up the shaft, backward
-  // and outward, ending just behind the tail.
-  //
-  // The first version ran them from the tail FORWARD and outward, which made
-  // the V open toward the tip — reading as a second, backwards arrowhead.
-  //
-  // Drawn at SHAFT_WIDTH rather than 1px: a single-pixel antialiased stroke
-  // this short renders as a couple of faint pixels and disappears.
+  // The fletching's two vanes form a V that opens REARWARD, like real
+  // fletching sitting at the nock: each runs from an apex up the shaft,
+  // backward and outward, ending just past the tail. The first version ran
+  // them from the tail FORWARD and outward, which made the V open toward the
+  // tip — reading as a second, backwards arrowhead.
   const apexX = tailX + ux * FLETCH_LEN;
   const apexY = tailY + uy * FLETCH_LEN;
   const backX = tailX - ux * FLETCH_OVERHANG;
   const backY = tailY - uy * FLETCH_OVERHANG;
+
+  // Path builders, shared by both passes below so the outline and the fill
+  // are geometrically identical by construction and cannot drift apart.
+  const shaftPath = () => {
+    ctx.beginPath();
+    ctx.moveTo(tailX, tailY);
+    ctx.lineTo(shaftEndX, shaftEndY);
+  };
+  const fletchingPath = () => {
+    ctx.beginPath();
+    for (const sign of [1, -1]) {
+      ctx.moveTo(apexX, apexY);
+      ctx.lineTo(
+        backX + sign * px * FLETCH_SPREAD,
+        backY + sign * py * FLETCH_SPREAD,
+      );
+    }
+  };
+  const headPath = () => {
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(
+      tipX - ux * HEAD_LEN + px * HEAD,
+      tipY - uy * HEAD_LEN + py * HEAD,
+    );
+    ctx.lineTo(
+      tipX - ux * HEAD_LEN - px * HEAD,
+      tipY - uy * HEAD_LEN - py * HEAD,
+    );
+    ctx.closePath();
+  };
+
+  // --- Pass 1: outline ----------------------------------------------------
+  //
+  // EVERY part is outlined before ANY part is filled. Outlining each part
+  // just before filling it would let a later part's outline cut a dark notch
+  // into an earlier part's fill — most visibly where the head meets the
+  // shaft. Two passes give one continuous outline around the whole
+  // silhouette.
+  //
+  // Round caps and joins so the outline wraps the ends and corners rather
+  // than leaving them squared off.
+  ctx.strokeStyle = OUTLINE_COLOR;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = SHAFT_WIDTH + OUTLINE * 2;
+  shaftPath();
+  ctx.stroke();
+  ctx.lineWidth = FLETCH_WIDTH + OUTLINE * 2;
+  fletchingPath();
+  ctx.stroke();
+  // The head is filled, so its outline is a stroke centred on the same path:
+  // half sits outside the triangle, which is the OUTLINE px we want.
+  ctx.lineWidth = OUTLINE * 2;
+  headPath();
+  ctx.stroke();
+
+  // --- Pass 2: fills ------------------------------------------------------
+  ctx.lineCap = 'butt';
+  ctx.strokeStyle = hex(ramp[SHAFT_STOP]);
+  ctx.lineWidth = SHAFT_WIDTH;
+  shaftPath();
+  ctx.stroke();
+
   ctx.strokeStyle = hex(ramp[FLETCH_STOP]);
   ctx.lineWidth = FLETCH_WIDTH;
-  ctx.beginPath();
-  for (const sign of [1, -1]) {
-    ctx.moveTo(apexX, apexY);
-    ctx.lineTo(
-      backX + sign * px * FLETCH_SPREAD,
-      backY + sign * py * FLETCH_SPREAD,
-    );
-  }
+  fletchingPath();
   ctx.stroke();
+
+  ctx.fillStyle = hex(ramp[HEAD_STOP]);
+  headPath();
+  ctx.fill();
 
   return new Texture({
     source: new CanvasSource({
