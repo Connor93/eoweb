@@ -1,9 +1,10 @@
+import type { CharacterMapInfo } from 'eolib';
 import type { Client } from '@/client';
 import type { Vector2 } from '@/vector';
 import { getNextCoords } from './get-next-coords';
 import { isTileSpecWalkable } from './tile-spec-walkable';
 
-/** Tiles the equipped weapon reaches, nearest-first, as a straight ray in the
+/** Tiles a ranged attack reaches, nearest-first, as a straight ray in the
  *  character's facing direction.
  *
  *  Mirrors reoserv's `get_attack_target` (src/map/map/character/attack.rs):
@@ -12,20 +13,18 @@ import { isTileSpecWalkable } from './tile-spec-walkable';
  *  rejects occupied tiles, which would truncate the ray at exactly the NPC
  *  being aimed at.
  *
- *  Empty for melee: the family-55 range map is sparse and only carries
- *  reach > 1.
+ *  Takes the character explicitly so it serves BOTH the local player's range
+ *  indicator and any nearby player's projectile flight path.
  *
  *  Known gap: the server forces range 1 inside the arena, which the client has
  *  no state for, so the ray over-promises there. */
-export function attackRayTiles(client: Client): Vector2[] {
-  const range = client.itemAttackRanges.get(client.equipment.weapon);
-  if (!range || range <= 1) {
-    return [];
-  }
-
-  const character = client.getPlayerCharacter();
+export function attackRayTiles(
+  client: Client,
+  character: CharacterMapInfo,
+  range: number,
+): Vector2[] {
   const map = client.map;
-  if (!character || !map) {
+  if (!map || range <= 1) {
     return [];
   }
 
@@ -55,4 +54,17 @@ export function attackRayTiles(client: Client): Vector2[] {
   }
 
   return tiles;
+}
+
+/** The local player's ray, for the weapon-range indicator.
+ *
+ *  Empty for melee: the family-55 range map is sparse and only carries
+ *  reach > 1. */
+export function localAttackRayTiles(client: Client): Vector2[] {
+  const range = client.itemAttackRanges.get(client.equipment.weapon);
+  const character = client.getPlayerCharacter();
+  if (!range || !character) {
+    return [];
+  }
+  return attackRayTiles(client, character, range);
 }

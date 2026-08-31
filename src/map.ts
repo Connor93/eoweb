@@ -65,9 +65,9 @@ import {
   weaponAnchorScreen,
 } from '@/render';
 import {
-  attackRayTiles,
   getItemGraphicId,
   isoToScreen,
+  localAttackRayTiles,
   screenToIso,
 } from '@/utils';
 import type { Vector2 } from '@/vector';
@@ -806,7 +806,7 @@ export class MapRenderer {
     ) {
       // No skill armed: show how far the equipped weapon reaches as a ray in
       // the facing direction, mirroring the server's attack targeting.
-      for (const tile of attackRayTiles(this.client)) {
+      for (const tile of localAttackRayTiles(this.client)) {
         dynamics.push({
           x: tile.x,
           y: tile.y,
