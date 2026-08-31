@@ -32,8 +32,9 @@ const HEAD = 4;
 const HEAD_LEN = 7;
 /** Shaft stroke width. */
 const SHAFT_WIDTH = 2;
-/** Fletching stroke width. Kept at shaft width so the barbs actually read. */
-const FLETCH_WIDTH = 2;
+/** How far forward the notch cuts into the fletching's rear edge, making it
+ *  concave so the shape reads as a tail rather than a backwards arrowhead. */
+const FLETCH_NOTCH = 2.5;
 /** How far up the shaft the fletching's forward apex sits, from the tail. */
 const FLETCH_LEN = 6;
 /** How far the fletching vanes splay off the shaft. */
@@ -150,15 +151,22 @@ function drawArrow(ramp: Ramp, dx: number, dy: number): Texture | null {
   const shaftEndX = tipX - ux * (HEAD_LEN - SHAFT_HEAD_OVERLAP);
   const shaftEndY = tipY - uy * (HEAD_LEN - SHAFT_HEAD_OVERLAP);
 
-  // The fletching's two vanes form a V that opens REARWARD, like real
-  // fletching sitting at the nock: each runs from an apex up the shaft,
-  // backward and outward, ending just past the tail. The first version ran
-  // them from the tail FORWARD and outward, which made the V open toward the
-  // tip — reading as a second, backwards arrowhead.
+  // The fletching is a SOLID swallowtail at the nock, not two separate vanes.
+  //
+  // Two vanes drawn as lines splaying from a point up the shaft left the shaft
+  // itself visible between them — three prongs radiating from one point, which
+  // read as a tripod rather than fletching. Filling the shape covers that
+  // stretch of shaft, so the back of the arrow is one solid mass.
+  //
+  // The rear edge is NOTCHED (concave, cut forward toward the apex) so the
+  // shape cannot be mistaken for a second arrowhead pointing backwards — that
+  // notch is what makes a dart tail read as a tail.
   const apexX = tailX + ux * FLETCH_LEN;
   const apexY = tailY + uy * FLETCH_LEN;
   const backX = tailX - ux * FLETCH_OVERHANG;
   const backY = tailY - uy * FLETCH_OVERHANG;
+  const notchX = tailX + ux * FLETCH_NOTCH;
+  const notchY = tailY + uy * FLETCH_NOTCH;
 
   // Path builders, shared by both passes below so the outline and the fill
   // are geometrically identical by construction and cannot drift apart.
@@ -169,13 +177,11 @@ function drawArrow(ramp: Ramp, dx: number, dy: number): Texture | null {
   };
   const fletchingPath = () => {
     ctx.beginPath();
-    for (const sign of [1, -1]) {
-      ctx.moveTo(apexX, apexY);
-      ctx.lineTo(
-        backX + sign * px * FLETCH_SPREAD,
-        backY + sign * py * FLETCH_SPREAD,
-      );
-    }
+    ctx.moveTo(apexX, apexY);
+    ctx.lineTo(backX + px * FLETCH_SPREAD, backY + py * FLETCH_SPREAD);
+    ctx.lineTo(notchX, notchY);
+    ctx.lineTo(backX - px * FLETCH_SPREAD, backY - py * FLETCH_SPREAD);
+    ctx.closePath();
   };
   const headPath = () => {
     ctx.beginPath();
@@ -207,7 +213,7 @@ function drawArrow(ramp: Ramp, dx: number, dy: number): Texture | null {
   ctx.lineWidth = SHAFT_WIDTH + OUTLINE * 2;
   shaftPath();
   ctx.stroke();
-  ctx.lineWidth = FLETCH_WIDTH + OUTLINE * 2;
+  ctx.lineWidth = OUTLINE * 2;
   fletchingPath();
   ctx.stroke();
   // The head is filled, so its outline is a stroke centred on the same path:
@@ -217,16 +223,20 @@ function drawArrow(ramp: Ramp, dx: number, dy: number): Texture | null {
   ctx.stroke();
 
   // --- Pass 2: fills ------------------------------------------------------
+  //
+  // ORDER MATTERS: the shaft is filled FIRST so the fletching covers the
+  // stretch of it that runs through the tail. Fill the fletching first and the
+  // shaft draws back over it, splitting it into two vanes with shaft showing
+  // between them — the tripod look this shape exists to remove.
   ctx.lineCap = 'butt';
   ctx.strokeStyle = hex(ramp[SHAFT_STOP]);
   ctx.lineWidth = SHAFT_WIDTH;
   shaftPath();
   ctx.stroke();
 
-  ctx.strokeStyle = hex(ramp[FLETCH_STOP]);
-  ctx.lineWidth = FLETCH_WIDTH;
+  ctx.fillStyle = hex(ramp[FLETCH_STOP]);
   fletchingPath();
-  ctx.stroke();
+  ctx.fill();
 
   ctx.fillStyle = hex(ramp[HEAD_STOP]);
   headPath();
