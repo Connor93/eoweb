@@ -7,6 +7,7 @@ import {
   PacketFamily,
 } from 'eolib';
 import type { Client } from '@/client';
+import { CombatElement } from '@/combat-overlay/element-colors';
 import {
   CharacterAttackAnimation,
   CharacterRangedAttackAnimation,
@@ -41,7 +42,12 @@ function handleAttackPlayer(client: Client, reader: EoReader) {
   );
 
   if (isBowMetadata(metadata)) {
-    client.projectileController.openShot(packet.playerId, attackMs);
+    const element =
+      packet.playerId === client.playerId
+        ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
+            ?.element ?? CombatElement.Plain)
+        : client.instanceController.weaponElement(packet.playerId);
+    client.projectileController.openShot(packet.playerId, attackMs, element);
   }
 
   const index = randomRange(0, metadata.sfx.length - 1);

@@ -1,7 +1,7 @@
-import { CanvasSource, Texture } from 'pixi.js';
 import type { Client } from '@/client';
+import type { CombatElement } from '@/combat-overlay/element-colors';
 import { HALF_TILE_HEIGHT, HALF_TILE_WIDTH } from '@/consts';
-import { Projectile, type ProjectileVisual } from '@/render';
+import { getArrowVisual, Projectile } from '@/render';
 import { attackRayTiles, isoToScreen } from '@/utils';
 
 // --- Tuning knobs. All three are settled in the browser, not on paper. ---
@@ -30,34 +30,10 @@ const TILE_ISO_PX = Math.hypot(HALF_TILE_WIDTH, HALF_TILE_HEIGHT);
  *  as the swing — has arrived and named the target before launch. */
 interface PendingShot {
   playerId: number;
+  element: CombatElement;
   releaseInMs: number;
   targetKey: string | null;
   onImpact: (() => void) | null;
-}
-
-/** Placeholder visual: a plain white dot. Task 3 replaces this with the
- *  procedurally-drawn arrow. It exists so the flight mechanics can be
- *  reviewed and seen working before any art judgement enters. */
-class DotVisual implements ProjectileVisual {
-  private texture: Texture | null = null;
-
-  textureFor(): Texture | null {
-    if (!this.texture) {
-      const canvas = new OffscreenCanvas(6, 6);
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return null;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(1, 1, 4, 4);
-      this.texture = new Texture({
-        source: new CanvasSource({
-          resource: canvas,
-          scaleMode: 'nearest',
-          label: 'projectile-placeholder',
-        }),
-      });
-    }
-    return this.texture;
-  }
 }
 
 /** In-flight projectiles + the pending shots that will become them. Pooled
@@ -70,7 +46,6 @@ export class ProjectileController {
    *  and each outcome packet must attach to the shot that caused it, in
    *  order — hence a queue, not a single slot. */
   private pending = new Map<number, PendingShot[]>();
-  private visual: ProjectileVisual = new DotVisual();
 
   constructor(client: Client) {
     this.client = client;
@@ -78,10 +53,11 @@ export class ProjectileController {
 
   /** A ranged swing was seen. Opens a pending shot; the arrow launches
    *  RELEASE_FRACTION of the way through the animation. */
-  openShot(playerId: number, attackMs: number): void {
+  openShot(playerId: number, attackMs: number, element: CombatElement): void {
     const queue = this.pending.get(playerId) ?? [];
     queue.push({
       playerId,
+      element,
       releaseInMs: Math.max(1, attackMs * RELEASE_FRACTION),
       targetKey: null,
       onImpact: null,
@@ -162,7 +138,7 @@ export class ProjectileController {
 
     const projectile = this.pool.pop() ?? new Projectile();
     projectile.reset(
-      this.visual,
+      getArrowVisual(shot.element),
       from.x,
       fromY,
       target.x,

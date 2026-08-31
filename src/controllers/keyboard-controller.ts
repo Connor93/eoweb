@@ -1,5 +1,6 @@
 import { Direction, Emote, ItemSubtype, MapTileSpec, SitState } from 'eolib';
 import type { Client } from '@/client';
+import { CombatElement } from '@/combat-overlay/element-colors';
 import {
   HOTBAR_COOLDOWN_TICKS,
   WALK_TICKS as WALK_ANIMATION_TICKS,
@@ -532,7 +533,15 @@ export class KeyboardController {
       // so handlers/attack.ts's openShot call never fires for the local
       // player — this is the only place the local player's own shot opens.
       if (isBowMetadata(metadata)) {
-        this.client.projectileController.openShot(character.playerId, attackMs);
+        const element =
+          this.client.instanceController
+            .list()
+            .find((i) => i.equippedSlot === 8)?.element ?? CombatElement.Plain;
+        this.client.projectileController.openShot(
+          character.playerId,
+          attackMs,
+          element,
+        );
       }
 
       this.client.movementController.attack(
