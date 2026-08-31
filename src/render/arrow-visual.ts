@@ -31,10 +31,14 @@ const HEAD_LEN = 7;
 const SHAFT_WIDTH = 2;
 /** Fletching stroke width. Kept at shaft width so the barbs actually read. */
 const FLETCH_WIDTH = 2;
-/** How far the fletching barbs run forward from the tail. */
+/** How far up the shaft the fletching's forward apex sits, from the tail. */
 const FLETCH_LEN = 6;
-/** How far the fletching barbs splay off the shaft. */
+/** How far the fletching vanes splay off the shaft. */
 const FLETCH_SPREAD = 3.5;
+/** How far the vanes trail past the tail, so the fan reads as behind it. */
+const FLETCH_OVERHANG = 1.5;
+/** Hair of shaft tucked under the head, so the join has no antialiased seam. */
+const SHAFT_HEAD_OVERLAP = 1;
 
 /** Ramp indices, named. shadow -> mid -> base -> hot. */
 // Ramp stops by ROLE, chosen for maximum VALUE separation so the three parts
@@ -129,12 +133,20 @@ function drawArrow(ramp: Ramp, dx: number, dy: number): Texture | null {
 
   // Shaft: the darkest stop. It is the longest part, so keeping it dark stops
   // it swamping the two smaller details.
+  //
+  // It STOPS where the head begins rather than running on to the tip. Drawing
+  // it full-length put the head triangle on top of the shaft's last stretch,
+  // so the head read as pasted over the shaft instead of fitted to the end of
+  // it. SHAFT_HEAD_OVERLAP keeps a hair of overlap so antialiasing cannot
+  // leave a seam at the join.
+  const shaftEndX = tipX - ux * (HEAD_LEN - SHAFT_HEAD_OVERLAP);
+  const shaftEndY = tipY - uy * (HEAD_LEN - SHAFT_HEAD_OVERLAP);
   ctx.strokeStyle = hex(ramp[SHAFT_STOP]);
   ctx.lineWidth = SHAFT_WIDTH;
   ctx.lineCap = 'butt';
   ctx.beginPath();
   ctx.moveTo(tailX, tailY);
-  ctx.lineTo(tipX, tipY);
+  ctx.lineTo(shaftEndX, shaftEndY);
   ctx.stroke();
 
   // Head: a filled triangle at the tip, in the element's signature colour, so
@@ -153,23 +165,29 @@ function drawArrow(ramp: Ramp, dx: number, dy: number): Texture | null {
   ctx.closePath();
   ctx.fill();
 
-  // Fletching: two barbs swept back from the tail, at mid value. Drawn at
-  // SHAFT_WIDTH rather than 1px — a single-pixel antialiased stroke this
-  // short renders as a couple of faint pixels and effectively disappears,
-  // which is why the first version looked like it had no fletching at all.
+  // Fletching: two vanes forming a V that opens REARWARD, like real fletching
+  // sitting at the nock. Each vane runs from an apex up the shaft, backward
+  // and outward, ending just behind the tail.
+  //
+  // The first version ran them from the tail FORWARD and outward, which made
+  // the V open toward the tip — reading as a second, backwards arrowhead.
+  //
+  // Drawn at SHAFT_WIDTH rather than 1px: a single-pixel antialiased stroke
+  // this short renders as a couple of faint pixels and disappears.
+  const apexX = tailX + ux * FLETCH_LEN;
+  const apexY = tailY + uy * FLETCH_LEN;
+  const backX = tailX - ux * FLETCH_OVERHANG;
+  const backY = tailY - uy * FLETCH_OVERHANG;
   ctx.strokeStyle = hex(ramp[FLETCH_STOP]);
   ctx.lineWidth = FLETCH_WIDTH;
   ctx.beginPath();
-  ctx.moveTo(tailX, tailY);
-  ctx.lineTo(
-    tailX + ux * FLETCH_LEN + px * FLETCH_SPREAD,
-    tailY + uy * FLETCH_LEN + py * FLETCH_SPREAD,
-  );
-  ctx.moveTo(tailX, tailY);
-  ctx.lineTo(
-    tailX + ux * FLETCH_LEN - px * FLETCH_SPREAD,
-    tailY + uy * FLETCH_LEN - py * FLETCH_SPREAD,
-  );
+  for (const sign of [1, -1]) {
+    ctx.moveTo(apexX, apexY);
+    ctx.lineTo(
+      backX + sign * px * FLETCH_SPREAD,
+      backY + sign * py * FLETCH_SPREAD,
+    );
+  }
   ctx.stroke();
 
   return new Texture({
