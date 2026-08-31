@@ -122,36 +122,48 @@ function handleAvatarReply(client: Client, reader: EoReader) {
     return;
   }
 
-  client.combatOverlayController.setHpBar({
-    key: `char:${packet.victimId}`,
-    percent: packet.hpPercentage,
-    worldX: victim.coords.x,
-    worldY: victim.coords.y,
-  });
-  if (packet.damage > 0) {
-    const element =
-      packet.playerId === client.playerId
-        ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
-            ?.element ?? CombatElement.Plain)
-        : client.instanceController.weaponElement(packet.playerId);
-    client.combatOverlayController.pushDamage({
-      amount: packet.damage,
-      element,
-      targetKey: `char:${packet.victimId}`,
+  const bundle = () => {
+    client.combatOverlayController.setHpBar({
+      key: `char:${packet.victimId}`,
+      percent: packet.hpPercentage,
       worldX: victim.coords.x,
       worldY: victim.coords.y,
     });
-  } else {
-    client.combatOverlayController.pushMiss({
-      targetKey: `char:${packet.victimId}`,
-      worldX: victim.coords.x,
-      worldY: victim.coords.y,
-    });
-  }
+    if (packet.damage > 0) {
+      const element =
+        packet.playerId === client.playerId
+          ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
+              ?.element ?? CombatElement.Plain)
+          : client.instanceController.weaponElement(packet.playerId);
+      client.combatOverlayController.pushDamage({
+        amount: packet.damage,
+        element,
+        targetKey: `char:${packet.victimId}`,
+        worldX: victim.coords.x,
+        worldY: victim.coords.y,
+      });
+    } else {
+      client.combatOverlayController.pushMiss({
+        targetKey: `char:${packet.victimId}`,
+        worldX: victim.coords.x,
+        worldY: victim.coords.y,
+      });
+    }
 
-  if (packet.dead) {
-    client.setCharacterDeathAnimation(packet.victimId);
-    client.audioController.playAtPosition(SfxId.Dead, victim.coords);
+    if (packet.dead) {
+      client.setCharacterDeathAnimation(packet.victimId);
+      client.audioController.playAtPosition(SfxId.Dead, victim.coords);
+    }
+  };
+
+  if (
+    !client.projectileController.attachOutcome(
+      packet.playerId,
+      `char:${packet.victimId}`,
+      bundle,
+    )
+  ) {
+    bundle();
   }
 }
 
