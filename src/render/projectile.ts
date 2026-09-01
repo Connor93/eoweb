@@ -1,4 +1,5 @@
 import { type Container, Sprite, type Texture } from 'pixi.js';
+import type { ArrowTrailKind, ElementKey } from '@/vfx-engine';
 
 // worldContainer is sortableChildren; every map/entity/effect sprite is
 // re-assigned zIndex 0..N from `_worldOrder` each frame (MapRenderer.
@@ -38,6 +39,14 @@ export class Projectile {
    *  in-flight, still-targetless projectile when a delayed outcome packet
    *  arrives after launch — see ProjectileController.attachOutcome. */
   shooterId = 0;
+  /** Which trail this arrow sheds, or null for shapes that shed nothing. */
+  trailKind: ArrowTrailKind | null = null;
+  /** The element the arrow was DRAWN with, so its motes match it exactly. */
+  elementKey: ElementKey = 'neutral';
+  /** Flight time banked since the last mote, ms. */
+  emitAccumMs = 0;
+  /** Monotonic per-flight mote counter, feeding deterministic jitter. */
+  emitCount = 0;
   /** Launch point in RAW iso-screen space. Fixed for the whole flight. */
   fromIsoX = 0;
   fromIsoY = 0;
@@ -69,6 +78,8 @@ export class Projectile {
     targetKey: string | null,
     durationMs: number,
     onImpact: (() => void) | null,
+    trailKind: ArrowTrailKind | null,
+    elementKey: ElementKey,
   ): void {
     this.visual = visual;
     this.shooterId = shooterId;
@@ -80,6 +91,12 @@ export class Projectile {
     this.durationMs = Math.max(1, durationMs);
     this.elapsedMs = 0;
     this.onImpact = onImpact;
+    // Every reset sets all four so a projectile pulled from the pool can
+    // never inherit the previous flight's trail, element or mote counter.
+    this.trailKind = trailKind;
+    this.elementKey = elementKey;
+    this.emitAccumMs = 0;
+    this.emitCount = 0;
     this.sprite.visible = true;
     // Every reset applies the fallback, so a projectile pulled from the pool
     // can never inherit the previous flight's zIndex either. Nothing

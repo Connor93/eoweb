@@ -1,8 +1,24 @@
+import { CanvasSource, Texture } from 'pixi.js';
 import type { Client } from '@/client';
 import type { CombatElement } from '@/combat-overlay/element-colors';
 import { HALF_TILE_HEIGHT, HALF_TILE_WIDTH } from '@/consts';
-import { getArrowVisual, Projectile } from '@/render';
+import {
+  getArrowVisual,
+  Projectile,
+  resolveArrowElement,
+  TrailParticle,
+} from '@/render';
 import { isoToScreen, localAttackRayTiles } from '@/utils';
+import {
+  ARROW_SHAPES,
+  ARROW_TRAILS,
+  type ArrowTrailKind,
+  DEFAULT_ARROW_SHAPE,
+  drawMoteCanvas,
+  type ElementKey,
+  isArrowShapeId,
+  moteJitter,
+} from '@/vfx-engine';
 
 // --- Tuning knobs. The first three are settled in the browser, not on paper. ---
 
@@ -25,9 +41,38 @@ const FLIGHT_LIFT = 18;
  *  it leaves the bow instead of appearing inside the character sprite. About
  *  40% of a tile — clear of the body without looking detached from it. */
 const MUZZLE_OFFSET = 14;
+/** Global safety cap on live trail motes, across every in-flight arrow. Exists
+ *  so a pathological frame delta (a backgrounded tab resuming) cannot
+ *  emit hundreds of motes in one step. */
+const MAX_PARTICLES = 120;
 
 /** One tile of travel, in iso-screen pixels. */
 const TILE_ISO_PX = Math.hypot(HALF_TILE_WIDTH, HALF_TILE_HEIGHT);
+
+/** One below the projectile's flat foreground z (PROJECTILE_Z_INDEX_FALLBACK
+ *  in render/projectile.ts), so an arrow always reads on top of its own
+ *  trail. Kept in step with that value by hand — both are flat constants. */
+const TRAIL_Z_INDEX = 1_000_000 - 1;
+
+// Mote textures are tiny and there are at most 3 kinds x 7 elements, so they
+// are built once on first use and kept for the session.
+const moteTextures = new Map<string, Texture>();
+
+function moteTexture(kind: ArrowTrailKind, element: ElementKey): Texture {
+  const key = `${kind}:${element}`;
+  let texture = moteTextures.get(key);
+  if (!texture) {
+    texture = new Texture({
+      source: new CanvasSource({
+        resource: drawMoteCanvas(kind, element),
+        scaleMode: 'nearest',
+        label: `arrow-trail:${key}`,
+      }),
+    });
+    moteTextures.set(key, texture);
+  }
+  return texture;
+}
 
 /** A shot whose arrow has not left the bow yet. Held for RELEASE_FRACTION of
  *  the attack animation so the damage packet — sent in the SAME server tick
@@ -47,6 +92,8 @@ export class ProjectileController {
   private client: Client;
   private active: Projectile[] = [];
   private pool: Projectile[] = [];
+  private particles: TrailParticle[] = [];
+  private particlePool: TrailParticle[] = [];
   /** FIFO per shooter. A fast bow at long range can have several shots out,
    *  and each outcome packet must attach to the shot that caused it, in
    *  order — hence a queue, not a single slot. */
@@ -134,6 +181,7 @@ export class ProjectileController {
   advance(deltaMs: number): void {
     this.advancePending(deltaMs);
     this.advanceActive(deltaMs);
+    this.advanceParticles(deltaMs);
   }
 
   private advancePending(deltaMs: number): void {
@@ -206,6 +254,12 @@ export class ProjectileController {
       (tiles / ARROW_TILES_PER_SEC) * 1000,
     );
 
+    const shape = isArrowShapeId(shot.shapeId)
+      ? ARROW_SHAPES[shot.shapeId]
+      : ARROW_SHAPES[DEFAULT_ARROW_SHAPE];
+    const trailKind = shape.trail ?? null;
+    const elementKey = resolveArrowElement(shot.shapeId, shot.element);
+
     const projectile = this.pool.pop() ?? new Projectile();
     projectile.reset(
       getArrowVisual(shot.shapeId, shot.element),
@@ -219,6 +273,8 @@ export class ProjectileController {
       to ? shot.targetKey : null,
       durationMs,
       shot.onImpact,
+      trailKind,
+      elementKey,
     );
     projectile.refreshTexture();
     projectile.mount(this.client.worldContainer);
@@ -300,11 +356,64 @@ export class ProjectileController {
       // element, same precedent as SkillBurst's BURST_Z_INDEX_FALLBACK.
       p.refreshTexture();
 
+      // Shed motes along the flight path. Emission is driven by flight TIME,
+      // not by frame count, so the trail's density does not change with frame
+      // rate.
+      if (p.trailKind && !p.finished) {
+        const def = ARROW_TRAILS[p.trailKind];
+        p.emitAccumMs += deltaMs;
+        while (
+          p.emitAccumMs >= def.emitMs &&
+          this.particles.length < MAX_PARTICLES
+        ) {
+          p.emitAccumMs -= def.emitMs;
+          const j = moteJitter(p.emitCount++);
+          const particle = this.particlePool.pop() ?? new TrailParticle();
+          particle.reset(
+            moteTexture(p.trailKind, p.elementKey),
+            now.x + j.x * def.spread,
+            now.y + j.y * def.spread,
+            def.driftX,
+            def.driftY,
+            def.lifeMs,
+          );
+          particle.sprite.zIndex = TRAIL_Z_INDEX;
+          particle.mount(this.client.worldContainer);
+          this.particles.push(particle);
+        }
+        // If the MAX_PARTICLES cap blocks the loop above from ever entering
+        // (or from draining fully), emitAccumMs would otherwise keep growing
+        // every frame it stays blocked; once particles later free up, the
+        // arrow would burst-emit a whole banked clump at once to "catch up".
+        // Clamping here means a saturated cap can never bank emission debt —
+        // at most one mote's worth is ever owed.
+        p.emitAccumMs = Math.min(p.emitAccumMs, def.emitMs);
+      }
+
       if (p.finished) {
         p.releaseImpact();
         p.unmount();
         this.active.splice(i, 1);
         this.pool.push(p);
+      }
+    }
+  }
+
+  private advanceParticles(deltaMs: number): void {
+    const mapRenderer = this.client.mapRenderer;
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const particle = this.particles[i];
+      particle.step(deltaMs);
+      // Bake EVERY frame — the iso point is a fixed WORLD point but
+      // worldContainer coords are camera-relative.
+      const now = particle.currentIso();
+      const baked = mapRenderer?.bakeIsoToWorldSprite(now.x, now.y);
+      if (baked) particle.sprite.position.set(baked.x, baked.y);
+      particle.sprite.alpha = particle.alpha;
+      if (particle.finished) {
+        particle.unmount();
+        this.particles.splice(i, 1);
+        this.particlePool.push(particle);
       }
     }
   }
@@ -342,5 +451,12 @@ export class ProjectileController {
     }
     this.pool.push(...this.active);
     this.active = [];
+
+    // Particles carry no impact bundle, so unlike projectiles there is
+    // nothing to release — they are purely decorative and can simply be
+    // dropped.
+    for (const particle of this.particles) particle.unmount();
+    this.particlePool.push(...this.particles);
+    this.particles = [];
   }
 }

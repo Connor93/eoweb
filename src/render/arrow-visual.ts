@@ -74,6 +74,19 @@ export class ArrowVisual implements ProjectileVisual {
   }
 }
 
+/** Element precedence: ROLLED element -> the shape's own default -> neutral.
+ *  Exported because the trail must be drawn in the SAME element as the arrow;
+ *  two copies of this rule would eventually disagree. */
+export function resolveArrowElement(
+  shapeId: string,
+  element: CombatElement,
+): ElementKey {
+  const id = isArrowShapeId(shapeId) ? shapeId : DEFAULT_ARROW_SHAPE;
+  return element === CombatElement.Plain
+    ? ARROW_SHAPES[id].defaultElement
+    : elementKey(element);
+}
+
 const cache = new Map<string, ArrowVisual>();
 
 // Unknown shape ids we've already warned about, so a bow fired repeatedly
@@ -107,11 +120,9 @@ export function getArrowVisual(
   // the damage number and the weapon glow. But an UNROLLED flame bow must
   // still fire FIRE-coloured flame arrows, not neutral ones — otherwise the
   // whole motivating case (a flaming bow that shoots flaming arrows) fails on
-  // exactly the bows most likely to be authored with a shape.
-  const resolved: ElementKey =
-    element === CombatElement.Plain
-      ? ARROW_SHAPES[id].defaultElement
-      : elementKey(element);
+  // exactly the bows most likely to be authored with a shape. See
+  // resolveArrowElement below — extracted so the trail can share this rule.
+  const resolved = resolveArrowElement(shapeId, element);
 
   const key = `${id}:${resolved}`;
   let visual = cache.get(key);
