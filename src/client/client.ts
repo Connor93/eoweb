@@ -199,6 +199,10 @@ export class Client {
   // Effective weapon attack range in tiles (item_id -> tiles), from the same
   // family-55 Reply packet. Sparse: only weapons whose reach exceeds 1 appear.
   itemAttackRanges: Map<number, number> = new Map();
+  // Authored bow arrow art (item_id -> arrow kind), from the same family-55
+  // Reply packet. Sparse: only items that author a non-default arrow_kind
+  // appear.
+  itemArrowKinds: Map<number, string> = new Map();
   // "What does this stat do" readouts from the server (StatEffects deep
   // packet, family 64). Keyed by stat row ("str" … "armor"); each entry is a
   // locale key plus its number. Values arrive as value_x100 and are divided

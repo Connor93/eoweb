@@ -7,6 +7,11 @@ import type { Client } from '@/client';
 // three move_rate_ms, char capped_flags (bit0=attack capped, bit1=move capped).
 export const FAMILY_RATES = 55;
 
+function readStr(reader: EoReader): string {
+  const len = reader.getChar();
+  return new TextDecoder().decode(new Uint8Array(reader.getBytes(len)));
+}
+
 function parseEntries(client: Client, reader: EoReader) {
   const count = reader.getShort();
   for (let i = 0; i < count; i++) {
@@ -43,9 +48,10 @@ export function registerRatesHandlers(client: Client) {
     PacketAction.List,
     (reader) => parseEntries(client, reader),
   );
-  // Sparse per-item display list (swing speed + attack range) — sent at map
-  // enter / refresh. Each entry carries both fields; 0 means "no line" (an
-  // unauthored swing speed or a melee range), so only store positive values.
+  // Sparse per-item display list (swing speed + attack range + arrow kind) —
+  // sent at map enter / refresh. Each entry carries all three fields; 0/""
+  // means "no line" (an unauthored swing speed, a melee range, or the
+  // default arrow art), so only store non-default values.
   client.bus!.registerPacketHandler(
     FAMILY_RATES as PacketFamily,
     PacketAction.Reply,
@@ -55,11 +61,15 @@ export function registerRatesHandlers(client: Client) {
         const itemId = reader.getShort();
         const attackMs = reader.getThree();
         const range = reader.getChar();
+        const arrowKind = readStr(reader);
         if (attackMs > 0) {
           client.itemAttackRates.set(itemId, attackMs);
         }
         if (range > 0) {
           client.itemAttackRanges.set(itemId, range);
+        }
+        if (arrowKind) {
+          client.itemArrowKinds.set(itemId, arrowKind);
         }
       }
     },
