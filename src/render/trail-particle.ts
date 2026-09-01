@@ -1,4 +1,5 @@
 import { type Container, Sprite, type Texture } from 'pixi.js';
+import { moteAlpha } from '@/vfx-engine';
 
 /** One trail mote. Pooled by ProjectileController.
  *
@@ -49,10 +50,12 @@ export class TrailParticle {
     return this.ageMs >= this.lifeMs;
   }
 
-  /** Fades out over its life, easing so it lingers then goes quickly. */
+  /** Fades out over its life, easing so it lingers then goes quickly. Curve
+   *  lives in vfx-engine/arrows.ts (moteAlpha) so this and the AIO editor's
+   *  preview can never drift apart. */
   get alpha(): number {
     const t = this.ageMs / this.lifeMs;
-    return Math.max(0, 1 - t * t);
+    return moteAlpha(t);
   }
 
   /** Current point in RAW iso space: birth plus accumulated drift. */

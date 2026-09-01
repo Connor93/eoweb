@@ -41,9 +41,12 @@ const FLIGHT_LIFT = 18;
  *  it leaves the bow instead of appearing inside the character sprite. About
  *  40% of a tile — clear of the body without looking detached from it. */
 const MUZZLE_OFFSET = 14;
-/** Global safety cap on live trail motes, across every in-flight arrow. Exists
- *  so a pathological frame delta (a backgrounded tab resuming) cannot
- *  emit hundreds of motes in one step. */
+/** Global safety cap on live trail motes, across every in-flight arrow. NOT
+ *  for a pathological frame delta (a backgrounded tab resuming) — a delta
+ *  that large finishes the arrow outright, and the `!p.finished` guard above
+ *  means a finished arrow emits nothing. The real risk this guards against is
+ *  many archers firing at once plus an ordinary mid-size frame hitch, which
+ *  can genuinely stack up live motes across several simultaneous trails. */
 const MAX_PARTICLES = 120;
 
 /** One tile of travel, in iso-screen pixels. */
