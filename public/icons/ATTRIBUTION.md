@@ -17,3 +17,9 @@ Vendored via @iconify-json/game-icons. Icons used:
 - fist
 - bloody-sword
 - shield-echoes
+- arrow-scope
+- barbed-arrow
+- chained-arrow-heads
+- sight-disabled
+- archery-target
+- bullseye

@@ -13,4 +13,10 @@ export const SKILL_ICONS: ReadonlySet<string> = new Set([
   'fist',
   'bloody-sword',
   'shield-echoes',
+  'arrow-scope',
+  'barbed-arrow',
+  'chained-arrow-heads',
+  'sight-disabled',
+  'archery-target',
+  'bullseye',
 ]);

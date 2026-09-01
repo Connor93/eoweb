@@ -22,6 +22,13 @@ const SLUGS = [
   'fist',
   'bloody-sword',
   'shield-echoes',
+  // Archer skills/statuses (2026-09-01 archer pass)
+  'arrow-scope',
+  'barbed-arrow',
+  'chained-arrow-heads',
+  'sight-disabled',
+  'archery-target',
+  'bullseye',
 ];
 
 mkdirSync('public/icons', { recursive: true });
