@@ -76,6 +76,10 @@ export class ArrowVisual implements ProjectileVisual {
 
 const cache = new Map<string, ArrowVisual>();
 
+// Unknown shape ids we've already warned about, so a bow fired repeatedly
+// (or repeatedly rendered by many nearby archers) logs once, not every shot.
+const warnedShapeIds = new Set<string>();
+
 /** One ArrowVisual per (shape, element) pair, shared by every projectile
  *  using it. An unknown shape id falls back to the default rather than
  *  throwing: pub values reach the client unvalidated, and a bow authored
@@ -87,7 +91,16 @@ export function getArrowVisual(
   // isArrowShapeId, not a truthiness check — see drawArrowCanvas: a plain
   // object literal makes 'constructor'/'toString'/'__proto__' read as valid
   // shape ids.
-  const id = isArrowShapeId(shapeId) ? shapeId : DEFAULT_ARROW_SHAPE;
+  const valid = isArrowShapeId(shapeId);
+  if (!valid && shapeId !== '' && !warnedShapeIds.has(shapeId)) {
+    // Empty string is the normal "unauthored" case and must stay silent;
+    // anything else non-empty is a typo'd/stale pub value worth surfacing.
+    warnedShapeIds.add(shapeId);
+    console.warn(
+      `Unknown arrow shape id "${shapeId}"; falling back to "${DEFAULT_ARROW_SHAPE}".`,
+    );
+  }
+  const id = valid ? shapeId : DEFAULT_ARROW_SHAPE;
 
   // Element precedence: ROLLED element -> the shape's own default -> neutral.
   // The roll wins because it IS the damage type, so the arrow must agree with

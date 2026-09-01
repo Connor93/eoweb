@@ -43,6 +43,11 @@ function handleAttackPlayer(client: Client, reader: EoReader) {
   );
 
   if (isBowMetadata(metadata)) {
+    // The packet.playerId === client.playerId branch below is vestigial:
+    // reoserv excludes the attacker from its own Attack broadcast, so this
+    // handler never fires for the local player. Kept only so `element`
+    // wouldn't silently misbehave if that exclusion ever changed; it does
+    // NOT justify adding a matching branch to shape below (see next comment).
     const element =
       packet.playerId === client.playerId
         ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
