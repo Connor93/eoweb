@@ -3,7 +3,6 @@ import type { CombatElement } from '@/combat-overlay/element-colors';
 import { HALF_TILE_HEIGHT, HALF_TILE_WIDTH } from '@/consts';
 import { getArrowVisual, Projectile } from '@/render';
 import { isoToScreen, localAttackRayTiles } from '@/utils';
-import { DEFAULT_ARROW_SHAPE } from '@/vfx-engine';
 
 // --- Tuning knobs. The first three are settled in the browser, not on paper. ---
 
@@ -36,6 +35,7 @@ const TILE_ISO_PX = Math.hypot(HALF_TILE_WIDTH, HALF_TILE_HEIGHT);
 interface PendingShot {
   playerId: number;
   element: CombatElement;
+  shapeId: string;
   releaseInMs: number;
   targetKey: string | null;
   onImpact: (() => void) | null;
@@ -58,11 +58,17 @@ export class ProjectileController {
 
   /** A ranged swing was seen. Opens a pending shot; the arrow launches
    *  RELEASE_FRACTION of the way through the animation. */
-  openShot(playerId: number, attackMs: number, element: CombatElement): void {
+  openShot(
+    playerId: number,
+    attackMs: number,
+    element: CombatElement,
+    shapeId: string,
+  ): void {
     const queue = this.pending.get(playerId) ?? [];
     queue.push({
       playerId,
       element,
+      shapeId,
       releaseInMs: Math.max(1, attackMs * RELEASE_FRACTION),
       targetKey: null,
       onImpact: null,
@@ -202,7 +208,7 @@ export class ProjectileController {
 
     const projectile = this.pool.pop() ?? new Projectile();
     projectile.reset(
-      getArrowVisual(DEFAULT_ARROW_SHAPE, shot.element),
+      getArrowVisual(shot.shapeId, shot.element),
       shot.playerId,
       fromX,
       fromY,

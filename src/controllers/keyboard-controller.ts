@@ -16,6 +16,7 @@ import {
 } from '@/render';
 import { SfxId } from '@/sfx';
 import { bigCoordsToCoords, getNextCoords, isBowMetadata } from '@/utils';
+import { DEFAULT_ARROW_SHAPE } from '@/vfx-engine';
 import { getTimestamp } from './movement-controller';
 
 // Shim for the transition period (T9→T12): tick-based animations gate input
@@ -537,10 +538,14 @@ export class KeyboardController {
           this.client.instanceController
             .list()
             .find((i) => i.equippedSlot === 8)?.element ?? CombatElement.Plain;
+        const shapeId =
+          this.client.itemArrowKinds.get(this.client.equipment.weapon) ??
+          DEFAULT_ARROW_SHAPE;
         this.client.projectileController.openShot(
           character.playerId,
           attackMs,
           element,
+          shapeId,
         );
       }
 

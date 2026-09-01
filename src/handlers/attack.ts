@@ -15,6 +15,7 @@ import {
 } from '@/render';
 import { SfxId } from '@/sfx';
 import { isBowMetadata, randomRange } from '@/utils';
+import { DEFAULT_ARROW_SHAPE } from '@/vfx-engine';
 
 function handleAttackPlayer(client: Client, reader: EoReader) {
   const packet = AttackPlayerServerPacket.deserialize(reader);
@@ -47,7 +48,15 @@ function handleAttackPlayer(client: Client, reader: EoReader) {
         ? (client.instanceController.list().find((i) => i.equippedSlot === 8)
             ?.element ?? CombatElement.Plain)
         : client.instanceController.weaponElement(packet.playerId);
-    client.projectileController.openShot(packet.playerId, attackMs, element);
+    // Other players' shots use the default shape: itemArrowKinds is keyed by
+    // ITEM id and a nearby character's equipment.weapon is a worn GRAPHIC id.
+    // Resolving it needs an EIF spec1 reverse lookup — see the spec.
+    client.projectileController.openShot(
+      packet.playerId,
+      attackMs,
+      element,
+      DEFAULT_ARROW_SHAPE,
+    );
   }
 
   const index = randomRange(0, metadata.sfx.length - 1);
