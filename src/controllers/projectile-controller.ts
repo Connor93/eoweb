@@ -3,6 +3,7 @@ import type { CombatElement } from '@/combat-overlay/element-colors';
 import { HALF_TILE_HEIGHT, HALF_TILE_WIDTH } from '@/consts';
 import { getArrowVisual, Projectile } from '@/render';
 import { isoToScreen, localAttackRayTiles } from '@/utils';
+import { DEFAULT_ARROW_SHAPE } from '@/vfx-engine';
 
 // --- Tuning knobs. The first three are settled in the browser, not on paper. ---
 
@@ -201,7 +202,7 @@ export class ProjectileController {
 
     const projectile = this.pool.pop() ?? new Projectile();
     projectile.reset(
-      getArrowVisual(shot.element),
+      getArrowVisual(DEFAULT_ARROW_SHAPE, shot.element),
       shot.playerId,
       fromX,
       fromY,
