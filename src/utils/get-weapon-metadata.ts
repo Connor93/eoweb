@@ -115,5 +115,6 @@ export function getWeaponMetaData(): Map<number, WeaponMetadata> {
     [94, new WeaponMetadata(0, [SfxId.AttackBow], true)], // icebow
     [95, new WeaponMetadata(0, [SfxId.AttackBow], true)], // xbow2
     [96, new WeaponMetadata(0, [SfxId.AttackBow], true)], // legendaryicebow
+    [222, new WeaponMetadata(0, [SfxId.AttackBow], true)], // incindius' bow
   ]);
 }
