@@ -33,6 +33,13 @@ echo "🚀 Pushing to GHCR ..."
 echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 docker push "$IMAGE"
 
+# Reclaim local Docker disk: the image is on GHCR now, and BuildKit's cache is
+# capped at 6GB (shared with the reoserv/aio-editor deploy scripts) so repeated
+# builds can't fill the Mac — a full disk surfaces as Docker EIO.
+echo "🧹 Pruning local Docker image + build cache (cap 6GB) ..."
+docker image rm "$IMAGE" >/dev/null 2>&1 || true
+docker builder prune -f --max-used-space 6gb >/dev/null || true
+
 ssh -p "$SSH_PORT" "${VPS_USER}@${VPS_HOST}" bash -s -- \
   "$IMAGE" "$GHCR_USER" "$GHCR_PAT" "$CLIENT_DOMAIN" "$WS_URL" <<'REMOTE'
 set -euo pipefail
