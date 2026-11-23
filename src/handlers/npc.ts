@@ -179,41 +179,6 @@ function handleNpcAgree(client: Client, reader: EoReader) {
   client.atlas.refresh();
 }
 
-/**
- * Play a skill's authored `impact_vfx` on a KILLING blow.
- *
- * reoserv's `deal_skill_damage` only broadcasts the FAMILY_SKILL `SkillDamage`
- * packet when the NPC SURVIVES the hit; a fatal one takes the kill/reward path
- * (`attack_npc_killed_reply`) and never sends it. So `handleSkillDamage` —
- * where a non-fatal hit plays `impact_vfx` — never runs for the blow that
- * lands the kill, and the effect was silently lost on exactly the hit you most
- * want it on. That gap has existed since offensive skills predate the VFX
- * layer by five days; nothing ever joined the two up.
- *
- * The client already holds everything needed: `SkillController.use()` arms
- * `pendingImpact` keyed by NPC index at cast time, so both kill handlers can
- * consume it exactly as the damage handler does. Client-only — no server,
- * wire, or pub change.
- *
- * MUST be called BEFORE `setNpcDeathAnimation`: `getEntityWorldSpritePosition`
- * reads the renderer's world-sprite map, and the dying NPC leaves it.
- */
-function playKillImpactVfx(
-  client: Client,
-  npcIndex: number,
-  killerId: number,
-): void {
-  // Only our own casts arm a pending entry, and `takePendingImpact` clears on
-  // read — so bail before consuming when someone else landed the kill.
-  if (killerId !== client.playerId) return;
-  const entry = client.skillController.takePendingImpact(npcIndex);
-  if (!entry?.impactVfx) return;
-  const targetKey = `npc:${npcIndex}`;
-  const pos = client.mapRenderer?.getEntityWorldSpritePosition(targetKey);
-  if (!pos) return;
-  client.skillVfxController.playBurst(entry.impactVfx, pos.x, pos.y, targetKey);
-}
-
 function handleNpcSpec(client: Client, reader: EoReader) {
   const packet = NpcSpecServerPacket.deserialize(reader);
   const specNpc = client.getNpcByIndex(packet.npcKilledData.npcIndex);
@@ -247,12 +212,6 @@ function handleNpcSpec(client: Client, reader: EoReader) {
         worldY: specNpc.coords.y,
       });
     }
-
-    playKillImpactVfx(
-      client,
-      packet.npcKilledData.npcIndex,
-      packet.npcKilledData.killerId,
-    );
 
     client.setNpcDeathAnimation(packet.npcKilledData.npcIndex);
 
@@ -333,14 +292,6 @@ function handleNpcAccept(client: Client, reader: EoReader) {
         worldY: acceptNpc.coords.y,
       });
     }
-
-    // Same as handleNpcSpec — this is the kill-that-also-levels-you-up variant,
-    // and missing it here would drop the effect on exactly those kills.
-    playKillImpactVfx(
-      client,
-      packet.npcKilledData.npcIndex,
-      packet.npcKilledData.killerId,
-    );
 
     client.setNpcDeathAnimation(packet.npcKilledData.npcIndex);
 

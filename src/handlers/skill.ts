@@ -68,26 +68,37 @@ function handleSkillReply(client: Client, reader: EoReader): void {
   const reason = reader.getChar();
   const cooldownMs = reader.getInt();
   client.skillController.handleReply(skillId, ok, reason, cooldownMs);
+}
 
-  if (ok) {
-    const entry = client.skillController.entryOf(skillId);
-    const casterKey = `char:${client.playerId}`;
-    const pos = client.mapRenderer?.getEntityWorldSpritePosition(casterKey);
-    if (entry?.castVfx && pos) {
-      client.skillVfxController.playBurst(
-        entry.castVfx,
-        pos.x,
-        pos.y,
-        casterKey,
-      );
-    }
-  } else {
-    client.skillController.clearPending(skillId);
+/**
+ * Server broadcasts this to everyone near the caster (caster included) on
+ * every successful cast, before damage resolves — so every client plays the
+ * cast VFX on the caster and the impact VFX on the target, and the target is
+ * still on screen even when this cast kills it.
+ */
+function handleSkillCast(client: Client, reader: EoReader): void {
+  const casterId = reader.getShort();
+  const targetNpcIndex = reader.getShort();
+  const skillId = readStr(reader);
+  const entry = client.skillController.entryOf(skillId);
+  if (!entry) return;
+
+  playVfxOn(client, entry.castVfx, `char:${casterId}`);
+  if (targetNpcIndex > 0) {
+    playVfxOn(client, entry.impactVfx, `npc:${targetNpcIndex}`);
   }
 }
 
+/** Play `ref` on the entity `key`; skipped if unset or the entity isn't drawn. */
+function playVfxOn(client: Client, ref: string, key: string): void {
+  if (!ref) return;
+  const pos = client.mapRenderer?.getEntityWorldSpritePosition(key);
+  if (!pos) return;
+  client.skillVfxController.playBurst(ref, pos.x, pos.y, key);
+}
+
 function handleSkillDamage(client: Client, reader: EoReader): void {
-  const casterId = reader.getShort();
+  reader.getShort(); // caster id — impact VFX now comes from SkillCast
   const npcIndex = reader.getShort();
   const damage = reader.getInt();
   const hpPercentage = reader.getChar();
@@ -128,20 +139,6 @@ function handleSkillDamage(client: Client, reader: EoReader): void {
       worldY: npc.coords.y,
     });
   }
-
-  if (casterId === client.playerId) {
-    const entry = client.skillController.takePendingImpact(npcIndex);
-    const targetKey = `npc:${npcIndex}`;
-    const pos = client.mapRenderer?.getEntityWorldSpritePosition(targetKey);
-    if (entry?.impactVfx && pos) {
-      client.skillVfxController.playBurst(
-        entry.impactVfx,
-        pos.x,
-        pos.y,
-        targetKey,
-      );
-    }
-  }
 }
 
 function handleSkillAugment(client: Client, reader: EoReader): void {
@@ -159,6 +156,11 @@ export function registerSkillHandlers(client: Client): void {
     FAMILY_SKILL as PacketFamily,
     PacketAction.Reply,
     (reader) => handleSkillReply(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_SKILL as PacketFamily,
+    PacketAction.Use,
+    (reader) => handleSkillCast(client, reader),
   );
   client.bus!.registerPacketHandler(
     FAMILY_SKILL as PacketFamily,

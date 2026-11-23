@@ -73,10 +73,6 @@ export class SkillController {
   selectedSkillId: string | null = null;
   private cooldowns = new Map<string, CooldownState>();
   private subscribers: (() => void)[] = [];
-  // Enemy-cast target → skillId, for correlating impact VFX (SkillDamage carries
-  // no skill id). Keyed by npcIndex so concurrent casts at different targets
-  // don't collide. Overwritten per (re)cast of the same target.
-  private pendingImpact = new Map<number, string>();
 
   constructor(client: Client) {
     this.client = client;
@@ -200,7 +196,6 @@ export class SkillController {
 
   use(skillId: string, targetNpcIndex = 0): void {
     if (this.remainingMs(skillId) > 0) return; // locally gated; server re-checks
-    if (targetNpcIndex > 0) this.pendingImpact.set(targetNpcIndex, skillId);
     const writer = new EoWriter();
     const idBytes = new TextEncoder().encode(skillId);
     writer.addChar(idBytes.length);
@@ -224,21 +219,6 @@ export class SkillController {
       PacketAction.Add,
       writer.toByteArray(),
     );
-  }
-
-  /** The pending cast's target if `casterIsSelf`+`npcIndex` match; else null. Clears on read. */
-  takePendingImpact(npcIndex: number): SkillCatalogEntry | null {
-    const skillId = this.pendingImpact.get(npcIndex);
-    if (skillId === undefined) return null;
-    this.pendingImpact.delete(npcIndex);
-    return this.catalog.get(skillId) ?? null;
-  }
-
-  /** Drop any pending impact-VFX entries for `skillId` (e.g. the cast was rejected). */
-  clearPending(skillId: string): void {
-    for (const [npcIndex, id] of this.pendingImpact) {
-      if (id === skillId) this.pendingImpact.delete(npcIndex);
-    }
   }
 
   entryOf(skillId: string): SkillCatalogEntry | undefined {
