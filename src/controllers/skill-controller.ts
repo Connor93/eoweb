@@ -1,5 +1,6 @@
 import { EoWriter, PacketAction, type PacketFamily } from 'eolib';
 import type { Client } from '@/client';
+import { EOResourceID } from '@/edf';
 
 const FAMILY_SKILL = 62;
 
@@ -10,6 +11,8 @@ const REJECT_UNKNOWN = 3;
 const REJECT_INVALID_TARGET = 4;
 const REJECT_OUT_OF_RANGE = 5;
 const REJECT_NOT_LEARNED = 6;
+// Target NPC is kill-steal protected (fighting someone outside your party).
+const REJECT_PROTECTED = 7;
 
 // Learn reject reason codes (mirror the server's LearnReject codes). A
 // SEPARATE numbering from the cast-time SKILL_REJECT_* codes above.
@@ -158,6 +161,13 @@ export class SkillController {
     } else if (reason === REJECT_NOT_LEARNED) {
       this.client.toastController.showWarning(
         this.client.locale.skills.notLearned,
+      );
+    } else if (reason === REJECT_PROTECTED) {
+      // Same message melee shows on a protected NPC (handlers/npc.ts).
+      this.client.toastController.showWarning(
+        this.client.getResourceString(
+          EOResourceID.STATUS_LABEL_UNABLE_TO_ATTACK,
+        ),
       );
     }
     this.notify();
