@@ -307,6 +307,28 @@ export class MouseController {
       return;
     }
 
+    // Armed ground-area skill: the click (or touch tap) aims it. Clicking an
+    // NPC sprite aims at that NPC's tile. A can't-cast tile does nothing —
+    // the skill stays armed and the player doesn't walk there.
+    const groundSkill = this.client.skillController.armedGroundSkill();
+    if (groundSkill) {
+      const npcAt = getNpcIntersecting(this.client.mousePosition!);
+      const npc = npcAt
+        ? this.client.nearby.npcs.find((n) => n.index === npcAt.id)
+        : undefined;
+      const tile = npc
+        ? { x: npc.coords.x, y: npc.coords.y }
+        : this.client.mouseCoords;
+      if (
+        tile &&
+        this.client.skillController.canCastGroundAt(groundSkill, tile)
+      ) {
+        this.client.skillController.use(groundSkill.skillId, 0, tile);
+        this.client.skillController.clearArmed();
+      }
+      return;
+    }
+
     if (this.client.mouseCoords) {
       if (this.clickItem()) {
         return;

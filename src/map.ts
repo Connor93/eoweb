@@ -68,6 +68,7 @@ import {
 import {
   getItemGraphicId,
   isoToScreen,
+  isTileSpecWalkable,
   localAttackRayTiles,
   screenToIso,
 } from '@/utils';
@@ -128,6 +129,17 @@ const INTERACTIVE_TILE_SPECS = new Set([
   MapTileSpec.Board7,
   MapTileSpec.Board8,
 ]);
+
+// RangeHighlight typeIds: the cast-range / weapon-ray tiles, and a ground
+// skill's blast square when the aim is castable vs. not.
+const RANGE_HL_RANGE = 0;
+const RANGE_HL_BLAST_OK = 1;
+const RANGE_HL_BLAST_BLOCKED = 2;
+const RANGE_HL_FILL: Record<number, { color: number; alpha: number }> = {
+  [RANGE_HL_RANGE]: { color: 0x35d0e0, alpha: 0.25 },
+  [RANGE_HL_BLAST_OK]: { color: 0xffb020, alpha: 0.4 },
+  [RANGE_HL_BLAST_BLOCKED]: { color: 0xe04040, alpha: 0.35 },
+};
 
 const TDG = 0.00000001; // gap between depth of each tile on a layer
 const RDG = 0.001; // gap between depth of each row of tiles
@@ -803,7 +815,7 @@ export class MapRenderer {
       }
     }
 
-    const armedRange = this.client.skillController.armedEnemyRange();
+    const armedRange = this.client.skillController.armedRange();
     if (
       armedRange === null &&
       inGame &&
@@ -816,7 +828,7 @@ export class MapRenderer {
           x: tile.x,
           y: tile.y,
           type: EntityType.RangeHighlight,
-          typeId: 0,
+          typeId: RANGE_HL_RANGE,
           layer: Layer.Cursor,
           depth: this.calculateDepth(Layer.Cursor, tile.x, tile.y),
         });
@@ -837,10 +849,44 @@ export class MapRenderer {
           ) {
             continue;
           }
-          const spec = this.getTileSpec(x, y);
+          // Same blocking rule the server's wall checks use, so a lit tile
+          // never contradicts the ground skill's "can't cast" colour.
+          if (!isTileSpecWalkable(this.getTileSpec(x, y) ?? undefined)) {
+            continue;
+          }
+          dynamics.push({
+            x,
+            y,
+            type: EntityType.RangeHighlight,
+            typeId: RANGE_HL_RANGE,
+            layer: Layer.Cursor,
+            depth: this.calculateDepth(Layer.Cursor, x, y),
+          });
+        }
+      }
+    }
+
+    // Armed ground skill: the blast square follows the mouse, centred on the
+    // hovered tile, coloured by whether the server would accept the aim.
+    const groundSkill = inGame
+      ? this.client.skillController.armedGroundSkill()
+      : null;
+    if (groundSkill && renderMouseCoords) {
+      const center = renderMouseCoords;
+      const typeId = this.client.skillController.canCastGroundAt(
+        groundSkill,
+        center,
+      )
+        ? RANGE_HL_BLAST_OK
+        : RANGE_HL_BLAST_BLOCKED;
+      const r = groundSkill.areaRadius;
+      for (let y = center.y - r; y <= center.y + r; y++) {
+        for (let x = center.x - r; x <= center.x + r; x++) {
           if (
-            spec !== null &&
-            [MapTileSpec.Wall, MapTileSpec.Edge].includes(spec)
+            x < 0 ||
+            y < 0 ||
+            x > this.client.map.width ||
+            y > this.client.map.height
           ) {
             continue;
           }
@@ -848,7 +894,7 @@ export class MapRenderer {
             x,
             y,
             type: EntityType.RangeHighlight,
-            typeId: 0,
+            typeId,
             layer: Layer.Cursor,
             depth: this.calculateDepth(Layer.Cursor, x, y),
           });
@@ -1826,8 +1872,9 @@ export class MapRenderer {
     const rectY = Math.floor(
       tileScreenY - HALF_TILE_HEIGHT - playerScreen.y + this._halfGameHeight,
     );
+    // Range and blast tiles can share a coordinate; key by kind so both draw.
     const g = this.ensureWorldGraphics(
-      `range-hl:${entity.x}:${entity.y}`,
+      `range-hl:${entity.typeId}:${entity.x}:${entity.y}`,
       'map:range-highlight',
     );
     // Iso tile diamond within the 64x32 tile rect.
@@ -1841,7 +1888,7 @@ export class MapRenderer {
       0,
       HALF_TILE_HEIGHT,
     ]);
-    g.fill({ color: 0x35d0e0, alpha: 0.25 });
+    g.fill(RANGE_HL_FILL[entity.typeId] ?? RANGE_HL_FILL[RANGE_HL_RANGE]);
     g.position.set(rectX, rectY);
   }
 

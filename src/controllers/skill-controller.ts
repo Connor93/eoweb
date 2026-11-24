@@ -1,6 +1,7 @@
 import { EoWriter, PacketAction, type PacketFamily } from 'eolib';
 import type { Client } from '@/client';
 import { EOResourceID } from '@/edf';
+import { getChebyshevDistance, isTileSpecWalkable, tileLine } from '@/utils';
 import type { Vector2 } from '@/vector';
 
 const FAMILY_SKILL = 62;
@@ -287,5 +288,54 @@ export class SkillController {
       return null;
     }
     return this.effectiveRange(entry);
+  }
+
+  /** Cast range of the armed enemy OR ground skill (drives the range square
+   *  around the player), or null if nothing targetable is armed. */
+  armedRange(): number | null {
+    if (!this.selectedSkillId) {
+      return null;
+    }
+    const entry = this.catalog.get(this.selectedSkillId);
+    if (!entry || (entry.target !== 'enemy' && entry.target !== 'ground')) {
+      return null;
+    }
+    return this.effectiveRange(entry);
+  }
+
+  /** The armed ground-area skill, or null if none is armed. */
+  armedGroundSkill(): SkillCatalogEntry | null {
+    if (!this.selectedSkillId) {
+      return null;
+    }
+    const entry = this.catalog.get(this.selectedSkillId);
+    return entry?.target === 'ground' ? entry : null;
+  }
+
+  /** Whether the server will accept a ground cast aimed at `tile`, short of
+   *  the no-targets check: in map bounds, within chebyshev cast range, and —
+   *  for throw-blocked skills — no blocking tile on the line from the player
+   *  (end tile included). Mirrors reoserv `ground_cast_check`. */
+  canCastGroundAt(entry: SkillCatalogEntry, tile: Vector2): boolean {
+    const map = this.client.map;
+    if (
+      !map ||
+      tile.x < 0 ||
+      tile.y < 0 ||
+      tile.x > map.width ||
+      tile.y > map.height
+    ) {
+      return false;
+    }
+    const player = this.client.getPlayerCoords();
+    if (getChebyshevDistance(player, tile) > this.effectiveRange(entry)) {
+      return false;
+    }
+    if (!entry.areaThrowBlocked) {
+      return true;
+    }
+    return tileLine(player, tile).every((t) =>
+      isTileSpecWalkable(this.client.mapRenderer.getTileSpecAt(t)),
+    );
   }
 }
