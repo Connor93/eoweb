@@ -19,9 +19,8 @@ function handleWarpRequest(client: Client, reader: EoReader) {
   const packet = WarpRequestServerPacket.deserialize(reader);
   client.sessionId = packet.sessionId;
   client.warpMapId = packet.mapId;
-  // Drop the current map's lasting-zone glows now: the map we enter sends
-  // its own zones while the server moves us, BEFORE WarpAgree arrives — so
-  // clearing any later would wipe them.
+  // Stop drawing the current map's lasting-zone glows as soon as a warp is
+  // under way (WarpAgree below clears again — that is the one that matters).
   client.groundZoneController.clear();
 
   switch (packet.warpType) {
@@ -52,6 +51,12 @@ function handleWarpRequest(client: Client, reader: EoReader) {
 function handleWarpAgree(client: Client, reader: EoReader) {
   const packet = WarpAgreeServerPacket.deserialize(reader);
   client.nearby = packet.nearby;
+  // Drop every lasting-zone glow from the map we left (including one cast
+  // there while this warp was pending). The server writes WarpAgree straight
+  // to the socket, while everything the new map sends during enter — its
+  // own SkillZoneAdds included — is queued through the player actor and
+  // arrives AFTER this packet, so clearing here never wipes them.
+  client.groundZoneController.clear();
 
   if (
     packet.warpTypeData instanceof WarpAgreeServerPacket.WarpTypeDataMapSwitch

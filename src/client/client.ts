@@ -905,6 +905,13 @@ export class Client {
   setState(state: GameState) {
     this.state = state;
 
+    // Leaving the game (logout, disconnect, character switch): drop every
+    // lasting-zone glow — removes may have been missed while disconnected.
+    // Not on ENTERING the game: the login map's zone adds may already be in.
+    if (state !== GameState.InGame) {
+      this.groundZoneController.clear();
+    }
+
     if (state === GameState.InGame && this.reconnecting) {
       this.reconnecting = false;
       this.reconnectAttempts = 0;
