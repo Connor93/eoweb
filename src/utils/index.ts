@@ -69,3 +69,4 @@ export {
 export { buildStatEffectLines, type StatEffectEntry } from './stat-effects';
 export { tileLine } from './tile-line';
 export { isTileSpecWalkable } from './tile-spec-walkable';
+export { zoneTiles } from './zone-tiles';

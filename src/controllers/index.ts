@@ -37,6 +37,10 @@ export {
   EnchanterController,
   type EnchanterPricing,
 } from './enchanter-controller';
+export {
+  type GroundZone,
+  GroundZoneController,
+} from './ground-zone-controller';
 export { GuildController } from './guild-controller';
 export { HotbarController } from './hotbar-controller';
 export { InnController } from './inn-controller';

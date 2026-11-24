@@ -52,6 +52,7 @@ import {
   ConfigController,
   DrunkController,
   EnchanterController,
+  GroundZoneController,
   GuildController,
   HotbarController,
   InnController,
@@ -302,6 +303,8 @@ export class Client {
   sessionController: SessionController;
   shopController: ShopController;
   skillController: SkillController;
+  /** Lasting ground areas on the current map (glowing tiles). */
+  groundZoneController = new GroundZoneController();
   statusController: StatusController;
   socialController: SocialController;
   statSkillController: StatSkillController;

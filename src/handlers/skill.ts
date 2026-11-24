@@ -114,6 +114,47 @@ function handleSkillCast(client: Client, reader: EoReader): void {
   }
 }
 
+/** SkillZoneAdd (62 / Open): a lasting ground area started, or one already
+ *  running on the map we just entered. Wire: zone id short, skill id, centre
+ *  x/y chars, radius char, blast-blocked char, element char, remaining ms int
+ *  (deep/skill_zone_add_server_packet.rs). */
+function handleSkillZoneAdd(client: Client, reader: EoReader): void {
+  const id = reader.getShort();
+  const skillId = readStr(reader);
+  const center = { x: reader.getChar(), y: reader.getChar() };
+  const radius = reader.getChar();
+  const blastBlocked = reader.getChar() !== 0;
+  const element = reader.getChar();
+  const remainingMs = reader.getInt();
+  client.groundZoneController.add(
+    { id, skillId, center, radius, blastBlocked, element, remainingMs },
+    performance.now(),
+  );
+}
+
+/** SkillZoneRemove (62 / Close): the zone expired or its caster left. */
+function handleSkillZoneRemove(client: Client, reader: EoReader): void {
+  client.groundZoneController.remove(reader.getShort());
+}
+
+/** SkillPulse (62 / Report): one wave of a lasting ground area. Flashes the
+ *  zone's glow and plays the impact VFX on each NPC hit — never a cast VFX,
+ *  and never on a tile. Wire: zone id short, skill id, hit count char, then
+ *  one short per hit (deep/skill_pulse_server_packet.rs). */
+function handleSkillPulse(client: Client, reader: EoReader): void {
+  const zoneId = reader.getShort();
+  const skillId = readStr(reader);
+  const hitCount = reader.getChar();
+  const hits: number[] = [];
+  for (let i = 0; i < hitCount; i++) hits.push(reader.getShort());
+  client.groundZoneController.pulse(zoneId, performance.now());
+  const entry = client.skillController.entryOf(skillId);
+  if (!entry) return;
+  for (const npcIndex of hits) {
+    playVfxOn(client, entry.impactVfx, `npc:${npcIndex}`);
+  }
+}
+
 /** Play `ref` on the entity `key`; skipped if unset or the entity isn't drawn. */
 function playVfxOn(client: Client, ref: string, key: string): void {
   if (!ref) return;
@@ -206,5 +247,20 @@ export function registerSkillHandlers(client: Client): void {
     FAMILY_SKILL as PacketFamily,
     PacketAction.Accept,
     (reader) => handleSkillLearnReply(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_SKILL as PacketFamily,
+    PacketAction.Open,
+    (reader) => handleSkillZoneAdd(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_SKILL as PacketFamily,
+    PacketAction.Close,
+    (reader) => handleSkillZoneRemove(client, reader),
+  );
+  client.bus!.registerPacketHandler(
+    FAMILY_SKILL as PacketFamily,
+    PacketAction.Report,
+    (reader) => handleSkillPulse(client, reader),
   );
 }

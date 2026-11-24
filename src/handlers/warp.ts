@@ -19,6 +19,10 @@ function handleWarpRequest(client: Client, reader: EoReader) {
   const packet = WarpRequestServerPacket.deserialize(reader);
   client.sessionId = packet.sessionId;
   client.warpMapId = packet.mapId;
+  // Drop the current map's lasting-zone glows now: the map we enter sends
+  // its own zones while the server moves us, BEFORE WarpAgree arrives — so
+  // clearing any later would wipe them.
+  client.groundZoneController.clear();
 
   switch (packet.warpType) {
     case WarpType.Local: {
