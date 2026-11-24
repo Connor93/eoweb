@@ -303,6 +303,12 @@ export class SkillController {
     return this.effectiveRange(entry);
   }
 
+  /** Where an armed ground skill is aimed right now — set by the map
+   *  renderer every frame (NPC under the cursor → its tile, else the cursor
+   *  tile), read by the click handler so the click casts exactly where the
+   *  blast square is drawn. Null when no ground skill is armed. */
+  groundAimTile: Vector2 | null = null;
+
   /** The armed ground-area skill, or null if none is armed. */
   armedGroundSkill(): SkillCatalogEntry | null {
     if (!this.selectedSkillId) {

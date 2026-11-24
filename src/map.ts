@@ -17,6 +17,7 @@ import {
 import type { Client } from '@/client';
 import {
   getCharacterRectangle,
+  getNpcIntersecting,
   getNpcRectangle,
   Rectangle,
   setBoardRectangle,
@@ -867,12 +868,29 @@ export class MapRenderer {
     }
 
     // Armed ground skill: the blast square follows the mouse, centred on the
-    // hovered tile, coloured by whether the server would accept the aim.
+    // aim tile, coloured by whether the server would accept the aim. The aim
+    // tile is computed once per frame here and stored on the skill controller
+    // so a click casts exactly where the square is drawn: an NPC under the
+    // cursor aims at that NPC's tile, otherwise the cursor's tile relative to
+    // the player's CURRENT position (not the last pointer-move's).
     const groundSkill = inGame
       ? this.client.skillController.armedGroundSkill()
       : null;
-    if (groundSkill && renderMouseCoords) {
-      const center = renderMouseCoords;
+    let aimTile: Vector2 | null = null;
+    if (groundSkill) {
+      const npcAt = this.client.mousePosition
+        ? getNpcIntersecting(this.client.mousePosition)
+        : null;
+      const npc = npcAt
+        ? this.client.nearby.npcs.find((n) => n.index === npcAt.id)
+        : undefined;
+      aimTile = npc
+        ? { x: npc.coords.x, y: npc.coords.y }
+        : (renderMouseCoords ?? null);
+    }
+    this.client.skillController.groundAimTile = aimTile;
+    if (groundSkill && aimTile) {
+      const center = aimTile;
       const typeId = this.client.skillController.canCastGroundAt(
         groundSkill,
         center,
