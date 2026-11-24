@@ -1,6 +1,7 @@
 import { EoWriter, PacketAction, type PacketFamily } from 'eolib';
 import type { Client } from '@/client';
 import { EOResourceID } from '@/edf';
+import type { Vector2 } from '@/vector';
 
 const FAMILY_SKILL = 62;
 
@@ -13,6 +14,8 @@ const REJECT_OUT_OF_RANGE = 5;
 const REJECT_NOT_LEARNED = 6;
 // Target NPC is kill-steal protected (fighting someone outside your party).
 const REJECT_PROTECTED = 7;
+// Ground-area cast whose square holds no valid enemy.
+const REJECT_NO_TARGETS = 8;
 
 // Learn reject reason codes (mirror the server's LearnReject codes). A
 // SEPARATE numbering from the cast-time SKILL_REJECT_* codes above.
@@ -46,7 +49,8 @@ export interface SkillCatalogEntry {
   costHp: number;
   costTp: number;
   cooldownMs: number;
-  target: 'self' | 'enemy';
+  /** 'unknown' = a target code this client doesn't understand; never cast. */
+  target: 'self' | 'enemy' | 'ground' | 'unknown';
   /** Cast range in tiles (chebyshev). 0 = use the equipped weapon's range. */
   range: number;
   /** VFX ref to burst at the caster on a successful cast. Empty = none. */
@@ -59,6 +63,10 @@ export interface SkillCatalogEntry {
   skillPointCost: number;
   /** Flavour text for the hover tooltip. Empty = no tooltip. */
   description: string;
+  /** Ground skills: blast square radius in tiles (1 = 3x3). */
+  areaRadius: number;
+  /** Ground skills: a wall between caster and aimed tile prevents the cast. */
+  areaThrowBlocked: boolean;
 }
 
 interface CooldownState {
@@ -158,6 +166,10 @@ export class SkillController {
       this.client.toastController.showWarning(
         this.client.locale.skills.notLearned,
       );
+    } else if (reason === REJECT_NO_TARGETS) {
+      this.client.toastController.showWarning(
+        this.client.locale.skills.noTargets,
+      );
     } else if (reason === REJECT_PROTECTED) {
       // Same message melee shows on a protected NPC (handlers/npc.ts).
       this.client.toastController.showWarning(
@@ -194,13 +206,16 @@ export class SkillController {
     }
   }
 
-  use(skillId: string, targetNpcIndex = 0): void {
+  /** `tile` is the aimed tile for ground skills (sent as 0,0 otherwise). */
+  use(skillId: string, targetNpcIndex = 0, tile?: Vector2): void {
     if (this.remainingMs(skillId) > 0) return; // locally gated; server re-checks
     const writer = new EoWriter();
     const idBytes = new TextEncoder().encode(skillId);
     writer.addChar(idBytes.length);
     writer.addBytes(idBytes);
     writer.addShort(targetNpcIndex);
+    writer.addChar(tile?.x ?? 0);
+    writer.addChar(tile?.y ?? 0);
     this.client.bus?.sendBuf(
       FAMILY_SKILL as PacketFamily,
       PacketAction.Use,

@@ -75,7 +75,11 @@ export class HotbarController {
         return;
       }
       const entry = this.client.skillController.catalog.get(slot.skillId);
-      if (entry?.target === 'enemy') {
+      if (entry?.target === 'unknown') {
+        this.client.toastController.showWarning(
+          this.client.locale.skills.unknownSkill,
+        );
+      } else if (entry?.target === 'enemy' || entry?.target === 'ground') {
         if (this.client.skillController.selectedSkillId === slot.skillId) {
           this.client.skillController.clearArmed();
         } else {

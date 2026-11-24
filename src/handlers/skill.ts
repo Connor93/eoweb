@@ -18,6 +18,21 @@ function readStr(reader: EoReader): string {
   return new TextDecoder().decode(new Uint8Array(reader.getBytes(len)));
 }
 
+/** Catalog target code → entry target. An unknown code must never fall
+ *  through to 'self', which the hotbar casts instantly. */
+function decodeTarget(code: number): SkillCatalogEntry['target'] {
+  switch (code) {
+    case 0:
+      return 'self';
+    case 1:
+      return 'enemy';
+    case 2:
+      return 'ground';
+    default:
+      return 'unknown';
+  }
+}
+
 function handleSkillList(client: Client, reader: EoReader): void {
   const count = reader.getShort();
   const entries: SkillCatalogEntry[] = [];
@@ -29,7 +44,7 @@ function handleSkillList(client: Client, reader: EoReader): void {
       costHp: reader.getShort(),
       costTp: reader.getShort(),
       cooldownMs: reader.getInt(),
-      target: reader.getChar() === 1 ? 'enemy' : 'self',
+      target: decodeTarget(reader.getChar()),
       range: reader.getChar(),
       castVfx: readStr(reader),
       impactVfx: readStr(reader),
@@ -39,6 +54,9 @@ function handleSkillList(client: Client, reader: EoReader): void {
       // Trailing field — must stay last, mirroring the server's serialize
       // order in deep/skill_list_server_packet.rs.
       description: readStr(reader),
+      // Ground-area fields trail `description` (server serialize order).
+      areaRadius: reader.getChar(),
+      areaThrowBlocked: reader.getChar() !== 0,
     });
   }
   client.skillController.setCatalog(entries);
@@ -76,16 +94,23 @@ function handleSkillReply(client: Client, reader: EoReader): void {
  * cast VFX on the caster and the impact VFX on the target, and the target is
  * still on screen even when this cast kills it.
  */
+/** Wire: caster short, skill id, tile x/y chars, hit count char, then one
+ *  short per NPC hit (deep/skill_cast_server_packet.rs). Impacts play only on
+ *  the listed NPCs — never on the tile itself. */
 function handleSkillCast(client: Client, reader: EoReader): void {
   const casterId = reader.getShort();
-  const targetNpcIndex = reader.getShort();
   const skillId = readStr(reader);
+  reader.getChar(); // aimed tile x — unused until persistent ground effects
+  reader.getChar(); // aimed tile y
+  const hitCount = reader.getChar();
+  const hits: number[] = [];
+  for (let i = 0; i < hitCount; i++) hits.push(reader.getShort());
   const entry = client.skillController.entryOf(skillId);
   if (!entry) return;
 
   playVfxOn(client, entry.castVfx, `char:${casterId}`);
-  if (targetNpcIndex > 0) {
-    playVfxOn(client, entry.impactVfx, `npc:${targetNpcIndex}`);
+  for (const npcIndex of hits) {
+    playVfxOn(client, entry.impactVfx, `npc:${npcIndex}`);
   }
 }
 
