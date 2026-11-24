@@ -3,6 +3,7 @@ import {
   Coords,
   Direction,
   Emote as EmoteType,
+  type Element as EolibElement,
   MapTileSpec,
   SitState,
 } from 'eolib';
@@ -28,7 +29,11 @@ import {
   setNpcRectangle,
   setSignRectangle,
 } from '@/collision';
-import { CombatElement } from '@/combat-overlay/element-colors';
+import {
+  CombatElement,
+  combatElementColor,
+  eolibToCombatElement,
+} from '@/combat-overlay/element-colors';
 import {
   ANIMATION_TICKS,
   DEATH_TICKS,
@@ -72,6 +77,7 @@ import {
   isTileSpecWalkable,
   localAttackRayTiles,
   screenToIso,
+  zoneTiles,
 } from '@/utils';
 import type { Vector2 } from '@/vector';
 
@@ -82,6 +88,7 @@ enum EntityType {
   Npc = 3,
   Item = 4,
   RangeHighlight = 5,
+  ZoneGlow = 6,
 }
 
 type Entity = {
@@ -141,6 +148,14 @@ const RANGE_HL_FILL: Record<number, { color: number; alpha: number }> = {
   [RANGE_HL_BLAST_OK]: { color: 0xffb020, alpha: 0.4 },
   [RANGE_HL_BLAST_BLOCKED]: { color: 0xe04040, alpha: 0.35 },
 };
+
+// Lasting ground-area glow: one inset diamond per zone tile (inset so the
+// zone reads as a checkered glow), alpha pulsing gently, flashing on a wave.
+const ZONE_GLOW_INSET = 0.8;
+const ZONE_PULSE_MS = 1500;
+const ZONE_ALPHA_BASE = 0.18;
+const ZONE_ALPHA_SWING = 0.12;
+const ZONE_ALPHA_FLASH = 0.55;
 
 const TDG = 0.00000001; // gap between depth of each tile on a layer
 const RDG = 0.001; // gap between depth of each row of tiles
@@ -284,6 +299,11 @@ export class MapRenderer {
   private readonly _seenUiSprites = new Set<string>();
   private readonly _seenUiGraphics = new Set<string>();
   private readonly _seenWorldGraphics = new Set<string>();
+  /** Per-frame colour + alpha for each visible lasting ground zone. */
+  private readonly zoneGlowStyle = new Map<
+    number,
+    { color: number; alpha: number }
+  >();
   private _worldOrder = 0;
   private _uiOrder = 0;
   // Ghost container for the local player's second-pass render (alpha=0.4).
@@ -920,6 +940,49 @@ export class MapRenderer {
       }
     }
 
+    // Lasting ground areas: glowing tiles, visible to everyone on the map.
+    // Tiles are computed against the map actually loaded (on a warp the new
+    // map's zones arrive before the map itself) and cached per map.
+    this.zoneGlowStyle.clear();
+    if (inGame) {
+      const now = performance.now();
+      for (const zone of this.client.groundZoneController.active(now)) {
+        if (zone.tilesKey !== this.client.map) {
+          zone.tiles = zoneTiles(
+            zone.center,
+            zone.radius,
+            zone.blastBlocked,
+            this.client.map.width,
+            this.client.map.height,
+            (x, y) => this.getTileSpec(x, y) ?? undefined,
+          );
+          zone.tilesKey = this.client.map;
+        }
+        const color = Number.parseInt(
+          combatElementColor(
+            eolibToCombatElement(zone.element as EolibElement),
+          ).slice(1),
+          16,
+        );
+        const wave = 0.5 + 0.5 * Math.sin((2 * Math.PI * now) / ZONE_PULSE_MS);
+        const alpha =
+          now < zone.flashUntil
+            ? ZONE_ALPHA_FLASH
+            : ZONE_ALPHA_BASE + ZONE_ALPHA_SWING * wave;
+        this.zoneGlowStyle.set(zone.id, { color, alpha });
+        for (const tile of zone.tiles) {
+          dynamics.push({
+            x: tile.x,
+            y: tile.y,
+            type: EntityType.ZoneGlow,
+            typeId: zone.id,
+            layer: Layer.Cursor,
+            depth: this.calculateDepth(Layer.Cursor, tile.x, tile.y),
+          });
+        }
+      }
+    }
+
     this.beginFrame();
     this.client.weaponElementController.beginFrame();
     this.client.npcElementController.beginFrame();
@@ -970,6 +1033,9 @@ export class MapRenderer {
           break;
         case EntityType.RangeHighlight:
           this.addRangeHighlightSprite(entity, playerScreen);
+          break;
+        case EntityType.ZoneGlow:
+          this.addZoneGlowSprite(entity, playerScreen);
           break;
       }
     }
@@ -1879,6 +1945,26 @@ export class MapRenderer {
         sprite.position.set(animX, animY);
       }
     }
+  }
+
+  private addZoneGlowSprite(entity: Entity, playerScreen: Vector2) {
+    const style = this.zoneGlowStyle.get(entity.typeId);
+    if (!style) return;
+    const tileScreenX = (entity.x - entity.y) * HALF_TILE_WIDTH;
+    const tileScreenY = (entity.x + entity.y) * HALF_TILE_HEIGHT;
+    // Tile centre in world-container coords (the diamond is drawn around it).
+    const cx = Math.floor(tileScreenX - playerScreen.x + this._halfGameWidth);
+    const cy = Math.floor(tileScreenY - playerScreen.y + this._halfGameHeight);
+    const hw = HALF_TILE_WIDTH * ZONE_GLOW_INSET;
+    const hh = HALF_TILE_HEIGHT * ZONE_GLOW_INSET;
+    // Zones can overlap; key by zone so both draw.
+    const g = this.ensureWorldGraphics(
+      `zone-glow:${entity.typeId}:${entity.x}:${entity.y}`,
+      'map:zone-glow',
+    );
+    g.poly([0, -hh, hw, 0, 0, hh, -hw, 0]);
+    g.fill({ color: style.color, alpha: style.alpha });
+    g.position.set(cx, cy);
   }
 
   private addRangeHighlightSprite(entity: Entity, playerScreen: Vector2) {
